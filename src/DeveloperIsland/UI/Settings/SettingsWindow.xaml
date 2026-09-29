@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="DeveloperIsland.UI.Settings.SettingsWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Developer Island Settings">
+
+    <Grid x:Name="Root">
+        <Grid.Resources>
+            <ResourceDictionary Source="ms-appx:///UI/Theme/SettingsTheme.xaml" />
+        </Grid.Resources>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="232" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Sidebar -->
+        <Grid Padding="12,0,12,16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="56" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <StackPanel x:Name="TitleArea" Orientation="Horizontal" Spacing="10" Padding="8,0,0,0" VerticalAlignment="Center">
+                <Image Source="ms-appx:///Assets/DeveloperIsland-256.png" Width="20" Height="20" AutomationProperties.AccessibilityView="Raw" />
+                <TextBlock Text="Developer Island" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{ThemeResource SettingsTextPrimaryBrush}" />
+            </StackPanel>
+            <StackPanel Grid.Row="1" Spacing="2" x:Name="Nav" AutomationProperties.Name="Settings sections">
+                <Button x:Name="NavGeneral" AutomationProperties.Name="General" Style="{StaticResource SettingsNavButtonStyle}" Tag="General" Click="OnNav">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <FontIcon Glyph="&#xE713;" FontSize="14" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" />
+                        <TextBlock Text="General" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="NavPosition" AutomationProperties.Name="Position" Style="{StaticResource SettingsNavButtonStyle}" Tag="Position" Click="OnNav">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <FontIcon Glyph="&#xE7F4;" FontSize="14" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" />
+                        <TextBlock Text="Position" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="NavModules" AutomationProperties.Name="Modules" Style="{StaticResource SettingsNavButtonStyle}" Tag="Modules" Click="OnNav">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <FontIcon Glyph="&#xE74C;" FontSize="14" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" />
+                        <TextBlock Text="Modules" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="NavAppearance" AutomationProperties.Name="Appearance" Style="{StaticResource SettingsNavButtonStyle}" Tag="Appearance" Click="OnNav">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <FontIcon Glyph="&#xE790;" FontSize="14" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" />
+                        <TextBlock Text="Appearance" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="NavAbout" AutomationProperties.Name="About" Style="{StaticResource SettingsNavButtonStyle}" Tag="About" Click="OnNav">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <FontIcon Glyph="&#xE946;" FontSize="14" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" />
+                        <TextBlock Text="About" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Content -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="48" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid x:Name="DragArea" Background="Transparent" />
+            <ScrollViewer Grid.Row="1" Padding="32,0,36,32" HorizontalScrollMode="Disabled">
+                <Grid MaxWidth="620" HorizontalAlignment="Left">
+
+                    <!-- General -->
+                    <StackPanel x:Name="GeneralSection" Spacing="8">
+                        <TextBlock Text="General" Style="{StaticResource SettingsTitleStyle}" Margin="0,0,0,20" />
+                        <Border Style="{StaticResource SettingsCardStyle}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Start with Windows" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Text="Opens Developer Island when you sign in." Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="StartWithWindowsToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
+                                                  AutomationProperties.Name="Start with Windows" Toggled="OnToggle" Tag="StartWithWindows" />
+                                </Grid>
+                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Always on top" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Text="Keeps the island above other windows." Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="AlwaysOnTopToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
+                                                  AutomationProperties.Name="Always on top" Toggled="OnToggle" Tag="AlwaysOnTop" />
+                                </Grid>
+                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Launch hidden" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Text="When starting with Windows, wait in the notification area until you open it." Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="LaunchHiddenToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
+                                                  AutomationProperties.Name="Launch hidden" Toggled="OnToggle" Tag="LaunchHidden" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Position -->
+                    <StackPanel x:Name="PositionSection" Spacing="8" Visibility="Collapsed">
+                        <TextBlock Text="Position" Style="{StaticResource SettingsTitleStyle}" Margin="0,0,0,20" />
+                        <Border Style="{StaticResource SettingsCardStyle}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Monitor" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Text="If this monitor is disconnected, the island moves to the primary monitor." Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <ComboBox x:Name="MonitorPicker" Grid.Column="1" MinWidth="220" VerticalAlignment="Center"
+                                              AutomationProperties.Name="Monitor" SelectionChanged="OnMonitorChanged" />
+                                </Grid>
+                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
+                                <Grid Style="{StaticResource SettingsRowStyle}" Padding="16,16,16,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Anchor" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Text="The island rests here and grows away from this edge." Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                        <TextBlock x:Name="AnchorName" Style="{StaticResource SettingsRowDescriptionStyle}" Foreground="{ThemeResource SettingsTextPrimaryBrush}" Margin="0,8,0,0" />
+                                    </StackPanel>
+                                    <!-- Miniature screen with the six anchors. -->
+                                    <Border Grid.Column="1" Width="184" Height="116" CornerRadius="10" BorderThickness="1"
+                                            Background="{ThemeResource SettingsScreenBrush}" BorderBrush="{ThemeResource SettingsScreenStrokeBrush}">
+                                        <Grid x:Name="AnchorGrid" Padding="6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="*" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+                                            <RadioButton x:Name="AnchorTopLeft" GroupName="Anchor" Style="{StaticResource AnchorPickerButtonStyle}" Tag="TopLeft"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Top" AutomationProperties.Name="Top Left" Checked="OnAnchorChecked" />
+                                            <RadioButton x:Name="AnchorTopCenter" Grid.Column="1" GroupName="Anchor" Style="{StaticResource AnchorPickerButtonStyle}" Tag="TopCenter"
+                                                         HorizontalAlignment="Center" VerticalAlignment="Top" AutomationProperties.Name="Top Center" Checked="OnAnchorChecked" />
+                                            <RadioButton x:Name="AnchorTopRight" Grid.Column="2" GroupName="Anchor" Style="{StaticResource AnchorPickerButtonStyle}" Tag="TopRight"
+                                                         HorizontalAlignment="Right" VerticalAlignment="Top" AutomationProperties.Name="Top Right" Checked="OnAnchorChecked" />
+                                            <RadioButton x:Name="AnchorBottomLeft" Grid.Row="1" GroupName="Anchor" Style="{StaticResource AnchorPickerButtonStyle}" Tag="BottomLeft"
+                                                         HorizontalAlignment="Left" VerticalAlignment="Bottom" AutomationProperties.Name="Bottom Left" Checked="OnAnchorChecked" />
+                                            <RadioButton x:Name="AnchorBottomCenter" Grid.Row="1" Grid.Column="1" GroupName="Anchor" Style="{StaticResource AnchorPickerButtonStyle}" Tag="BottomCenter"
+                                                         HorizontalAlignment="Center" VerticalAlignment="Bottom" AutomationProperties.Name="Bottom Center" Checked="OnAnchorChecked" />
+                                            <RadioButton x:Name="AnchorBottomRight" Grid.Row="1" Grid.Column="2" GroupName="Anchor" Style="{StaticResource AnchorPickerButtonStyle}" Tag="BottomRight"
+                                                         HorizontalAlignment="Right" VerticalAlignment="Bottom" AutomationProperties.Name="Bottom Right" Checked="OnAnchorChecked" />
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Custom position" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock x:Name="CustomPositionText" Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <Button x:Name="ResetPositionButton" Grid.Column="1" Content="Reset Position" Click="OnResetPosition" VerticalAlignment="Center" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Modules -->
+                    <StackPanel x:Name="ModulesSection" Spacing="8" Visibility="Collapsed">
+                        <TextBlock Text="Modules" Style="{StaticResource SettingsTitleStyle}" Margin="0,0,0,20" />
+                        <Border Style="{StaticResource SettingsCardStyle}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Claude Code" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Text="Token usage and API equivalent from local Claude Code logs." Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="ClaudeToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
+                                                  AutomationProperties.Name="Claude Code" Toggled="OnToggle" Tag="Claude" />
+                                </Grid>
+                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Codex" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Text="Token usage, rate limits and API equivalent from local Codex logs." Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="CodexToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
+                                                  AutomationProperties.Name="Codex" Toggled="OnToggle" Tag="Codex" />
+                                </Grid>
+                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Music" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Text="What's playing in Spotify, Apple Music, browsers and other media apps." Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="MusicToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
+                                                  AutomationProperties.Name="Music" Toggled="OnToggle" Tag="Music" />
+                                </Grid>
+                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Focus" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Text="A focus timer with 25, 50 and 90 minute presets." Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="FocusToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
+                                                  AutomationProperties.Name="Focus" Toggled="OnToggle" Tag="Focus" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Appearance -->
+                    <StackPanel x:Name="AppearanceSection" Spacing="8" Visibility="Collapsed">
+                        <TextBlock Text="Appearance" Style="{StaticResource SettingsTitleStyle}" Margin="0,0,0,20" />
+                        <Border Style="{StaticResource SettingsCardStyle}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Theme" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Text="Applies to this window. The island itself is always dark." Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" VerticalAlignment="Center" CornerRadius="8" Padding="2" Background="{ThemeResource SettingsSegmentBrush}">
+                                        <StackPanel Orientation="Horizontal" AutomationProperties.Name="Theme">
+                                            <RadioButton x:Name="ThemeSystem" GroupName="Theme" Style="{StaticResource SegmentedOptionStyle}" Content="System" Tag="System" Checked="OnThemeChecked" />
+                                            <RadioButton x:Name="ThemeDark" GroupName="Theme" Style="{StaticResource SegmentedOptionStyle}" Content="Dark" Tag="Dark" Checked="OnThemeChecked" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- About -->
+                    <StackPanel x:Name="AboutSection" Spacing="8" Visibility="Collapsed">
+                        <TextBlock Text="About" Style="{StaticResource SettingsTitleStyle}" Margin="0,0,0,20" />
+                        <Border Style="{StaticResource SettingsCardStyle}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Image Source="ms-appx:///Assets/DeveloperIsland-256.png" Width="44" Height="44" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Developer Island" Style="{StaticResource SettingsRowTitleStyle}" FontWeight="SemiBold" />
+                                        <TextBlock x:Name="VersionText" Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                </Grid>
+                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Local-first" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Style="{StaticResource SettingsRowDescriptionStyle}"
+                                                   Text="Your prompts never leave your device. Developer Island reads only usage metadata (tokens, model, time) from local logs and stores daily totals on this PC. It makes no network requests." />
+                                    </StackPanel>
+                                </Grid>
+                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Data and logs" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock x:Name="DataPathText" Style="{StaticResource SettingsRowDescriptionStyle}" IsTextSelectionEnabled="True" />
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Content="Open Folder" Click="OnOpenDataFolder" VerticalAlignment="Center" />
+                                </Grid>
+                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="API equivalent" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Style="{StaticResource SettingsRowDescriptionStyle}"
+                                                   Text="Estimated from public API list prices, converted to euros. Subscriptions are billed differently, so this is not what you pay. Adjust prices or the exchange rate in pricing.json." />
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</Window>

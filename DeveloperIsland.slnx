@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DeveloperIsland.Core/DeveloperIsland.Core.csproj" />
+    <Project Path="src/DeveloperIsland/DeveloperIsland.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DeveloperIsland.Tests/DeveloperIsland.Tests.csproj" />
+  </Folder>
+</Solution>

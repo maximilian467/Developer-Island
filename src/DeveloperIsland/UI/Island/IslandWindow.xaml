@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="DeveloperIsland.UI.Island.IslandWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:island="using:DeveloperIsland.UI.Island"
+    xmlns:expanded="using:DeveloperIsland.UI.Expanded"
+    xmlns:components="using:DeveloperIsland.UI.Components"
+    Title="Developer Island">
+
+    <components:CursorGrid x:Name="Root" Background="Transparent">
+        <!-- Composition surface: capsule shape and shadow (IslandMorph). -->
+        <Grid x:Name="SurfaceHost" IsHitTestVisible="False" />
+
+        <!-- Content, clipped to the animated capsule. -->
+        <Grid x:Name="ContentHost">
+            <island:CompactView x:Name="Compact" />
+            <island:ActivityView x:Name="Activity" Visibility="Collapsed" />
+            <expanded:ExpandedView x:Name="Expanded" Visibility="Collapsed" />
+        </Grid>
+    </components:CursorGrid>
+</Window>

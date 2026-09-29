@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Today's usage of one AI tool. No card: grouping comes from spacing (Taste 4.4). -->
+<UserControl
+    x:Class="DeveloperIsland.UI.Expanded.ProviderSummary"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <StackPanel Spacing="2">
+        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,2">
+            <TextBlock Text="{x:Bind ViewModel.DisplayName, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />
+            <Ellipse Width="6" Height="6" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center"
+                     Visibility="{x:Bind ViewModel.IsActive, Mode=OneWay}"
+                     AutomationProperties.Name="Session active" />
+        </StackPanel>
+
+        <StackPanel Visibility="{x:Bind ViewModel.IsReady, Mode=OneWay}" Spacing="2">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+                <TextBlock Text="{x:Bind ViewModel.TokensText, Mode=OneWay}" Style="{StaticResource FigureTextStyle}" />
+                <TextBlock Text="{x:Bind ViewModel.TokensUnit, Mode=OneWay}" Style="{StaticResource BodyTextStyle}" VerticalAlignment="Bottom" Margin="0,0,0,5" />
+            </StackPanel>
+            <TextBlock Style="{StaticResource CaptionTextStyle}" Visibility="{x:Bind ViewModel.ShowValue, Mode=OneWay}">
+                <Run Text="{x:Bind ViewModel.ValueText, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" /><Run Text=" " /><Run Text="{x:Bind ViewModel.ValueCaption, Mode=OneWay}" />
+            </TextBlock>
+            <TextBlock Text="{x:Bind ViewModel.DetailText, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" Margin="0,6,0,0" />
+            <TextBlock Text="{x:Bind ViewModel.ContextText, Mode=OneWay}" Style="{StaticResource FineTextStyle}" />
+        </StackPanel>
+
+        <StackPanel Visibility="{x:Bind ViewModel.IsUnavailable, Mode=OneWay}" Spacing="4" Margin="0,4,0,0">
+            <TextBlock Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" Style="{StaticResource TitleTextStyle}" Foreground="{StaticResource TextSecondaryBrush}" />
+            <TextBlock Text="{x:Bind ViewModel.StatusHint, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" TextTrimming="None" MaxWidth="170" HorizontalAlignment="Left" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

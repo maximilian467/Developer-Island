@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="DeveloperIsland.UI.Expanded.UsagePanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:DeveloperIsland.UI.Expanded"
+    xmlns:components="using:DeveloperIsland.UI.Components">
+
+    <StackPanel>
+        <Grid x:Name="ProvidersGrid" ColumnSpacing="24">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <local:ProviderSummary x:Name="ClaudeSummary" ViewModel="{x:Bind ViewModel.Claude}" Visibility="{x:Bind ViewModel.ShowClaude, Mode=OneWay}" />
+            <local:ProviderSummary x:Name="CodexSummary" Grid.Column="1" ViewModel="{x:Bind ViewModel.Codex}" Visibility="{x:Bind ViewModel.ShowCodex, Mode=OneWay}" />
+        </Grid>
+
+        <components:UsageHeatmap x:Name="Heatmap" Margin="0,22,0,0" HorizontalAlignment="Left" />
+
+        <!-- Readout: summary and legend at rest, the inspected day on hover or keyboard focus. -->
+        <Grid Height="18" Margin="0,10,0,0">
+            <Grid Visibility="{x:Bind ViewModel.IsNotInspecting, Mode=OneWay}">
+                <TextBlock Text="{x:Bind ViewModel.HistorySummary, Mode=OneWay}" Style="{StaticResource FineTextStyle}" VerticalAlignment="Center" />
+                <StackPanel Orientation="Horizontal" Spacing="3" HorizontalAlignment="Right" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw">
+                    <TextBlock Text="Less" Style="{StaticResource FineTextStyle}" Margin="0,0,4,0" />
+                    <Rectangle Width="9" Height="9" RadiusX="2" RadiusY="2" Fill="#16FFFFFF" />
+                    <Rectangle Width="9" Height="9" RadiusX="2" RadiusY="2" Fill="#4D2997FF" />
+                    <Rectangle Width="9" Height="9" RadiusX="2" RadiusY="2" Fill="#802997FF" />
+                    <Rectangle Width="9" Height="9" RadiusX="2" RadiusY="2" Fill="#B82997FF" />
+                    <Rectangle Width="9" Height="9" RadiusX="2" RadiusY="2" Fill="#FF2997FF" />
+                    <TextBlock Text="More" Style="{StaticResource FineTextStyle}" Margin="4,0,0,0" />
+                </StackPanel>
+            </Grid>
+            <Grid Visibility="{x:Bind ViewModel.IsInspecting, Mode=OneWay}" ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{x:Bind ViewModel.InspectedDate, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                <TextBlock Grid.Column="1" Style="{StaticResource CaptionTextStyle}">
+                    <Run Text="Claude" /><Run Text=" " /><Run Text="{x:Bind ViewModel.InspectedClaude, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+                </TextBlock>
+                <TextBlock Grid.Column="2" Style="{StaticResource CaptionTextStyle}">
+                    <Run Text="Codex" /><Run Text=" " /><Run Text="{x:Bind ViewModel.InspectedCodex, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+                </TextBlock>
+                <TextBlock Grid.Column="3" HorizontalAlignment="Right" Style="{StaticResource CaptionTextStyle}">
+                    <Run Text="{x:Bind ViewModel.InspectedValue, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" /><Run Text=" API" />
+                </TextBlock>
+            </Grid>
+        </Grid>
+
+        <TextBlock Margin="0,12,0,0" Style="{StaticResource FineTextStyle}"
+                   Text="API equivalent estimates list prices. It is not what you pay." />
+    </StackPanel>
+</UserControl>

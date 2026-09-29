@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="DeveloperIsland.UI.Expanded.FocusPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid>
+        <!-- Idle: presets -->
+        <StackPanel Visibility="{x:Bind ViewModel.IsIdle, Mode=OneWay}">
+            <TextBlock Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" Style="{StaticResource TitleTextStyle}" />
+            <TextBlock Text="{x:Bind ViewModel.TodayText, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" Margin="0,2,0,0" />
+            <TextBlock Text="{x:Bind ViewModel.WeekText, Mode=OneWay}" Style="{StaticResource FineTextStyle}" Margin="0,2,0,0" />
+
+            <StackPanel x:Name="PresetRow" Orientation="Horizontal" Spacing="8" Margin="0,16,0,2"
+                        Visibility="{x:Bind ViewModel.IsPresetRowVisible, Mode=OneWay}">
+                <Button x:Name="Preset25" Style="{StaticResource IslandPillButtonStyle}" Content="25 min" Tag="25" Click="OnPreset" />
+                <Button Style="{StaticResource IslandPillButtonStyle}" Content="50 min" Tag="50" Click="OnPreset" />
+                <Button Style="{StaticResource IslandPillButtonStyle}" Content="90 min" Tag="90" Click="OnPreset" />
+                <Button Style="{StaticResource IslandPillButtonStyle}" Content="Custom…" Click="OnOpenCustom" />
+            </StackPanel>
+
+            <Grid x:Name="CustomRow" Margin="0,16,0,2" ColumnSpacing="8" Visibility="{x:Bind ViewModel.IsCustomRowVisible, Mode=OneWay}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="64" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Button x:Name="MinusButton" Style="{StaticResource IslandIconButtonStyle}" Width="32" Height="32" CornerRadius="16" FontSize="12"
+                        Background="{StaticResource SurfaceRaisedBrush}" Content="&#xE738;" Tag="-5" Click="OnAdjust"
+                        AutomationProperties.Name="5 minutes less" />
+                <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.CustomMinutesText, Mode=OneWay}" Style="{StaticResource LabelTextStyle}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+                <Button Grid.Column="2" Style="{StaticResource IslandIconButtonStyle}" Width="32" Height="32" CornerRadius="16" FontSize="12"
+                        Background="{StaticResource SurfaceRaisedBrush}" Content="&#xE710;" Tag="5" Click="OnAdjust"
+                        AutomationProperties.Name="5 minutes more" />
+                <Button Grid.Column="4" Style="{StaticResource IslandPillButtonStyle}" Content="Cancel" Click="OnCloseCustom" />
+                <Button Grid.Column="5" Style="{StaticResource IslandAccentPillButtonStyle}" Content="Start" Click="OnStartCustom" />
+            </Grid>
+        </StackPanel>
+
+        <!-- Running or paused -->
+        <StackPanel Visibility="{x:Bind ViewModel.IsActive, Mode=OneWay}">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+                <Ellipse Width="6" Height="6" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center"
+                         Visibility="{x:Bind ViewModel.IsRunning, Mode=OneWay}" />
+                <TextBlock Text="Focus" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />
+                <TextBlock Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" />
+            </StackPanel>
+
+            <TextBlock x:Name="Countdown" Text="{x:Bind ViewModel.RemainingText, Mode=OneWay}" Style="{StaticResource HeroTextStyle}" Margin="0,4,0,0"
+                       AutomationProperties.Name="{x:Bind ViewModel.AccessibleSummary, Mode=OneWay}" />
+
+            <Grid Height="3" Margin="0,10,0,0" CornerRadius="1.5" Background="{StaticResource ProgressTrackBrush}">
+                <Rectangle x:Name="ProgressFill" Fill="{StaticResource AccentBrush}" RadiusX="1.5" RadiusY="1.5" RenderTransformOrigin="0,0.5">
+                    <Rectangle.RenderTransform>
+                        <ScaleTransform ScaleX="{x:Bind ViewModel.Progress, Mode=OneWay}" />
+                    </Rectangle.RenderTransform>
+                </Rectangle>
+            </Grid>
+
+            <Grid Margin="0,16,0,2">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button x:Name="PauseButton" Style="{StaticResource IslandPillButtonStyle}" Content="{x:Bind ViewModel.PauseResumeLabel, Mode=OneWay}" Click="OnTogglePause" />
+                    <Button Style="{StaticResource IslandPillButtonStyle}" Content="Stop" Click="OnStop" />
+                </StackPanel>
+                <TextBlock Text="{x:Bind ViewModel.TodayText, Mode=OneWay}" Style="{StaticResource FineTextStyle}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+            </Grid>
+        </StackPanel>
+    </Grid>
+</UserControl>
