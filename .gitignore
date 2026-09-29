@@ -1,0 +1,16 @@
+# Build output
+bin/
+obj/
+artifacts/
+*.user
+.vs/
+TestResults/
+
+# Local agent tooling (design skills are installed per machine, see README)
+.agents/
+.claude/
+skills-lock.json
+
+# OS
+Thumbs.db
+Desktop.ini
