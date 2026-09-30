@@ -28,13 +28,19 @@ public sealed partial class IslandWindow : Window
 
     /// <summary>Largest capsule the window must hold, in DIPs.</summary>
     public const double MaxCapsuleWidth = 420;
-    public const double MaxCapsuleHeight = 400;
+    public const double MaxCapsuleHeight = 520;
 
     public static double WindowWidth => MaxCapsuleWidth + 2 * EdgeMargin;
 
     public static double WindowHeight => MaxCapsuleHeight + 2 * EdgeMargin;
 
     private const double ExpandedRadius = 28;
+
+    /// <summary>The notch is drawn 10 DIP tall and cut flat by the screen edge; 5 DIP remain visible.</summary>
+    private const double NotchHeight = 10;
+
+    /// <summary>Window y of the screen edge above a top-anchored island.</summary>
+    private static double ScreenEdgeY => EdgeMargin - IslandPlacement.EdgeGap;
     private const double ShadowBleed = 40;
 
     private readonly IntPtr _hwnd;
@@ -51,6 +57,7 @@ public sealed partial class IslandWindow : Window
     private bool _visible;
     private bool _loaded;
     private IntPtr _previousForeground;
+    private readonly HoverTracker _hover = new();
     private bool _restoreFocusOnCollapse;
     private bool _keyboardInitiated;
 
@@ -138,7 +145,13 @@ public sealed partial class IslandWindow : Window
         ApplyAnchorLayout();
 
         var rect = IslandPlacement.WindowRect(monitor, anchor, offsetX, offsetY, WindowWidth, WindowHeight, EdgeMargin);
-        IslandWindowChrome.Move(_hwnd, rect.X, rect.Y, rect.Width, rect.Height, _alwaysOnTop);
+        if (SnapshotMode)
+        {
+            // Rendered offscreen only: never visible on any monitor.
+            rect = rect with { X = -32000, Y = -32000 };
+        }
+
+        IslandWindowChrome.Move(_hwnd, rect.X, rect.Y, rect.Width, rect.Height, _alwaysOnTop && !SnapshotMode);
         if (_loaded && anchorChanged)
         {
             Root.UpdateLayout();
@@ -176,6 +189,13 @@ public sealed partial class IslandWindow : Window
 
         _visible = false;
         AppWindow.Hide();
+    }
+
+    /// <summary>Global shortcut: opens from any state (keyboard focus inside), closes when expanded.</summary>
+    public void ToggleFromShortcut()
+    {
+        _keyboardInitiated = _state.Mode != IslandMode.Expanded;
+        _state.Toggle();
     }
 
     /// <summary>Expands from outside the island (tray click); keyboard focus lands inside.</summary>
@@ -222,7 +242,13 @@ public sealed partial class IslandWindow : Window
             switch (newMode)
             {
                 case IslandMode.Hidden:
+                    if (oldMode == IslandMode.Expanded)
+                    {
+                        ReturnFocus();
+                    }
+
                     HideIsland();
+                    UpdateMediaTicker();
                     return;
                 case IslandMode.Activity when _state.ActivitySource == ActivitySource.Hover:
                     _viewModel.PreparePeek();
@@ -265,6 +291,7 @@ public sealed partial class IslandWindow : Window
 
     private FrameworkElement ViewFor(IslandMode mode) => mode switch
     {
+        IslandMode.Retracted => Notch,
         IslandMode.Activity => Activity,
         IslandMode.Expanded => Expanded,
         _ => Compact,
@@ -280,11 +307,11 @@ public sealed partial class IslandWindow : Window
         var rect = BoundsOf(target);
         var elevated = ReferenceEquals(target, Expanded);
         var radius = elevated ? ExpandedRadius : rect.Height / 2;
-        var finalRegion = RegionFor(rect, elevated);
+        var finalRegion = RegionFor(target, rect, elevated);
 
         // While morphing, the region covers both shapes; it shrinks to the final shape once settled.
         ApplyRegion(_regionRect.IsEmpty ? finalRegion : Union(_regionRect, finalRegion));
-        _morph.MorphTo(rect, radius, elevated, animate, () => ApplyRegion(finalRegion));
+        _morph.MorphTo(rect, radius, elevated, animate, () => OnMorphSettled(finalRegion));
 
         if (previous is not null && !ReferenceEquals(previous, target))
         {
@@ -325,13 +352,21 @@ public sealed partial class IslandWindow : Window
         }
 
         var elevated = ReferenceEquals(_current, Expanded);
-        var finalRegion = RegionFor(rect, elevated);
+        var finalRegion = RegionFor(_current, rect, elevated);
         ApplyRegion(Union(_regionRect, finalRegion));
-        _morph.MorphTo(rect, elevated ? ExpandedRadius : rect.Height / 2, elevated, animate, () => ApplyRegion(finalRegion));
+        _morph.MorphTo(rect, elevated ? ExpandedRadius : rect.Height / 2, elevated, animate, () => OnMorphSettled(finalRegion));
     }
 
-    private Rect BoundsOf(FrameworkElement view) =>
-        view.TransformToVisual(Root).TransformBounds(new Rect(0, 0, view.ActualWidth, view.ActualHeight));
+    /// <summary>
+    /// The view's layout rectangle in window coordinates. Uses the arrange result (ActualOffset), not
+    /// TransformToVisual: the latter includes the fade-in's composition scale and translation, so a
+    /// resize during a fade would otherwise lock the capsule onto a 97% rectangle.
+    /// </summary>
+    private Rect BoundsOf(FrameworkElement view)
+    {
+        var offset = view.ActualOffset + ContentHost.ActualOffset;
+        return new Rect(offset.X, offset.Y, view.ActualWidth, view.ActualHeight);
+    }
 
     /// <summary>The point the view grows from (for scale origins), relative to the view.</summary>
     private Vector2 AnchorPointIn(FrameworkElement view)
@@ -368,9 +403,20 @@ public sealed partial class IslandWindow : Window
             view.VerticalAlignment = top ? VerticalAlignment.Top : VerticalAlignment.Bottom;
             view.Margin = margin;
         }
+
+        // The notch always hugs the top edge above the island's center (Smart Auto-Hide is top-center only).
+        Notch.HorizontalAlignment = HorizontalAlignment.Center;
+        Notch.VerticalAlignment = VerticalAlignment.Top;
+        Notch.Margin = new Thickness(0, ScreenEdgeY - NotchHeight / 2, 0, 0);
     }
 
     // Region --------------------------------------------------------------------------------------
+
+    private static Rect RegionFor(FrameworkElement view, Rect capsule, bool elevated) =>
+        view.Name == "Notch"
+            // Only the part below the screen edge, plus 2 DIP so the edge-hugging tab is easy to hit.
+            ? Clamp(new Rect(capsule.X - 1, ScreenEdgeY, capsule.Width + 2, Math.Max(1, capsule.Bottom - ScreenEdgeY + 2)))
+            : RegionFor(capsule, elevated);
 
     private static Rect RegionFor(Rect capsule, bool elevated)
     {
@@ -419,12 +465,47 @@ public sealed partial class IslandWindow : Window
     }
 
     // Input -----------------------------------------------------------------------------------------
+    //
+    // Hover and clicks are judged against the visible capsule (the morph target), never against the
+    // window region: the region is larger while a morph runs and around the expanded shadow.
+
+    private CapsuleBounds Capsule => new(_morph.Target.X, _morph.Target.Y, _morph.Target.Width, _morph.Target.Height);
+
+    private void OnMorphSettled(Rect finalRegion)
+    {
+        ApplyRegion(finalRegion);
+        RevalidatePointer();
+    }
+
+    /// <summary>The OS reports no leave when a shrinking region slides out from under a still pointer.</summary>
+    private void RevalidatePointer()
+    {
+        if (_dragging || !GetCursorPos(out var cursor) || !GetWindowRect(_hwnd, out var window))
+        {
+            return;
+        }
+
+        ApplyHover(_hover.Revalidate((cursor.X - window.Left) / _scale, (cursor.Y - window.Top) / _scale, Capsule));
+    }
+
+    private void ApplyHover(HoverChange change)
+    {
+        if (change == HoverChange.Entered)
+        {
+            _state.PointerEntered();
+        }
+        else if (change == HoverChange.Exited)
+        {
+            _state.PointerExited();
+        }
+    }
 
     private void OnPointerEntered(object sender, PointerRoutedEventArgs e)
     {
-        if (!_dragging)
+        if (!_dragging && !_pointerDown)
         {
-            _state.PointerEntered();
+            var p = e.GetCurrentPoint(Root).Position;
+            ApplyHover(_hover.PointerAt(p.X, p.Y, Capsule));
         }
     }
 
@@ -432,18 +513,31 @@ public sealed partial class IslandWindow : Window
     {
         if (!_dragging && !_pointerDown)
         {
-            _state.PointerExited();
+            ApplyHover(_hover.PointerLeftWindow());
         }
     }
 
     private void OnPointerPressed(object sender, PointerRoutedEventArgs e)
     {
-        if (_state.Mode is not (IslandMode.Compact or IslandMode.Activity))
+        var point = e.GetCurrentPoint(Root);
+        if (!Capsule.Contains(point.Position.X, point.Position.Y))
+        {
+            // A press in the transparent margin is a click outside the island, never on it.
+            if (_state.Mode == IslandMode.Expanded)
+            {
+                _restoreFocusOnCollapse = false;
+                _state.Dismiss();
+            }
+
+            e.Handled = true;
+            return;
+        }
+
+        if (_state.Mode is not (IslandMode.Compact or IslandMode.Activity or IslandMode.Retracted))
         {
             return;
         }
 
-        var point = e.GetCurrentPoint(Root);
         if (!point.Properties.IsLeftButtonPressed)
         {
             return;
@@ -461,6 +555,8 @@ public sealed partial class IslandWindow : Window
     {
         if (!_pointerDown)
         {
+            var p = e.GetCurrentPoint(Root).Position;
+            ApplyHover(_hover.PointerAt(p.X, p.Y, Capsule));
             return;
         }
 
@@ -541,6 +637,11 @@ public sealed partial class IslandWindow : Window
 
     private void OnWindowActivated(object sender, WindowActivatedEventArgs args)
     {
+        if (SnapshotMode)
+        {
+            return;
+        }
+
         IslandWindowChrome.SuppressBorder(_hwnd);
 
         // Clicking anywhere else closes the expanded island, like a popover.
@@ -553,6 +654,11 @@ public sealed partial class IslandWindow : Window
 
     private void ActivateForKeyboard()
     {
+        if (SnapshotMode)
+        {
+            return;
+        }
+
         var foreground = GetForegroundWindow();
         if (foreground != _hwnd)
         {

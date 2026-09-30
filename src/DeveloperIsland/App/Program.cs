@@ -12,7 +12,7 @@ public static class Program
 
         // One island per user session. A second launch (Start menu, installer "Launch") shows the
         // running island instead. Demo mode uses its own instance name so it can run side by side.
-        var name = options.IsDemo ? "DeveloperIsland.Demo" : "DeveloperIsland";
+        var name = options.SnapshotDirectory is not null ? "DeveloperIsland.Snapshot" : options.IsDemo ? "DeveloperIsland.Demo" : "DeveloperIsland";
         using var mutex = new Mutex(true, $@"Local\{name}.Instance", out var isFirst);
         using var showSignal = new EventWaitHandle(false, EventResetMode.AutoReset, $@"Local\{name}.Show");
         if (!isFirst)

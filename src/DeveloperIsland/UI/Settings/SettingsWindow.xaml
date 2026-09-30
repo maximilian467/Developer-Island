@@ -111,6 +111,19 @@
                                     <ToggleSwitch x:Name="LaunchHiddenToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
                                                   AutomationProperties.Name="Launch hidden" Toggled="OnToggle" Tag="LaunchHidden" />
                                 </Grid>
+                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Keyboard shortcut" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock x:Name="ShortcutText" Text="Ctrl + Alt + Space opens or closes the island from anywhere." Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="ShortcutToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
+                                                  AutomationProperties.Name="Keyboard shortcut" Toggled="OnToggle" Tag="Shortcut" />
+                                </Grid>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -182,6 +195,80 @@
                                         <TextBlock x:Name="CustomPositionText" Style="{StaticResource SettingsRowDescriptionStyle}" />
                                     </StackPanel>
                                     <Button x:Name="ResetPositionButton" Grid.Column="1" Content="Reset Position" Click="OnResetPosition" VerticalAlignment="Center" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="Browser notch" Style="{StaticResource SettingsRowTitleStyle}" Margin="4,20,0,4" />
+                        <Border Style="{StaticResource SettingsCardStyle}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Step aside for browser tabs" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock x:Name="SmartHideText" Text="While a maximized browser is in front, the island rests as a small notch. Hover or click it to open." Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="SmartHideToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
+                                                  AutomationProperties.Name="Step aside for browser tabs" Toggled="OnToggle" Tag="SmartHide" />
+                                </Grid>
+                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Behavior" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Text="Hide removes the notch too. Ctrl + Alt + Space still opens the island." Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" VerticalAlignment="Center" CornerRadius="8" Padding="2" Background="{ThemeResource SettingsSegmentBrush}">
+                                        <StackPanel Orientation="Horizontal" AutomationProperties.Name="Browser notch behavior">
+                                            <RadioButton x:Name="SmartHideRetract" GroupName="SmartHideBehavior" Style="{StaticResource SegmentedOptionStyle}" Content="Notch" Tag="Retract" Checked="OnSmartHideBehaviorChecked" />
+                                            <RadioButton x:Name="SmartHideHide" GroupName="SmartHideBehavior" Style="{StaticResource SegmentedOptionStyle}" Content="Hide" Tag="Hide" Checked="OnSmartHideBehaviorChecked" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Google Chrome" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Text="chrome.exe" Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="BrowserChromeToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
+                                                  AutomationProperties.Name="Google Chrome" Toggled="OnToggle" Tag="Browser:chrome" />
+                                </Grid>
+                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Microsoft Edge" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Text="msedge.exe" Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="BrowserEdgeToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
+                                                  AutomationProperties.Name="Microsoft Edge" Toggled="OnToggle" Tag="Browser:msedge" />
+                                </Grid>
+                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Firefox" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Text="firefox.exe" Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="BrowserFirefoxToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
+                                                  AutomationProperties.Name="Firefox" Toggled="OnToggle" Tag="Browser:firefox" />
                                 </Grid>
                             </StackPanel>
                         </Border>

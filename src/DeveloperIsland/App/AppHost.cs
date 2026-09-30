@@ -47,6 +47,8 @@ internal sealed class AppHost : IDisposable
     private HostWindow _host = null!;
     private TrayIcon _tray = null!;
     private FullscreenWatcher? _fullscreen;
+    private ForegroundWatcher? _foreground;
+    private GlobalHotKey? _hotkey;
     private SettingsWindow? _settingsWindow;
     private DispatcherQueueTimer? _historyDebounce;
     private DispatcherQueueTimer? _midnight;
@@ -96,7 +98,7 @@ internal sealed class AppHost : IDisposable
         ApplyModuleFlags(settings);
 
         _state = new IslandStateMachine(TimeProvider.System, action => _dispatcher.TryEnqueue(() => action()));
-        _window = new IslandWindow(_viewModel, _state, settings.AlwaysOnTop);
+        _window = new IslandWindow(_viewModel, _state, settings.AlwaysOnTop) { SnapshotMode = IsSnapshot };
         _window.SettingsRequested += OpenSettings;
         _window.DragCompleted += OnDragCompleted;
         _window.PlacementInvalidated += () => _dispatcher.TryEnqueue(PlaceIsland);
@@ -111,9 +113,15 @@ internal sealed class AppHost : IDisposable
         };
         _tray.Activated += () => ShowIsland(expand: true);
         _tray.CommandInvoked += OnTrayCommand;
-        _tray.Add();
-
-        _fullscreen = new FullscreenWatcher(_host, _window.Handle, OnFullscreenChanged);
+        if (!IsSnapshot)
+        {
+            _tray.Add();
+            _fullscreen = new FullscreenWatcher(_host, _window.Handle, OnFullscreenChanged);
+            _foreground = new ForegroundWatcher(_window.Handle, () => _settings.Current.SmartHideProcesses, _ => ApplySmartHide());
+            _hotkey = new GlobalHotKey(_host);
+            _hotkey.Pressed += OnShortcut;
+            _hotkey.SetEnabled(settings.GlobalShortcutEnabled);
+        }
 
         WireEvents();
 
@@ -139,10 +147,82 @@ internal sealed class AppHost : IDisposable
 
         ScheduleMidnight();
         _ = StartBackgroundAsync();
+        if (IsSnapshot)
+        {
+            _ = RunSnapshotsAsync(_options.SnapshotDirectory!);
+            return;
+        }
+
         if (_options.SettingsSection is { } section)
         {
             OpenSettings(section);
         }
+    }
+
+    private bool IsSnapshot => _options.SnapshotDirectory is not null;
+
+    /// <summary>
+    /// Development: renders each island state to PNG files and quits. Nothing appears on screen
+    /// and no input is simulated; states are driven through the state machine and view model.
+    /// </summary>
+    private async Task RunSnapshotsAsync(string directory)
+    {
+        async Task Shot(string name)
+        {
+            await Task.Delay(1100);
+            await _window.SaveSnapshotAsync(Path.Combine(directory, name + ".png"));
+        }
+
+        try
+        {
+            await Task.Delay(4500);
+            _state.Dismiss();
+            await Shot("01-compact");
+
+            _viewModel.PreparePeek();
+            _state.ShowEvent(TimeSpan.FromMinutes(5));
+            await Shot("02-peek");
+
+            _viewModel.OnTrackChanged();
+            await Shot("03-activity-music");
+
+            _viewModel.OnAiActivity(new AiActivity(AiProviderKind.Claude, AiActivityKind.SessionStarted, "Claude Code session started", "developer-island"));
+            await Shot("04-activity-claude");
+
+            _state.Dismiss();
+            await Task.Delay(600);
+            _state.Activate();
+            foreach (var tab in _viewModel.AvailableTabs)
+            {
+                _viewModel.SelectedTab = tab;
+                await Shot("10-expanded-" + tab.ToString().ToLowerInvariant());
+            }
+
+            _state.Dismiss();
+            await ExtraSnapshotsAsync(Shot);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("snapshot", "Snapshot run failed", ex);
+        }
+        finally
+        {
+            QuitRequested?.Invoke();
+        }
+    }
+
+    /// <summary>Browser notch at rest, its peek, and module states.</summary>
+    private async Task ExtraSnapshotsAsync(Func<string, Task> shot)
+    {
+        _state.SetRest(Core.Island.RestMode.Retracted);
+        await shot("20-notch");
+        _viewModel.PreparePeek();
+        _state.Activate();
+        await Task.Delay(1500); // the morph from a 48 px notch travels furthest
+        await shot("21-notch-opened");
+        _state.Dismiss();
+        _state.SetRest(Core.Island.RestMode.Compact);
+        await Task.Delay(600);
     }
 
     /// <summary>Second launch of the app: show the island.</summary>
@@ -156,6 +236,8 @@ internal sealed class AppHost : IDisposable
         _media?.Dispose();
         _state?.Dispose();
         _fullscreen?.Dispose();
+        _foreground?.Dispose();
+        _hotkey?.Dispose();
         _tray?.Dispose();
         _host?.Dispose();
         _database?.Dispose();
@@ -279,6 +361,9 @@ internal sealed class AppHost : IDisposable
         PlaceIsland();
         SyncAutostart(settings);
         _settingsWindow?.ApplyTheme(settings.Theme);
+        _hotkey?.SetEnabled(settings.GlobalShortcutEnabled);
+        _foreground?.Refresh();
+        ApplySmartHide();
         if (!settings.FocusEnabled && _focusTimer.Snapshot.IsActive)
         {
             _focusTimer.Stop();
@@ -344,6 +429,8 @@ internal sealed class AppHost : IDisposable
             }
 
             _window.Place(placement.Monitor, placement.Anchor, placement.OffsetX, placement.OffsetY);
+            _foreground?.Refresh();
+            ApplySmartHide();
         }
         catch (Exception ex)
         {
@@ -382,6 +469,31 @@ internal sealed class AppHost : IDisposable
     {
         _hiddenByUser = true;
         _state.Hide();
+    }
+
+    /// <summary>
+    /// Smart Auto-Hide: rest as a notch (or hidden) while a maximized browser is in front of a
+    /// top-center island; rest as the compact capsule otherwise.
+    /// </summary>
+    private void ApplySmartHide()
+    {
+        var s = _settings.Current;
+        var placement = IslandPlacement.Resolve(MonitorService.GetMonitors(), s.MonitorDevice, s.Anchor, s.OffsetX, s.OffsetY);
+        var rest = Core.Island.SmartHidePolicy.Decide(s, placement.Anchor, placement.OffsetY, _foreground?.Current);
+        if (rest != _state.Rest)
+        {
+            Log.Info("window", "Smart Auto-Hide", new { rest = rest.ToString(), process = _foreground?.Current?.ProcessName });
+            _state.SetRest(rest);
+        }
+    }
+
+    /// <summary>Ctrl+Alt+Space: open from anywhere (including hidden), close when expanded.</summary>
+    private void OnShortcut()
+    {
+        _hiddenByUser = false;
+        _hiddenForFullscreen = false;
+        _window.ShowIsland();
+        _window.ToggleFromShortcut();
     }
 
     /// <summary>Steps aside while a fullscreen app (video, game, presentation) owns the island's monitor.</summary>

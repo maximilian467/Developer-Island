@@ -129,6 +129,20 @@ public sealed partial class SettingsWindow : Window
             CodexToggle.IsOn = s.CodexEnabled;
             MusicToggle.IsOn = s.MusicEnabled;
             FocusToggle.IsOn = s.FocusEnabled;
+            ShortcutToggle.IsOn = s.GlobalShortcutEnabled;
+            SmartHideToggle.IsOn = s.SmartHideEnabled;
+            (s.SmartHideBehavior == SmartHideBehavior.Hide ? SmartHideHide : SmartHideRetract).IsChecked = true;
+            BrowserChromeToggle.IsOn = s.SmartHideProcesses.Contains("chrome");
+            BrowserEdgeToggle.IsOn = s.SmartHideProcesses.Contains("msedge");
+            BrowserFirefoxToggle.IsOn = s.SmartHideProcesses.Contains("firefox");
+            foreach (var dependent in new Control[] { SmartHideRetract, SmartHideHide, BrowserChromeToggle, BrowserEdgeToggle, BrowserFirefoxToggle })
+            {
+                dependent.IsEnabled = s.SmartHideEnabled;
+            }
+
+            SmartHideText.Text = s.Anchor == IslandAnchor.TopCenter
+                ? "While a maximized browser is in front, the island rests as a small notch. Hover or click it to open."
+                : "Only applies at Top Center, where the island covers browser tabs.";
             (s.Theme == AppTheme.Dark ? ThemeDark : ThemeSystem).IsChecked = true;
 
             var anchorButton = s.Anchor switch
@@ -217,9 +231,31 @@ public sealed partial class SettingsWindow : Window
                 case "Codex": s.CodexEnabled = on; break;
                 case "Music": s.MusicEnabled = on; break;
                 case "Focus": s.FocusEnabled = on; break;
+                case "Shortcut": s.GlobalShortcutEnabled = on; break;
+                case "SmartHide": s.SmartHideEnabled = on; break;
+                case var browser when browser.StartsWith("Browser:", StringComparison.Ordinal):
+                    var process = browser["Browser:".Length..];
+                    s.SmartHideProcesses.Remove(process);
+                    if (on)
+                    {
+                        s.SmartHideProcesses.Add(process);
+                    }
+
+                    break;
             }
         });
         Log.Info("settings", "Setting changed", new { setting = tag, value = on });
+    }
+
+    private void OnSmartHideBehaviorChecked(object sender, RoutedEventArgs e)
+    {
+        if (_loading || sender is not RadioButton { Tag: string tag } || !Enum.TryParse<SmartHideBehavior>(tag, out var behavior))
+        {
+            return;
+        }
+
+        _store.Update(s => s.SmartHideBehavior = behavior);
+        Log.Info("settings", "Setting changed", new { setting = "SmartHideBehavior", value = behavior.ToString() });
     }
 
     private void OnAnchorChecked(object sender, RoutedEventArgs e)

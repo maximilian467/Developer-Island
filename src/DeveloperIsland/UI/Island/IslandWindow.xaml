@@ -14,6 +14,9 @@
 
         <!-- Content, clipped to the animated capsule. -->
         <Grid x:Name="ContentHost">
+            <!-- Smart Browser Notch: the island retracted into the top screen edge. -->
+            <Grid x:Name="Notch" Width="48" Height="10" Visibility="Collapsed" Background="Transparent"
+                  AutomationProperties.Name="Developer Island, retracted. Click to open." />
             <island:CompactView x:Name="Compact" />
             <island:ActivityView x:Name="Activity" Visibility="Collapsed" />
             <expanded:ExpandedView x:Name="Expanded" Visibility="Collapsed" />

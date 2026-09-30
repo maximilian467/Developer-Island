@@ -46,6 +46,9 @@ internal sealed class HostWindow : IDisposable
     /// <summary>Explorer restarted; tray icons must be re-added.</summary>
     public event Action? TaskbarCreated;
 
+    /// <summary>WM_HOTKEY with the registered id.</summary>
+    public event Action<int>? HotKey;
+
     public void Dispose()
     {
         if (Handle != IntPtr.Zero)
@@ -66,6 +69,9 @@ internal sealed class HostWindow : IDisposable
 
             switch (msg)
             {
+                case 0x0312: // WM_HOTKEY
+                    HotKey?.Invoke((int)wParam);
+                    return IntPtr.Zero;
                 case WM_DISPLAYCHANGE:
                 case WM_DPICHANGED:
                     DisplaySettingsChanged?.Invoke();

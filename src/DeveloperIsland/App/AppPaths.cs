@@ -18,19 +18,27 @@ internal static class AppPaths
     public static string Icon => Path.Combine(Assets, "DeveloperIsland.ico");
 }
 
-/// <summary>Command-line options: <c>--demo</c>, <c>--autostart</c>, <c>--settings[=section]</c>.</summary>
-internal sealed record AppOptions(bool IsDemo, bool IsAutostart, string? SettingsSection)
+/// <summary>
+/// Command-line options: <c>--demo</c>, <c>--autostart</c>, <c>--settings[=section]</c>, and for development
+/// <c>--snapshot=folder</c> (demo only: renders every state to PNG offscreen, then exits).
+/// </summary>
+internal sealed record AppOptions(bool IsDemo, bool IsAutostart, string? SettingsSection, string? SnapshotDirectory = null)
 {
     public static AppOptions Parse(IEnumerable<string> args)
     {
         var list = args.Select(a => a.Trim()).ToList();
         var set = new HashSet<string>(list.Select(a => a.ToLowerInvariant()));
         string? settings = null;
+        string? snapshot = null;
         foreach (var arg in list)
         {
             if (arg.Equals("--settings", StringComparison.OrdinalIgnoreCase))
             {
                 settings = "General";
+            }
+            else if (arg.StartsWith("--snapshot=", StringComparison.OrdinalIgnoreCase))
+            {
+                snapshot = arg["--snapshot=".Length..].Trim('"');
             }
             else if (arg.StartsWith("--settings=", StringComparison.OrdinalIgnoreCase))
             {
@@ -39,6 +47,7 @@ internal sealed record AppOptions(bool IsDemo, bool IsAutostart, string? Setting
             }
         }
 
-        return new AppOptions(set.Contains("--demo"), set.Contains(Platform.Startup.AutostartService.Argument), settings);
+        var demo = set.Contains("--demo");
+        return new AppOptions(demo, set.Contains(Platform.Startup.AutostartService.Argument), settings, demo ? snapshot : null);
     }
 }
