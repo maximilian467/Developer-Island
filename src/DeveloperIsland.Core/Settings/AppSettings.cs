@@ -9,6 +9,16 @@ public enum AppTheme
     Dark,
 }
 
+/// <summary>What Smart Auto-Hide does over a maximized browser.</summary>
+public enum SmartHideBehavior
+{
+    /// <summary>Retract into the top screen edge as a small notch.</summary>
+    Retract,
+
+    /// <summary>Hide completely while the browser is maximized in front.</summary>
+    Hide,
+}
+
 /// <summary>User settings, persisted as JSON. Every property has a safe default.</summary>
 public sealed class AppSettings
 {
@@ -54,5 +64,23 @@ public sealed class AppSettings
     // Focus
     public int CustomFocusMinutes { get; set; } = 45;
 
-    public AppSettings Clone() => (AppSettings)MemberwiseClone();
+    // Smart Auto-Hide (top-center island over maximized browsers)
+    public bool SmartHideEnabled { get; set; } = true;
+
+    [JsonConverter(typeof(JsonStringEnumConverter<SmartHideBehavior>))]
+    public SmartHideBehavior SmartHideBehavior { get; set; } = SmartHideBehavior.Retract;
+
+    /// <summary>Executable names without extension, lower case (chrome, msedge, firefox, ...).</summary>
+    public List<string> SmartHideProcesses { get; set; } = ["chrome", "msedge", "firefox"];
+
+    // Keyboard
+    /// <summary>Ctrl+Alt+Space toggles the island from anywhere.</summary>
+    public bool GlobalShortcutEnabled { get; set; } = true;
+
+    public AppSettings Clone()
+    {
+        var copy = (AppSettings)MemberwiseClone();
+        copy.SmartHideProcesses = [.. SmartHideProcesses];
+        return copy;
+    }
 }

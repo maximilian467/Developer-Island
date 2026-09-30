@@ -118,6 +118,16 @@ public sealed class SettingsStore
         }
 
         s.CustomFocusMinutes = Math.Clamp(s.CustomFocusMinutes, 5, 240);
+        if (!Enum.IsDefined(s.SmartHideBehavior))
+        {
+            s.SmartHideBehavior = SmartHideBehavior.Retract;
+        }
+
+        s.SmartHideProcesses = (s.SmartHideProcesses ?? [])
+            .Select(Island.SmartHidePolicy.NormalizeProcessName)
+            .Where(n => n.Length > 0)
+            .Distinct()
+            .ToList();
         s.Version = AppSettings.CurrentVersion;
         return s;
     }

@@ -129,3 +129,114 @@ public class IslandStateMachineTests
         Assert.Equal(IslandMode.Compact, island.Mode);
     }
 }
+
+public class IslandRestModeTests
+{
+    private readonly FakeTimeProvider _time = new();
+
+    private IslandStateMachine Create() => new(_time);
+
+    [Fact]
+    public void Retracting_moves_a_resting_island_into_the_notch()
+    {
+        var island = Create();
+        island.SetRest(RestMode.Retracted);
+
+        Assert.Equal(IslandMode.Retracted, island.Mode);
+    }
+
+    [Fact]
+    public void An_open_island_is_not_yanked_away_when_rest_changes()
+    {
+        var island = Create();
+        island.Activate();
+        island.SetRest(RestMode.Retracted);
+
+        Assert.Equal(IslandMode.Expanded, island.Mode);
+
+        island.Dismiss();
+        Assert.Equal(IslandMode.Retracted, island.Mode);
+    }
+
+    [Fact]
+    public void Passing_over_the_notch_does_nothing()
+    {
+        var island = Create();
+        island.SetRest(RestMode.Retracted);
+        island.PointerEntered();
+        _time.Advance(IslandStateMachine.NotchDwell - TimeSpan.FromMilliseconds(100));
+        island.PointerExited();
+        _time.Advance(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(IslandMode.Retracted, island.Mode);
+    }
+
+    [Fact]
+    public void Dwelling_on_the_notch_opens_a_peek_that_retracts_again_on_leave()
+    {
+        var island = Create();
+        island.SetRest(RestMode.Retracted);
+        island.PointerEntered();
+        _time.Advance(IslandStateMachine.NotchDwell + TimeSpan.FromMilliseconds(10));
+        Assert.Equal(IslandMode.Activity, island.Mode);
+
+        island.PointerExited();
+        _time.Advance(IslandStateMachine.HoverLinger + TimeSpan.FromMilliseconds(10));
+        Assert.Equal(IslandMode.Retracted, island.Mode);
+    }
+
+    [Fact]
+    public void Clicking_the_notch_opens_immediately()
+    {
+        var island = Create();
+        island.SetRest(RestMode.Retracted);
+        island.Activate();
+
+        Assert.Equal(IslandMode.Expanded, island.Mode);
+    }
+
+    [Fact]
+    public void Events_do_not_pop_out_of_the_notch()
+    {
+        var island = Create();
+        island.SetRest(RestMode.Retracted);
+
+        Assert.False(island.ShowEvent());
+        Assert.Equal(IslandMode.Retracted, island.Mode);
+    }
+
+    [Fact]
+    public void Leaving_the_browser_restores_the_compact_island()
+    {
+        var island = Create();
+        island.SetRest(RestMode.Retracted);
+        island.SetRest(RestMode.Compact);
+
+        Assert.Equal(IslandMode.Compact, island.Mode);
+    }
+
+    [Fact]
+    public void Toggle_opens_from_hidden_and_closes_when_expanded()
+    {
+        var island = Create();
+        island.Hide();
+
+        island.Toggle();
+        Assert.Equal(IslandMode.Expanded, island.Mode);
+
+        island.Toggle();
+        Assert.Equal(IslandMode.Compact, island.Mode);
+    }
+
+    [Fact]
+    public void Forced_hide_wins_over_rest_changes_until_shown()
+    {
+        var island = Create();
+        island.Hide();
+        island.SetRest(RestMode.Retracted);
+        Assert.Equal(IslandMode.Hidden, island.Mode);
+
+        island.Show();
+        Assert.Equal(IslandMode.Retracted, island.Mode);
+    }
+}
