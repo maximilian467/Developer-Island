@@ -166,6 +166,16 @@ To see every state without active sessions, start the **Developer Island (Demo)*
 
 Prerequisites: the [.NET 10 SDK](https://dotnet.microsoft.com/download). Visual Studio is optional; everything builds with the CLI.
 
+The quickest way to start it from source, from the repository folder:
+
+```powershell
+.\run.cmd            # build and start with your real data
+.\run.cmd -Demo      # with demo data
+.\run.cmd -Release   # optimized build
+```
+
+The scripts find the .NET 10 SDK themselves, even when the `dotnet` on PATH is an older install without it.
+
 ```powershell
 dotnet build src/DeveloperIsland -c Debug                      # build the app
 dotnet test tests/DeveloperIsland.Tests                         # 241 tests

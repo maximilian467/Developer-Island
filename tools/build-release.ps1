@@ -21,29 +21,8 @@ $artifacts = Join-Path $root "artifacts"
 $publish = Join-Path $artifacts "publish\$Runtime"
 Write-Host "Developer Island $Version ($Runtime)" -ForegroundColor Cyan
 
-# Find a dotnet that has a .NET 10 SDK. The one on PATH may only have runtimes (for example an
-# older machine-wide install in Program Files), while the SDK lives in a per-user install.
-$sdkMajor = 10
-$candidates = @(
-    $(if ($env:DOTNET_ROOT) { Join-Path $env:DOTNET_ROOT 'dotnet.exe' }),
-    (Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet\dotnet.exe'),
-    $((Get-Command dotnet.exe -All -ErrorAction SilentlyContinue).Source),
-    (Join-Path $env:ProgramFiles 'dotnet\dotnet.exe')
-) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -Unique
-$dotnet = $null
-foreach ($candidate in $candidates) {
-    $sdks = & $candidate --list-sdks 2>$null
-    if ($sdks | Where-Object { $_ -match "^$sdkMajor\." }) { $dotnet = $candidate; break }
-}
-if (-not $dotnet) {
-    $searched = if ($candidates) { $candidates -join ', ' } else { 'none found' }
-    throw ".NET $sdkMajor SDK not found (searched: $searched). Install it with: winget install Microsoft.DotNet.SDK.$sdkMajor"
-}
-# Child processes (test host, build tasks) must use the same installation.
-$env:DOTNET_ROOT = Split-Path $dotnet
-$env:PATH = "$env:DOTNET_ROOT;$env:PATH"
-$env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
-$env:DOTNET_NOLOGO = '1'
+. "$PSScriptRoot\dotnet-sdk.ps1"
+$dotnet = Use-DotnetSdk
 Write-Host "Using $dotnet"
 
 # A running copy of the published app locks its files.
