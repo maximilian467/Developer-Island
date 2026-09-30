@@ -98,10 +98,12 @@ public sealed class ClaudeUsageProvider : LogFileUsageProvider
 
         var busy = live.Where(s => s.IsBusy).OrderByDescending(s => s.UpdatedAt).FirstOrDefault();
         var mostRecent = live.OrderByDescending(s => s.UpdatedAt).FirstOrDefault();
-        var project = (busy ?? mostRecent)?.Project ?? snapshot.CurrentProject;
+        var session = busy ?? mostRecent;
+        var project = session?.Project ?? snapshot.CurrentProject;
         return snapshot with
         {
             CurrentProject = project,
+            CurrentProjectPath = session?.ProjectPath ?? snapshot.CurrentProjectPath,
             IsActive = snapshot.IsActive || busy is not null,
         };
     }
@@ -188,7 +190,8 @@ public sealed class ClaudeUsageProvider : LogFileUsageProvider
                 id,
                 ClaudeLogParser.ProjectNameFromPath(ClaudeLogParser.GetString(root, "cwd")),
                 string.Equals(ClaudeLogParser.GetString(root, "status"), "busy", StringComparison.OrdinalIgnoreCase),
-                updated);
+                updated,
+                ClaudeLogParser.GetString(root, "cwd"));
             return true;
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
@@ -210,5 +213,5 @@ public sealed class ClaudeUsageProvider : LogFileUsageProvider
         }
     }
 
-    private sealed record LiveSession(string SessionId, string? Project, bool IsBusy, DateTimeOffset UpdatedAt);
+    private sealed record LiveSession(string SessionId, string? Project, bool IsBusy, DateTimeOffset UpdatedAt, string? ProjectPath);
 }

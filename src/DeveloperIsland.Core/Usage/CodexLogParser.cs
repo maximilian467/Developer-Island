@@ -230,7 +230,8 @@ public sealed class CodexLogParser
         State.Model ?? "unknown",
         tokens,
         State.SessionId,
-        ClaudeLogParser.ProjectNameFromPath(State.Cwd));
+        ClaudeLogParser.ProjectNameFromPath(State.Cwd),
+        State.Cwd);
 
     /// <summary>
     /// OpenAI reports cached (and cache-write) tokens as part of input; they are split out here so the

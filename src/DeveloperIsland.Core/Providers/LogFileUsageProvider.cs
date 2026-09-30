@@ -150,6 +150,7 @@ public abstract class LogFileUsageProvider : IAiUsageProvider
                 SessionsToday = totals.Sessions,
                 CurrentModel = totals.Latest?.Model,
                 CurrentProject = totals.Latest?.Project,
+                CurrentProjectPath = totals.Latest?.ProjectPath,
                 LastActivity = last,
                 IsActive = last is { } l && now - l < ActiveWindow,
             };

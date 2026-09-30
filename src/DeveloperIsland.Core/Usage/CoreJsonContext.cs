@@ -4,8 +4,10 @@ using DeveloperIsland.Core.Pricing;
 namespace DeveloperIsland.Core.Usage;
 
 /// <summary>Source-generated JSON metadata, so Core works with reflection-based serialization disabled.</summary>
-[JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
+[JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(CodexFileState))]
 [JsonSerializable(typeof(PricingOverrides))]
 [JsonSerializable(typeof(DeveloperIsland.Core.Focus.FocusSessionState))]
+[JsonSerializable(typeof(List<DeveloperIsland.Core.Tasks.TaskItem>))]
+[JsonSerializable(typeof(List<string>))]
 internal sealed partial class CoreJsonContext : JsonSerializerContext;

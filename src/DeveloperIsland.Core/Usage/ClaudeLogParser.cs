@@ -90,7 +90,8 @@ public static class ClaudeLogParser
                 model,
                 tokens,
                 GetString(root, "sessionId"),
-                ProjectNameFromPath(GetString(root, "cwd")));
+                ProjectNameFromPath(GetString(root, "cwd")),
+                GetString(root, "cwd"));
             return true;
         }
         catch (JsonException)

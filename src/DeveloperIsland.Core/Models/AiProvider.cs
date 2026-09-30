@@ -32,7 +32,8 @@ public sealed record UsageEvent(
     string Model,
     TokenCounts Tokens,
     string? SessionId,
-    string? Project);
+    string? Project,
+    string? ProjectPath = null);
 
 /// <summary>What the UI shows for one AI tool.</summary>
 public sealed record AiUsageSnapshot
@@ -56,6 +57,9 @@ public sealed record AiUsageSnapshot
     public string? CurrentModel { get; init; }
 
     public string? CurrentProject { get; init; }
+
+    /// <summary>Working directory of the latest session; kept in memory only (feeds the Git module).</summary>
+    public string? CurrentProjectPath { get; init; }
 
     /// <summary>True while a session wrote data recently or reports itself busy.</summary>
     public bool IsActive { get; init; }

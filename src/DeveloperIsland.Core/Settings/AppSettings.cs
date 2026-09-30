@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using DeveloperIsland.Core.Modules;
 using DeveloperIsland.Core.Placement;
 
 namespace DeveloperIsland.Core.Settings;
@@ -57,6 +58,28 @@ public sealed class AppSettings
 
     public bool FocusEnabled { get; set; } = true;
 
+    public bool GitEnabled { get; set; } = true;
+
+    public bool GitHubEnabled { get; set; } = true;
+
+    public bool CalendarEnabled { get; set; } = true;
+
+    public bool TasksEnabled { get; set; } = true;
+
+    public bool SystemEnabled { get; set; } = true;
+
+    /// <summary>Module names in tab order; see <see cref="ModuleCatalog.NormalizeOrder"/>.</summary>
+    public List<string> ModuleOrder { get; set; } = ModuleCatalog.DefaultOrder.Select(m => m.ToString()).ToList();
+
+    /// <summary>Repositories added by the user (working-tree folders).</summary>
+    public List<string> GitRepositories { get; set; } = [];
+
+    /// <summary>Repositories of recent Claude Code and Codex sessions, most recent first.</summary>
+    public List<string> GitRecentRepositories { get; set; } = [];
+
+    /// <summary>iCalendar links (https or webcal) or .ics file paths.</summary>
+    public List<string> CalendarSources { get; set; } = [];
+
     // Appearance
     [JsonConverter(typeof(JsonStringEnumConverter<AppTheme>))]
     public AppTheme Theme { get; set; } = AppTheme.System;
@@ -80,10 +103,47 @@ public sealed class AppSettings
     /// <summary>One of <see cref="ShortcutGesture.Presets"/>, by its text.</summary>
     public string GlobalShortcut { get; set; } = ShortcutGesture.Default.Text;
 
+    [JsonIgnore]
+    public IReadOnlyList<ModuleId> Order => ModuleCatalog.NormalizeOrder(ModuleOrder);
+
+    public bool IsEnabled(ModuleId module) => module switch
+    {
+        ModuleId.Claude => ClaudeEnabled,
+        ModuleId.Codex => CodexEnabled,
+        ModuleId.Music => MusicEnabled,
+        ModuleId.Git => GitEnabled,
+        ModuleId.GitHub => GitHubEnabled,
+        ModuleId.Focus => FocusEnabled,
+        ModuleId.Calendar => CalendarEnabled,
+        ModuleId.Tasks => TasksEnabled,
+        ModuleId.System => SystemEnabled,
+        _ => false,
+    };
+
+    public void SetEnabled(ModuleId module, bool enabled)
+    {
+        switch (module)
+        {
+            case ModuleId.Claude: ClaudeEnabled = enabled; break;
+            case ModuleId.Codex: CodexEnabled = enabled; break;
+            case ModuleId.Music: MusicEnabled = enabled; break;
+            case ModuleId.Git: GitEnabled = enabled; break;
+            case ModuleId.GitHub: GitHubEnabled = enabled; break;
+            case ModuleId.Focus: FocusEnabled = enabled; break;
+            case ModuleId.Calendar: CalendarEnabled = enabled; break;
+            case ModuleId.Tasks: TasksEnabled = enabled; break;
+            case ModuleId.System: SystemEnabled = enabled; break;
+        }
+    }
+
     public AppSettings Clone()
     {
         var copy = (AppSettings)MemberwiseClone();
         copy.SmartHideProcesses = [.. SmartHideProcesses];
+        copy.ModuleOrder = [.. ModuleOrder];
+        copy.GitRepositories = [.. GitRepositories];
+        copy.GitRecentRepositories = [.. GitRecentRepositories];
+        copy.CalendarSources = [.. CalendarSources];
         return copy;
     }
 }

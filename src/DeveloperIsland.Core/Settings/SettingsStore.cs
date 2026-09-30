@@ -129,7 +129,19 @@ public sealed class SettingsStore
             .Distinct()
             .ToList();
         s.GlobalShortcut = ShortcutGesture.FromText(s.GlobalShortcut).Text;
+        s.ModuleOrder = Modules.ModuleCatalog.NormalizeOrder(s.ModuleOrder).Select(m => m.ToString()).ToList();
+        s.GitRepositories = CleanList(s.GitRepositories, 20);
+        s.GitRecentRepositories = CleanList(s.GitRecentRepositories, Git.GitService.MaxRecent);
+        s.CalendarSources = CleanList(s.CalendarSources, 10);
         s.Version = AppSettings.CurrentVersion;
         return s;
     }
+
+    private static List<string> CleanList(List<string>? values, int max) =>
+        (values ?? [])
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .Select(v => v.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(max)
+            .ToList();
 }
