@@ -11,6 +11,7 @@ public enum TrayCommand
     StartFocus = 3,
     Settings = 4,
     Quit = 5,
+    NewTask = 6,
 }
 
 /// <summary>
@@ -48,6 +49,8 @@ internal sealed class TrayIcon : IDisposable
     public Func<bool>? IsIslandVisible { get; set; }
 
     public Func<bool>? IsFocusAvailable { get; set; }
+
+    public Func<bool> IsTasksAvailable { get; set; } = () => true;
 
     public void Add()
     {
@@ -140,6 +143,7 @@ internal sealed class TrayIcon : IDisposable
             AppendMenu(menu, MF_STRING | (visible ? 0 : MF_GRAYED), (UIntPtr)(uint)TrayCommand.Hide, "Hide Developer Island");
             AppendMenu(menu, MF_SEPARATOR, UIntPtr.Zero, null);
             AppendMenu(menu, MF_STRING | (focus ? 0 : MF_GRAYED), (UIntPtr)(uint)TrayCommand.StartFocus, "Start Focus");
+            AppendMenu(menu, MF_STRING | (IsTasksAvailable() ? 0 : MF_GRAYED), (UIntPtr)(uint)TrayCommand.NewTask, "New Task…");
             AppendMenu(menu, MF_STRING, (UIntPtr)(uint)TrayCommand.Settings, "Settings…");
             AppendMenu(menu, MF_SEPARATOR, UIntPtr.Zero, null);
             AppendMenu(menu, MF_STRING, (UIntPtr)(uint)TrayCommand.Quit, "Quit Developer Island");

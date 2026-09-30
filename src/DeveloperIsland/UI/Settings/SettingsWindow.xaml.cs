@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using DeveloperIsland.Core.Diagnostics;
+using DeveloperIsland.Core.Modules;
 using DeveloperIsland.Core.Placement;
 using DeveloperIsland.Core.Settings;
 using DeveloperIsland.Platform.Monitors;
@@ -151,10 +152,9 @@ public sealed partial class SettingsWindow : Window
             StartWithWindowsToggle.IsEnabled = !_isDemo;
             AlwaysOnTopToggle.IsOn = s.AlwaysOnTop;
             LaunchHiddenToggle.IsOn = s.LaunchHidden;
-            ClaudeToggle.IsOn = s.ClaudeEnabled;
-            CodexToggle.IsOn = s.CodexEnabled;
-            MusicToggle.IsOn = s.MusicEnabled;
-            FocusToggle.IsOn = s.FocusEnabled;
+            BuildModuleRows(s);
+            BuildRepositoryRows(s);
+            BuildCalendarRows(s);
             ShortcutToggle.IsOn = s.GlobalShortcutEnabled;
             ShortcutPicker.SelectedItem = ShortcutGesture.FromText(s.GlobalShortcut).Text;
             ShortcutPicker.IsEnabled = s.GlobalShortcutEnabled;
@@ -256,10 +256,10 @@ public sealed partial class SettingsWindow : Window
                 case "StartWithWindows": s.StartWithWindows = on; break;
                 case "AlwaysOnTop": s.AlwaysOnTop = on; break;
                 case "LaunchHidden": s.LaunchHidden = on; break;
-                case "Claude": s.ClaudeEnabled = on; break;
-                case "Codex": s.CodexEnabled = on; break;
-                case "Music": s.MusicEnabled = on; break;
-                case "Focus": s.FocusEnabled = on; break;
+                case var module when module.StartsWith("Module:", StringComparison.Ordinal)
+                    && Enum.TryParse<ModuleId>(module["Module:".Length..], out var id):
+                    s.SetEnabled(id, on);
+                    break;
                 case "Shortcut": s.GlobalShortcutEnabled = on; break;
                 case "SmartHide": s.SmartHideEnabled = on; break;
                 case var browser when browser.StartsWith("Browser:", StringComparison.Ordinal):

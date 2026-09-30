@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GitHub: three counts as tiles, the active repository, and its latest CI run. Read-only. -->
+<UserControl
+    x:Class="DeveloperIsland.UI.Expanded.GitHubPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:DeveloperIsland.UI.Expanded">
+
+    <Grid>
+        <local:ModuleStateView x:Name="StateView" Visibility="{x:Bind ViewModel.ShowState, Mode=OneWay}" />
+
+        <StackPanel Visibility="{x:Bind ViewModel.IsReady, Mode=OneWay}" AutomationProperties.Name="{x:Bind ViewModel.AccessibleSummary, Mode=OneWay}">
+            <TextBlock Text="{x:Bind ViewModel.AccountText, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" />
+
+            <Grid Margin="0,10,0,0" ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource ModuleTileStyle}">
+                    <StackPanel>
+                        <TextBlock Text="{x:Bind ViewModel.NotificationsFigure, Mode=OneWay}" Style="{StaticResource FigureTextStyle}" />
+                        <TextBlock Text="{x:Bind ViewModel.NotificationsCaption, Mode=OneWay}" Style="{StaticResource FineTextStyle}" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Style="{StaticResource ModuleTileStyle}">
+                    <StackPanel>
+                        <TextBlock Text="{x:Bind ViewModel.PullRequestsFigure, Mode=OneWay}" Style="{StaticResource FigureTextStyle}" />
+                        <TextBlock Text="{x:Bind ViewModel.PullRequestsCaption, Mode=OneWay}" Style="{StaticResource FineTextStyle}" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Style="{StaticResource ModuleTileStyle}">
+                    <StackPanel>
+                        <TextBlock Text="{x:Bind ViewModel.ReviewsFigure, Mode=OneWay}" Style="{StaticResource FigureTextStyle}" />
+                        <TextBlock Text="{x:Bind ViewModel.ReviewsCaption, Mode=OneWay}" Style="{StaticResource FineTextStyle}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <StackPanel Visibility="{x:Bind ViewModel.HasRepository, Mode=OneWay}" Margin="0,14,0,0">
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{x:Bind ViewModel.RepositoryName, Mode=OneWay}" Style="{StaticResource LabelTextStyle}" MaxWidth="210" />
+                    <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.RepositoryDetail, Mode=OneWay}" Style="{StaticResource FineTextStyle}"
+                               HorizontalAlignment="Right" VerticalAlignment="Center" />
+                </Grid>
+
+                <Grid Margin="0,8,0,0" ColumnSpacing="8" Visibility="{x:Bind ViewModel.HasCi, Mode=OneWay}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid Width="8" Height="8" VerticalAlignment="Center">
+                        <Ellipse Fill="{StaticResource SuccessBrush}" Visibility="{x:Bind ViewModel.CiPassed, Mode=OneWay}" />
+                        <Ellipse Fill="{StaticResource CriticalBrush}" Visibility="{x:Bind ViewModel.CiFailed, Mode=OneWay}" />
+                        <Ellipse Fill="{StaticResource WarningBrush}" Visibility="{x:Bind ViewModel.CiRunning, Mode=OneWay}" />
+                    </Grid>
+                    <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.CiText, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <TextBlock Grid.Column="2" Text="{x:Bind ViewModel.CiDetail, Mode=OneWay}" Style="{StaticResource FineTextStyle}" VerticalAlignment="Center" />
+                </Grid>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</UserControl>

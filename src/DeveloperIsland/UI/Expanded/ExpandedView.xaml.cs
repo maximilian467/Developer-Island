@@ -1,27 +1,52 @@
 using System.Numerics;
 using DeveloperIsland.UI.Animations;
+using DeveloperIsland.UI.Components;
 using DeveloperIsland.ViewModels;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Windows.System;
 
 namespace DeveloperIsland.UI.Expanded;
 
+/// <summary>
+/// The expanded island. Tabs are icons (nine modules do not fit as words in 420 DIP without becoming
+/// a cramped dashboard); the selected tab's name sits beside them, and each icon has a tooltip and an
+/// accessible name. Panels are separate controls; this view only switches between them.
+/// </summary>
 public sealed partial class ExpandedView : UserControl
 {
+    private readonly Dictionary<IslandTab, Button> _tabButtons = [];
+    private readonly Dictionary<IslandTab, FrameworkElement> _panels;
     private IslandViewModel _viewModel = null!;
     private bool _indicatorPlaced;
+    private bool _isShown;
 
     public ExpandedView()
     {
         InitializeComponent();
+        _panels = new()
+        {
+            [IslandTab.Usage] = UsageView,
+            [IslandTab.Music] = MusicView,
+            [IslandTab.Git] = GitView,
+            [IslandTab.GitHub] = GitHubView,
+            [IslandTab.Focus] = FocusView,
+            [IslandTab.Calendar] = CalendarView,
+            [IslandTab.Tasks] = TasksView,
+            [IslandTab.System] = SystemView,
+        };
         ElementCompositionPreview.SetIsTranslationEnabled(TabIndicator, true);
         Tabs.SizeChanged += (_, _) => MoveIndicator(animate: false);
     }
 
     public event Action? SettingsRequested;
+
+    /// <summary>The panel on screen changed (null when the island is not expanded).</summary>
+    public event Action<IslandTab?>? VisiblePanelChanged;
 
     public IslandViewModel ViewModel
     {
@@ -32,23 +57,28 @@ public sealed partial class ExpandedView : UserControl
             UsageView.ViewModel = value.Usage;
             MusicView.ViewModel = value.Music;
             FocusView.ViewModel = value.Focus;
+            GitView.ViewModel = value.Git;
+            GitHubView.ViewModel = value.GitHub;
+            CalendarView.ViewModel = value.Calendar;
+            TasksView.ViewModel = value.Tasks;
+            SystemView.ViewModel = value.System;
             value.PropertyChanged += (_, e) =>
             {
                 if (e.PropertyName == nameof(IslandViewModel.SelectedTab))
                 {
+                    ShowSelectedPanel(reveal: true);
                     MoveIndicator(animate: true);
-                    RevealSelectedPanel();
                 }
             };
-            value.TabsChanged += () => DispatcherQueue.TryEnqueue(() => MoveIndicator(animate: false));
+            value.TabsChanged += () => DispatcherQueue.TryEnqueue(RebuildTabs);
+            RebuildTabs();
         }
     }
 
     /// <summary>Moves keyboard focus into the island after it expanded.</summary>
     public void FocusFirst(FocusState state)
     {
-        var tab = SelectedTabButton();
-        if (tab is not null && tab.Visibility == Visibility.Visible)
+        if (_tabButtons.TryGetValue(_viewModel.SelectedTab, out var tab))
         {
             tab.Focus(state);
         }
@@ -58,23 +88,69 @@ public sealed partial class ExpandedView : UserControl
         }
     }
 
+    /// <summary>Quick capture: open on Tasks with the cursor in the input.</summary>
+    public void FocusTaskCapture() => TasksView.FocusCapture();
+
     /// <summary>Called when the island becomes visible so the indicator starts in place.</summary>
     public void PrepareForShow()
     {
         _indicatorPlaced = false;
+        _isShown = true;
+        ShowSelectedPanel(reveal: false);
         MoveIndicator(animate: false);
     }
 
-    private Button? SelectedTabButton() => _viewModel.SelectedTab switch
+    /// <summary>The island collapsed: no panel is on screen.</summary>
+    public void OnHidden()
     {
-        IslandTab.Usage => UsageTab,
-        IslandTab.Music => MusicTab,
-        _ => FocusTab,
-    };
+        _isShown = false;
+        VisiblePanelChanged?.Invoke(null);
+    }
+
+    private void RebuildTabs()
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        var tabs = _viewModel.AvailableTabs;
+        if (tabs.SequenceEqual(_tabButtons.Keys) && Tabs.Children.Count == tabs.Count)
+        {
+            UpdateSelectedForeground();
+            return;
+        }
+
+        Tabs.Children.Clear();
+        _tabButtons.Clear();
+        foreach (var tab in tabs)
+        {
+            var name = IslandViewModel.TabName(tab);
+            var button = new Button
+            {
+                Style = (Style)Application.Current.Resources["IslandIconButtonStyle"],
+                Width = 32,
+                Height = 32,
+                CornerRadius = new CornerRadius(16),
+                Tag = tab,
+                Content = new ModuleIcon { Module = IslandViewModel.TabModule(tab) },
+            };
+            AutomationProperties.SetName(button, name);
+            ToolTipService.SetToolTip(button, name);
+            button.Click += OnTabClick;
+            button.KeyDown += OnTabKeyDown;
+            Tabs.Children.Add(button);
+            _tabButtons[tab] = button;
+        }
+
+        NoTabsText.Visibility = tabs.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        ShowSelectedPanel(reveal: false);
+        DispatcherQueue.TryEnqueue(() => MoveIndicator(animate: false));
+    }
 
     private void OnTabClick(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: string tag } && Enum.TryParse<IslandTab>(tag, out var tab))
+        if (sender is Button { Tag: IslandTab tab })
         {
             _viewModel.SelectedTab = tab;
         }
@@ -96,30 +172,56 @@ public sealed partial class ExpandedView : UserControl
 
         index = (index + (e.Key == VirtualKey.Right ? 1 : tabs.Count - 1)) % tabs.Count;
         _viewModel.SelectedTab = tabs[index];
-        SelectedTabButton()?.Focus(FocusState.Keyboard);
+        if (_tabButtons.TryGetValue(tabs[index], out var button))
+        {
+            button.Focus(FocusState.Keyboard);
+        }
+
         e.Handled = true;
     }
 
     private void OnSettings(object sender, RoutedEventArgs e) => SettingsRequested?.Invoke();
 
-    private void MoveIndicator(bool animate)
+    private void ShowSelectedPanel(bool reveal)
     {
         if (_viewModel is null)
         {
             return;
         }
 
-        var button = SelectedTabButton();
-        if (button is null || button.Visibility != Visibility.Visible || button.ActualWidth <= 0)
+        var available = _viewModel.AvailableTabs;
+        var selected = available.Contains(_viewModel.SelectedTab) ? _viewModel.SelectedTab : (IslandTab?)null;
+        foreach (var (tab, panel) in _panels)
+        {
+            panel.Visibility = tab == selected ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        SectionName.Text = selected is { } s ? IslandViewModel.TabName(s) : string.Empty;
+        UpdateSelectedForeground();
+        if (selected is { } shown)
+        {
+            if (reveal)
+            {
+                Motion.FadeIn(_panels[shown], delay: TimeSpan.FromMilliseconds(40), fromY: 4);
+            }
+
+            if (_isShown)
+            {
+                VisiblePanelChanged?.Invoke(shown);
+            }
+        }
+    }
+
+    private void MoveIndicator(bool animate)
+    {
+        if (_viewModel is null || !_tabButtons.TryGetValue(_viewModel.SelectedTab, out var button) || button.ActualWidth <= 0)
         {
             TabIndicator.Opacity = 0;
             return;
         }
 
         var x = (float)button.TransformToVisual(TabHost).TransformPoint(default).X;
-        TabIndicator.Width = button.ActualWidth;
         TabIndicator.Opacity = 1;
-        UpdateSelectedForeground();
 
         var visual = ElementCompositionPreview.GetElementVisual(TabIndicator);
         var target = new Vector3(x, 0, 0);
@@ -138,27 +240,18 @@ public sealed partial class ExpandedView : UserControl
 
     private void UpdateSelectedForeground()
     {
-        var primary = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextPrimaryBrush"];
-        var secondary = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextSecondaryBrush"];
-        UsageTab.Foreground = _viewModel.IsUsageSelected ? primary : secondary;
-        MusicTab.Foreground = _viewModel.IsMusicSelected ? primary : secondary;
-        FocusTab.Foreground = _viewModel.IsFocusSelected ? primary : secondary;
-        AutomationSelection(UsageTab, _viewModel.IsUsageSelected);
-        AutomationSelection(MusicTab, _viewModel.IsMusicSelected);
-        AutomationSelection(FocusTab, _viewModel.IsFocusSelected);
-    }
-
-    private static void AutomationSelection(Button tab, bool selected) =>
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetItemStatus(tab, selected ? "Selected" : string.Empty);
-
-    private void RevealSelectedPanel()
-    {
-        UIElement panel = _viewModel.SelectedTab switch
+        var primary = (Brush)Application.Current.Resources["TextPrimaryBrush"];
+        var secondary = (Brush)Application.Current.Resources["TextSecondaryBrush"];
+        foreach (var (tab, button) in _tabButtons)
         {
-            IslandTab.Usage => UsageView,
-            IslandTab.Music => MusicView,
-            _ => FocusView,
-        };
-        Motion.FadeIn(panel, delay: TimeSpan.FromMilliseconds(40), fromY: 4);
+            var selected = tab == _viewModel.SelectedTab;
+            button.Foreground = selected ? primary : secondary;
+            if (button.Content is ModuleIcon icon)
+            {
+                icon.Foreground = selected ? primary : secondary;
+            }
+
+            AutomationProperties.SetItemStatus(button, selected ? "Selected" : string.Empty);
+        }
     }
 }

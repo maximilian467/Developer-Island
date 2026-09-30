@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Tasks: quick capture on top (type, Enter), the list below. Click the circle to complete; hover a
+    row for delete; Alt+Up/Down (or the context menu) reorders.
+-->
+<UserControl
+    x:Class="DeveloperIsland.UI.Expanded.TasksPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:DeveloperIsland.UI.Expanded"
+    xmlns:vm="using:DeveloperIsland.ViewModels">
+
+    <Grid>
+        <local:ModuleStateView x:Name="StateView" Visibility="{x:Bind ViewModel.ShowState, Mode=OneWay}" />
+
+        <StackPanel Visibility="{x:Bind ViewModel.IsReady, Mode=OneWay}">
+            <TextBox x:Name="Capture" Height="36" PlaceholderText="Add a task" MaxLength="200"
+                     KeyDown="OnCaptureKeyDown" AutomationProperties.Name="New task" Padding="12,8,12,0"
+                     FontFamily="{StaticResource TextFont}" FontSize="13" CornerRadius="10" BorderThickness="0"
+                     Foreground="{StaticResource TextPrimaryBrush}">
+                <TextBox.Resources>
+                    <StaticResource x:Key="TextControlBackground" ResourceKey="SurfaceRaisedBrush" />
+                    <StaticResource x:Key="TextControlBackgroundPointerOver" ResourceKey="SurfaceHoverBrush" />
+                    <StaticResource x:Key="TextControlBackgroundFocused" ResourceKey="SurfaceHoverBrush" />
+                    <StaticResource x:Key="TextControlForeground" ResourceKey="TextPrimaryBrush" />
+                    <StaticResource x:Key="TextControlForegroundPointerOver" ResourceKey="TextPrimaryBrush" />
+                    <StaticResource x:Key="TextControlForegroundFocused" ResourceKey="TextPrimaryBrush" />
+                    <StaticResource x:Key="TextControlPlaceholderForeground" ResourceKey="TextTertiaryBrush" />
+                    <StaticResource x:Key="TextControlPlaceholderForegroundPointerOver" ResourceKey="TextTertiaryBrush" />
+                    <StaticResource x:Key="TextControlPlaceholderForegroundFocused" ResourceKey="TextTertiaryBrush" />
+                    <SolidColorBrush x:Key="TextControlBorderBrush" Color="Transparent" />
+                    <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="Transparent" />
+                    <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="Transparent" />
+                    <StaticResource x:Key="TextControlSelectionHighlightColor" ResourceKey="AccentBrush" />
+                    <Thickness x:Key="TextControlBorderThemeThicknessFocused">0</Thickness>
+                </TextBox.Resources>
+            </TextBox>
+
+            <TextBlock Text="Type a task and press Enter." Style="{StaticResource FineTextStyle}" Margin="2,10,0,0"
+                       Visibility="{x:Bind ViewModel.HasNoItems, Mode=OneWay}" />
+
+            <ScrollViewer MaxHeight="196" Margin="0,8,0,0" Padding="0,0,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollMode="Disabled"
+                          Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}">
+                <ItemsControl x:Name="List" ItemsSource="{x:Bind ViewModel.Items}" IsTabStop="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TaskRowViewModel">
+                            <Grid Height="36" ColumnSpacing="10" Background="Transparent" PointerEntered="OnRowPointerEntered" PointerExited="OnRowPointerExited">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.ContextFlyout>
+                                    <MenuFlyout>
+                                        <MenuFlyoutItem Text="Move up" Tag="{x:Bind Id}" Click="OnMoveUp" />
+                                        <MenuFlyoutItem Text="Move down" Tag="{x:Bind Id}" Click="OnMoveDown" />
+                                        <MenuFlyoutSeparator />
+                                        <MenuFlyoutItem Text="Delete" Tag="{x:Bind Id}" Click="OnDelete" />
+                                    </MenuFlyout>
+                                </Grid.ContextFlyout>
+                                <Button Style="{StaticResource IslandIconButtonStyle}" Width="28" Height="28" CornerRadius="14" Tag="{x:Bind Id}"
+                                        Click="OnToggle" KeyDown="OnRowKeyDown" AutomationProperties.Name="{x:Bind AccessibleName, Mode=OneWay}">
+                                    <Grid Width="18" Height="18">
+                                        <Ellipse Stroke="{StaticResource TextTertiaryBrush}" StrokeThickness="1.4" />
+                                        <Ellipse Fill="{StaticResource AccentBrush}" Opacity="{x:Bind CheckOpacity, Mode=OneWay}" />
+                                        <FontIcon Glyph="{x:Bind CheckGlyph, Mode=OneWay}" FontSize="10" Foreground="#FF0A0A0B" FontFamily="{StaticResource IconFont}" />
+                                    </Grid>
+                                </Button>
+                                <TextBlock Grid.Column="1" Text="{x:Bind Title, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" FontSize="13"
+                                           Foreground="{StaticResource TextPrimaryBrush}" Opacity="{x:Bind TitleOpacity, Mode=OneWay}" VerticalAlignment="Center" />
+                                <Button Grid.Column="2" Style="{StaticResource IslandIconButtonStyle}" Width="28" Height="28" CornerRadius="14" FontSize="10"
+                                        Content="&#xE711;" Tag="{x:Bind Id}" Click="OnDelete" Opacity="0" IsTabStop="False"
+                                        AutomationProperties.Name="Delete task" Foreground="{StaticResource TextSecondaryBrush}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <Grid Margin="0,10,0,0" MinHeight="32" Visibility="{x:Bind ViewModel.HasItems, Mode=OneWay}">
+                <TextBlock Text="{x:Bind ViewModel.SummaryText, Mode=OneWay}" Style="{StaticResource FineTextStyle}" VerticalAlignment="Center" Margin="2,0,0,0" />
+                <Button Style="{StaticResource IslandPillButtonStyle}" Content="Clear completed" HorizontalAlignment="Right"
+                        Visibility="{x:Bind ViewModel.HasCompleted, Mode=OneWay}" Click="OnClearCompleted" />
+            </Grid>
+        </StackPanel>
+    </Grid>
+</UserControl>

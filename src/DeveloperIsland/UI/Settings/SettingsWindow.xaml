@@ -203,7 +203,7 @@
                             </StackPanel>
                         </Border>
 
-                        <TextBlock Text="Browser notch" Style="{StaticResource SettingsRowTitleStyle}" Margin="4,20,0,4" />
+                        <TextBlock Text="Browser notch" Style="{StaticResource SettingsGroupLabelStyle}" Margin="4,20,0,4" />
                         <Border Style="{StaticResource SettingsCardStyle}">
                             <StackPanel>
                                 <Grid Style="{StaticResource SettingsRowStyle}">
@@ -280,59 +280,49 @@
 
                     <!-- Modules -->
                     <StackPanel x:Name="ModulesSection" Spacing="8" Visibility="Collapsed">
-                        <TextBlock Text="Modules" Style="{StaticResource SettingsTitleStyle}" Margin="0,0,0,20" />
+                        <TextBlock Text="Modules" Style="{StaticResource SettingsTitleStyle}" Margin="0,0,0,4" />
+                        <TextBlock Text="Turn modules on or off and set their order in the island." Style="{StaticResource SettingsRowDescriptionStyle}" Margin="0,0,0,16" />
+                        <Border Style="{StaticResource SettingsCardStyle}">
+                            <StackPanel x:Name="ModuleRows" AutomationProperties.Name="Modules" />
+                        </Border>
+
+                        <TextBlock Text="Git repositories" Style="{StaticResource SettingsGroupLabelStyle}" Margin="4,20,0,4" />
                         <Border Style="{StaticResource SettingsCardStyle}">
                             <StackPanel>
+                                <StackPanel x:Name="RepoRows" />
                                 <Grid Style="{StaticResource SettingsRowStyle}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="Claude Code" Style="{StaticResource SettingsRowTitleStyle}" />
-                                        <TextBlock Text="Token usage and API equivalent from local Claude Code logs." Style="{StaticResource SettingsRowDescriptionStyle}" />
-                                    </StackPanel>
-                                    <ToggleSwitch x:Name="ClaudeToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
-                                                  AutomationProperties.Name="Claude Code" Toggled="OnToggle" Tag="Claude" />
+                                    <TextBlock Text="The Git module follows the folder of your latest Claude Code or Codex session. Add other repositories to keep them in the list."
+                                               Style="{StaticResource SettingsRowDescriptionStyle}" VerticalAlignment="Center" Margin="0,0,16,0" />
+                                    <Button Grid.Column="1" Content="Add repository…" Click="OnAddRepository" VerticalAlignment="Center" />
                                 </Grid>
-                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
-                                <Grid Style="{StaticResource SettingsRowStyle}">
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="Calendars" Style="{StaticResource SettingsGroupLabelStyle}" Margin="4,20,0,4" />
+                        <Border Style="{StaticResource SettingsCardStyle}">
+                            <StackPanel>
+                                <StackPanel x:Name="CalendarRows" />
+                                <Grid Style="{StaticResource SettingsRowStyle}" ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="Codex" Style="{StaticResource SettingsRowTitleStyle}" />
-                                        <TextBlock Text="Token usage, rate limits and API equivalent from local Codex logs." Style="{StaticResource SettingsRowDescriptionStyle}" />
-                                    </StackPanel>
-                                    <ToggleSwitch x:Name="CodexToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
-                                                  AutomationProperties.Name="Codex" Toggled="OnToggle" Tag="Codex" />
+                                    <TextBox x:Name="CalendarLinkBox" PlaceholderText="Paste a calendar link in iCal format (https:// or webcal://)"
+                                             AutomationProperties.Name="Calendar link" KeyDown="OnCalendarLinkKeyDown" TextChanged="OnCalendarLinkChanged" />
+                                    <Button x:Name="AddCalendarButton" Grid.Column="1" Content="Add" Click="OnAddCalendarLink" IsEnabled="False" />
                                 </Grid>
-                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
-                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                <Grid Style="{StaticResource SettingsRowStyle}" Padding="16,0,12,12">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="Music" Style="{StaticResource SettingsRowTitleStyle}" />
-                                        <TextBlock Text="What's playing in Spotify, Apple Music, browsers and other media apps." Style="{StaticResource SettingsRowDescriptionStyle}" />
-                                    </StackPanel>
-                                    <ToggleSwitch x:Name="MusicToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
-                                                  AutomationProperties.Name="Music" Toggled="OnToggle" Tag="Music" />
-                                </Grid>
-                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
-                                <Grid Style="{StaticResource SettingsRowStyle}">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="Focus" Style="{StaticResource SettingsRowTitleStyle}" />
-                                        <TextBlock Text="A focus timer with 25, 50 and 90 minute presets." Style="{StaticResource SettingsRowDescriptionStyle}" />
-                                    </StackPanel>
-                                    <ToggleSwitch x:Name="FocusToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
-                                                  AutomationProperties.Name="Focus" Toggled="OnToggle" Tag="Focus" />
+                                    <TextBlock Text="Google, Outlook and iCloud offer a private iCal address in their sharing settings. The link stays on this PC and is only used to read events."
+                                               Style="{StaticResource SettingsRowDescriptionStyle}" VerticalAlignment="Center" Margin="0,0,16,0" />
+                                    <Button Grid.Column="1" Content="Add .ics file…" Click="OnAddCalendarFile" VerticalAlignment="Center" />
                                 </Grid>
                             </StackPanel>
                         </Border>

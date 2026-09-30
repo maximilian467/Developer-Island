@@ -60,6 +60,7 @@ public sealed partial class IslandWindow : Window
     private readonly HoverTracker _hover = new();
     private bool _restoreFocusOnCollapse;
     private bool _keyboardInitiated;
+    private bool _focusTaskCapture;
 
     // Drag state (physical pixels).
     private bool _pointerDown;
@@ -85,6 +86,7 @@ public sealed partial class IslandWindow : Window
         Activity.ViewModel = viewModel.Activity;
         Expanded.ViewModel = viewModel;
         Expanded.SettingsRequested += () => SettingsRequested?.Invoke();
+        Expanded.VisiblePanelChanged += tab => VisiblePanelChanged?.Invoke(tab);
 
         var resources = Application.Current.Resources;
         _morph = new IslandMorph(SurfaceHost, ContentHost, (Color)resources["IslandFillColor"], (Color)resources["IslandHairlineColor"]);
@@ -126,6 +128,9 @@ public sealed partial class IslandWindow : Window
     }
 
     public event Action? SettingsRequested;
+
+    /// <summary>The module panel on screen changed; null when the island is not expanded.</summary>
+    public event Action<ViewModels.IslandTab?>? VisiblePanelChanged;
 
     /// <summary>The user dropped the capsule; argument is its rectangle in screen pixels.</summary>
     public event Action<PixelRect>? DragCompleted;
@@ -199,6 +204,13 @@ public sealed partial class IslandWindow : Window
     }
 
     /// <summary>Expands from outside the island (tray click); keyboard focus lands inside.</summary>
+    /// <summary>Quick capture: expand on Tasks with the cursor in the input.</summary>
+    public void ExpandToTaskCapture()
+    {
+        _focusTaskCapture = true;
+        ExpandFromShortcut();
+    }
+
     public void ExpandFromShortcut()
     {
         _keyboardInitiated = true;
@@ -244,6 +256,7 @@ public sealed partial class IslandWindow : Window
                 case IslandMode.Hidden:
                     if (oldMode == IslandMode.Expanded)
                     {
+                        Expanded.OnHidden();
                         ReturnFocus();
                     }
 
@@ -278,6 +291,7 @@ public sealed partial class IslandWindow : Window
             }
             else if (oldMode == IslandMode.Expanded)
             {
+                Expanded.OnHidden();
                 ReturnFocus();
             }
 
@@ -668,15 +682,26 @@ public sealed partial class IslandWindow : Window
         SetForegroundWindow(_hwnd);
         IslandWindowChrome.SuppressBorder(_hwnd);
         var keyboard = _keyboardInitiated;
+        var capture = _focusTaskCapture;
         DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
         {
-            if (_state.Mode == IslandMode.Expanded)
+            if (_state.Mode != IslandMode.Expanded)
+            {
+                return;
+            }
+
+            if (capture)
+            {
+                Expanded.FocusTaskCapture();
+            }
+            else
             {
                 // Keyboard-initiated expansion shows the focus ring; a click does not.
                 Expanded.FocusFirst(keyboard ? FocusState.Keyboard : FocusState.Programmatic);
             }
         });
         _keyboardInitiated = false;
+        _focusTaskCapture = false;
     }
 
     private void ReturnFocus()
@@ -692,7 +717,7 @@ public sealed partial class IslandWindow : Window
 
     private void UpdateMediaTicker()
     {
-        var needed = _state.Mode == IslandMode.Expanded && _viewModel.IsMusicSelected && _viewModel.Music.IsPlaying;
+        var needed = _state.Mode == IslandMode.Expanded && _viewModel.SelectedTab == IslandTab.Music && _viewModel.Music.IsEnabled && _viewModel.Music.IsPlaying;
         if (needed && !_mediaTicker.IsRunning)
         {
             _viewModel.Music.Tick();

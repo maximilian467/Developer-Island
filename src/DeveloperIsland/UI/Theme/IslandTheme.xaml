@@ -29,6 +29,12 @@
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
     <SolidColorBrush x:Key="ProgressTrackBrush" Color="#33F5F5F7" />
 
+    <!-- Status colors: semantic only, used as small dots and icons, never as fills. -->
+    <SolidColorBrush x:Key="SuccessBrush" Color="#FF30D158" />
+    <SolidColorBrush x:Key="WarningBrush" Color="#FFFFD60A" />
+    <SolidColorBrush x:Key="CriticalBrush" Color="#FFFF453A" />
+    <SolidColorBrush x:Key="DividerBrush" Color="#14FFFFFF" />
+
     <!-- Type -->
     <FontFamily x:Key="DisplayFont">Segoe UI Variable Display, Segoe UI</FontFamily>
     <FontFamily x:Key="TextFont">Segoe UI Variable Text, Segoe UI</FontFamily>
@@ -165,6 +171,7 @@
     <!-- Pill text button (Pause, Stop, presets). -->
     <Style x:Key="IslandPillButtonStyle" TargetType="Button">
         <Setter Property="Height" Value="32" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="MinWidth" Value="64" />
         <Setter Property="Padding" Value="14,0" />
         <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
@@ -183,7 +190,7 @@
                             <ScaleTransform x:Name="Scale" />
                         </Grid.RenderTransform>
                         <Border x:Name="Fill" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}" />
-                        <ContentPresenter x:Name="Content" Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        <ContentPresenter x:Name="Content" Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"
                                           Foreground="{TemplateBinding Foreground}" Content="{TemplateBinding Content}"
                                           FontFamily="{TemplateBinding FontFamily}" FontSize="{TemplateBinding FontSize}"
                                           FontWeight="{TemplateBinding FontWeight}" />
@@ -270,6 +277,24 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <!-- A figure tile in module panels (GitHub counts, System meters). -->
+    <Style x:Key="ModuleTileStyle" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="Padding" Value="12,10,12,11" />
+    </Style>
+
+    <!-- A full-width row button (repository list, agenda); hover shows a raised fill. -->
+    <Style x:Key="IslandRowButtonStyle" TargetType="Button" BasedOn="{StaticResource IslandPillButtonStyle}">
+        <Setter Property="Height" Value="36" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="FontWeight" Value="Normal" />
     </Style>
 
     <!-- Keyboard focus ring: 2px accent, drawn only for keyboard focus (WinUI system focus visuals). -->

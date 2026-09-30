@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Compact capsule: 36 DIP tall, width follows content. Focus, AI usage, then music art. -->
+<!-- Compact capsule: 36 DIP tall, width follows content. Focus, time-critical signals (next event, system alert, failing CI), AI usage, then music art. -->
 <UserControl
     x:Class="DeveloperIsland.UI.Island.CompactView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -12,6 +12,21 @@
             <StackPanel Orientation="Horizontal" Spacing="7" Visibility="{x:Bind ViewModel.CompactShowFocus, Mode=OneWay}">
                 <Ellipse Width="6" Height="6" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" />
                 <TextBlock Text="{x:Bind ViewModel.Focus.RemainingText, Mode=OneWay}" Style="{StaticResource LabelTextStyle}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="6" Visibility="{x:Bind ViewModel.CompactShowCalendar, Mode=OneWay}">
+                <FontIcon Glyph="&#xE787;" FontSize="12" Style="{StaticResource IconTextStyle}" Foreground="{StaticResource AccentBrush}" />
+                <TextBlock Text="{x:Bind ViewModel.Calendar.CompactText, Mode=OneWay}" Style="{StaticResource LabelTextStyle}" MaxWidth="170" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="6" Visibility="{x:Bind ViewModel.CompactShowSystem, Mode=OneWay}">
+                <FontIcon Glyph="{x:Bind ViewModel.System.CompactGlyph, Mode=OneWay}" FontSize="12" Style="{StaticResource IconTextStyle}" Foreground="{StaticResource CriticalBrush}" />
+                <TextBlock Text="{x:Bind ViewModel.System.CompactText, Mode=OneWay}" Style="{StaticResource LabelTextStyle}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="7" Visibility="{x:Bind ViewModel.CompactShowGitHub, Mode=OneWay}">
+                <Ellipse Width="6" Height="6" Fill="{StaticResource CriticalBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="{x:Bind ViewModel.GitHub.CompactText, Mode=OneWay}" Style="{StaticResource LabelTextStyle}" />
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" Spacing="5" Visibility="{x:Bind ViewModel.CompactShowClaude, Mode=OneWay}">

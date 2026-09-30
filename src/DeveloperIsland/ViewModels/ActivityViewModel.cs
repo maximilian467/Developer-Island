@@ -7,6 +7,8 @@ public enum ActivityKind
     Music,
     Focus,
     Usage,
+    Calendar,
+    System,
     Info,
 }
 

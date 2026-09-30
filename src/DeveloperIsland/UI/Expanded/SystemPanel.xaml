@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- System: CPU, memory and (on laptops) battery as three quiet meters. -->
+<UserControl
+    x:Class="DeveloperIsland.UI.Expanded.SystemPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:DeveloperIsland.UI.Expanded">
+
+    <Grid>
+        <local:ModuleStateView x:Name="StateView" Visibility="{x:Bind ViewModel.ShowState, Mode=OneWay}" />
+
+        <StackPanel Visibility="{x:Bind ViewModel.IsReady, Mode=OneWay}" AutomationProperties.Name="{x:Bind ViewModel.AccessibleSummary, Mode=OneWay}">
+            <Grid x:Name="Tiles" ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition x:Name="BatteryColumn" Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Style="{StaticResource ModuleTileStyle}">
+                    <StackPanel>
+                        <TextBlock Text="CPU" Style="{StaticResource FineTextStyle}" />
+                        <TextBlock Text="{x:Bind ViewModel.CpuFigure, Mode=OneWay}" Style="{StaticResource FigureTextStyle}" Margin="0,2,0,0" />
+                        <Grid Height="3" Margin="0,8,0,0" CornerRadius="1.5" Background="{StaticResource ProgressTrackBrush}">
+                            <Rectangle Fill="{StaticResource AccentBrush}" RadiusX="1.5" RadiusY="1.5" RenderTransformOrigin="0,0.5">
+                                <Rectangle.RenderTransform>
+                                    <ScaleTransform ScaleX="{x:Bind ViewModel.CpuFraction, Mode=OneWay}" />
+                                </Rectangle.RenderTransform>
+                            </Rectangle>
+                        </Grid>
+                        <TextBlock Text="{x:Bind CpuCaption, Mode=OneWay}" Style="{StaticResource FineTextStyle}" Margin="0,6,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="1" Style="{StaticResource ModuleTileStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Memory" Style="{StaticResource FineTextStyle}" />
+                        <TextBlock Text="{x:Bind ViewModel.MemoryFigure, Mode=OneWay}" Style="{StaticResource FigureTextStyle}" Margin="0,2,0,0" />
+                        <Grid Height="3" Margin="0,8,0,0" CornerRadius="1.5" Background="{StaticResource ProgressTrackBrush}">
+                            <Rectangle Fill="{StaticResource AccentBrush}" RadiusX="1.5" RadiusY="1.5" RenderTransformOrigin="0,0.5">
+                                <Rectangle.RenderTransform>
+                                    <ScaleTransform ScaleX="{x:Bind ViewModel.MemoryFraction, Mode=OneWay}" />
+                                </Rectangle.RenderTransform>
+                            </Rectangle>
+                        </Grid>
+                        <TextBlock Text="{x:Bind ViewModel.MemoryDetail, Mode=OneWay}" Style="{StaticResource FineTextStyle}" Margin="0,6,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="2" Style="{StaticResource ModuleTileStyle}" Visibility="{x:Bind ViewModel.HasBattery, Mode=OneWay}">
+                    <StackPanel>
+                        <TextBlock Text="Battery" Style="{StaticResource FineTextStyle}" />
+                        <TextBlock Text="{x:Bind ViewModel.BatteryFigure, Mode=OneWay}" Style="{StaticResource FigureTextStyle}" Margin="0,2,0,0" />
+                        <Grid Height="3" Margin="0,8,0,0" CornerRadius="1.5" Background="{StaticResource ProgressTrackBrush}">
+                            <Rectangle Fill="{x:Bind BatteryBrush, Mode=OneWay}" RadiusX="1.5" RadiusY="1.5" RenderTransformOrigin="0,0.5">
+                                <Rectangle.RenderTransform>
+                                    <ScaleTransform ScaleX="{x:Bind ViewModel.BatteryFraction, Mode=OneWay}" />
+                                </Rectangle.RenderTransform>
+                            </Rectangle>
+                        </Grid>
+                        <TextBlock Text="{x:Bind ViewModel.BatteryDetail, Mode=OneWay}" Style="{StaticResource FineTextStyle}" Margin="0,6,0,0" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </StackPanel>
+    </Grid>
+</UserControl>

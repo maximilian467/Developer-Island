@@ -50,6 +50,7 @@ internal sealed class AppHost : IDisposable
     private ForegroundWatcher? _foreground;
     private GlobalHotKey? _hotkey;
     private SettingsWindow? _settingsWindow;
+    private ModuleHost _modules = null!;
     private DispatcherQueueTimer? _historyDebounce;
     private DispatcherQueueTimer? _midnight;
     private FocusState _lastFocusState = FocusState.Idle;
@@ -96,12 +97,16 @@ internal sealed class AppHost : IDisposable
         var music = new MusicViewModel(_media);
         var focus = new FocusViewModel(_focusTimer, _focusHistory, settings.CustomFocusMinutes,
             minutes => _settings.Update(s => s.CustomFocusMinutes = minutes));
-        _viewModel = new IslandViewModel(usage, music, focus, _options.IsDemo);
+        var modules = ModuleViewModels.Create();
+        _viewModel = new IslandViewModel(usage, music, focus, modules, _options.IsDemo);
+        _modules = new ModuleHost(_dispatcher, modules, _viewModel, _settings, _options.IsDemo) { OpenSettings = OpenSettings };
         ApplyModuleFlags(settings);
+        _modules.Apply(settings);
 
         _state = new IslandStateMachine(TimeProvider.System, action => _dispatcher.TryEnqueue(() => action()));
         _window = new IslandWindow(_viewModel, _state, settings.AlwaysOnTop) { SnapshotMode = IsSnapshot };
         _window.SettingsRequested += OpenSettings;
+        _window.VisiblePanelChanged += tab => _modules.OnPanelVisible(tab);
         _window.DragCompleted += OnDragCompleted;
         _window.PlacementInvalidated += () => _dispatcher.TryEnqueue(PlaceIsland);
         PlaceIsland();
@@ -112,6 +117,7 @@ internal sealed class AppHost : IDisposable
         {
             IsIslandVisible = () => _window.IsIslandVisible,
             IsFocusAvailable = () => _settings.Current.FocusEnabled && !_focusTimer.Snapshot.IsActive,
+            IsTasksAvailable = () => _settings.Current.TasksEnabled,
         };
         _tray.Activated += () => ShowIsland(expand: true);
         _tray.CommandInvoked += OnTrayCommand;
@@ -227,6 +233,21 @@ internal sealed class AppHost : IDisposable
         _state.SetRest(Core.Island.RestMode.Compact);
         await Task.Delay(600);
 
+        // Non-ready module states, as a user without gh, calendars or a readable repository sees them.
+        var now = DateTimeOffset.UtcNow;
+        _viewModel.GitHub.Update(new Core.Modules.ModuleStatus(Core.Modules.ModuleState.Unavailable, "Install the GitHub CLI and run “gh auth login” to see pull requests, CI and notifications."), null, now);
+        _viewModel.Calendar.Update(new Core.Modules.ModuleStatus(Core.Modules.ModuleState.Empty, "Add a calendar link (iCal format) or an .ics file in Settings."), [], [], now);
+        _viewModel.Git.Update(new Core.Modules.ModuleStatus(Core.Modules.ModuleState.Error, "Git could not read these repositories."), [], now);
+        _state.Activate();
+        foreach (var (tab, name) in new[] { (IslandTab.GitHub, "github-unavailable"), (IslandTab.Calendar, "calendar-empty"), (IslandTab.Git, "git-error") })
+        {
+            _viewModel.SelectedTab = tab;
+            await shot("40-state-" + name);
+        }
+
+        _state.Dismiss();
+        await Task.Delay(600);
+
         await new SettingsWindow(_settings, _options.IsDemo, () => false).SaveSnapshotsAsync(_options.SnapshotDirectory!);
     }
 
@@ -238,6 +259,7 @@ internal sealed class AppHost : IDisposable
         _shutdown.Cancel();
         _providers.Dispose();
         _focusTimer?.Dispose();
+        _modules?.Dispose();
         _media?.Dispose();
         _state?.Dispose();
         _fullscreen?.Dispose();
@@ -330,6 +352,7 @@ internal sealed class AppHost : IDisposable
         {
             var vm = snapshot.Provider == AiProviderKind.Claude ? _viewModel.Usage.Claude : _viewModel.Usage.Codex;
             vm.Update(snapshot);
+            _modules.OnAiSnapshot(snapshot);
         });
         _providers.Activity += activity => _dispatcher.TryEnqueue(() => _viewModel.OnAiActivity(activity));
         _history.Changed += _ => _dispatcher.TryEnqueue(RequestHistoryReload);
@@ -391,6 +414,7 @@ internal sealed class AppHost : IDisposable
     private void ApplySettings(AppSettings settings)
     {
         ApplyModuleFlags(settings);
+        _modules.Apply(settings);
         _viewModel.EnsureValidTab();
         _window.SetAlwaysOnTop(settings.AlwaysOnTop);
         PlaceIsland();
@@ -570,6 +594,15 @@ internal sealed class AppHost : IDisposable
                 {
                     ShowIsland(expand: false);
                     _focusTimer.Start(TimeSpan.FromMinutes(25));
+                }
+
+                break;
+            case TrayCommand.NewTask:
+                if (_settings.Current.TasksEnabled)
+                {
+                    ShowIsland(expand: false);
+                    _viewModel.PrepareExpandTo(IslandTab.Tasks);
+                    _window.ExpandToTaskCapture();
                 }
 
                 break;

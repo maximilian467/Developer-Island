@@ -90,6 +90,39 @@ public static class DisplayFormat
         return day.ToString(pattern, culture).TrimEnd('.').Replace(' ', Nbsp);
     }
 
+    /// <summary>Relative past time for small labels: "just now", "12 min ago", "3 h ago", "2 days ago".</summary>
+    public static string Ago(TimeSpan elapsed)
+    {
+        if (elapsed < TimeSpan.FromMinutes(1))
+        {
+            return "just now";
+        }
+
+        if (elapsed < TimeSpan.FromHours(1))
+        {
+            return $"{(int)elapsed.TotalMinutes}{Nbsp}min ago";
+        }
+
+        if (elapsed < TimeSpan.FromDays(1))
+        {
+            return $"{(int)elapsed.TotalHours}{Nbsp}h ago";
+        }
+
+        var days = (int)elapsed.TotalDays;
+        return days == 1 ? "yesterday" : $"{days}{Nbsp}days ago";
+    }
+
+    /// <summary>Time of day in the current culture, short: "14:30" or "2:30 PM".</summary>
+    public static string TimeOfDay(DateTimeOffset at, CultureInfo? culture = null)
+    {
+        culture ??= CultureInfo.CurrentCulture;
+        return at.ToString(culture.DateTimeFormat.ShortTimePattern, culture).Replace(" ", Nbsp.ToString(), StringComparison.Ordinal);
+    }
+
+    /// <summary>Bytes as gigabytes with one decimal: "11.4".</summary>
+    public static string Gigabytes(ulong bytes, CultureInfo? culture = null) =>
+        (bytes / (1024.0 * 1024 * 1024)).ToString("0.0", culture ?? CultureInfo.CurrentCulture);
+
     public static string Count(int value, string singular, string plural) =>
         $"{value}{Nbsp}{(value == 1 ? singular : plural)}";
 
