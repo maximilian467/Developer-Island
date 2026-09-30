@@ -74,8 +74,11 @@ public sealed class AppSettings
     public List<string> SmartHideProcesses { get; set; } = ["chrome", "msedge", "firefox"];
 
     // Keyboard
-    /// <summary>Ctrl+Alt+Space toggles the island from anywhere.</summary>
+    /// <summary>The global shortcut toggles the island from anywhere.</summary>
     public bool GlobalShortcutEnabled { get; set; } = true;
+
+    /// <summary>One of <see cref="ShortcutGesture.Presets"/>, by its text.</summary>
+    public string GlobalShortcut { get; set; } = ShortcutGesture.Default.Text;
 
     public AppSettings Clone()
     {

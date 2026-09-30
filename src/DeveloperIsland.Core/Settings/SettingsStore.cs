@@ -128,6 +128,7 @@ public sealed class SettingsStore
             .Where(n => n.Length > 0)
             .Distinct()
             .ToList();
+        s.GlobalShortcut = ShortcutGesture.FromText(s.GlobalShortcut).Text;
         s.Version = AppSettings.CurrentVersion;
         return s;
     }

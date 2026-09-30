@@ -11,6 +11,8 @@ internal static class AppPaths
 
     public static string PricingOverrides => Path.Combine(Root, "pricing.json");
 
+    public static string FocusSession => Path.Combine(Root, "focus-session.json");
+
     public static string Settings(bool demo) => Path.Combine(Root, demo ? "settings.demo.json" : "settings.json");
 
     public static string Assets => Path.Combine(AppContext.BaseDirectory, "Assets");

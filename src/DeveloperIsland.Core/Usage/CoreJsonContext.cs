@@ -7,4 +7,5 @@ namespace DeveloperIsland.Core.Usage;
 [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(CodexFileState))]
 [JsonSerializable(typeof(PricingOverrides))]
+[JsonSerializable(typeof(DeveloperIsland.Core.Focus.FocusSessionState))]
 internal sealed partial class CoreJsonContext : JsonSerializerContext;

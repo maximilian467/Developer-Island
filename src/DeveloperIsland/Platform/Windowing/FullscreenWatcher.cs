@@ -76,7 +76,12 @@ internal sealed partial class FullscreenWatcher : IDisposable
         try
         {
             var fullscreen = IsFullscreenOnIslandMonitor();
-            if (fullscreen != _last)
+            if (_last is null && !fullscreen)
+            {
+                // First look: nothing to step aside for, and nothing "closed".
+                _last = false;
+            }
+            else if (fullscreen != _last)
             {
                 _last = fullscreen;
                 _changed(fullscreen);

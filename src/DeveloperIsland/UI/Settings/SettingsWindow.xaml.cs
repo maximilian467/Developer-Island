@@ -24,13 +24,20 @@ public sealed partial class SettingsWindow : Window
     private readonly Dictionary<string, (Button Nav, FrameworkElement Section)> _sections;
     private IReadOnlyList<MonitorInfo> _monitors = [];
     private bool _loading;
+    private readonly Func<bool> _isShortcutInUse;
     private string _selected = "General";
 
-    internal SettingsWindow(SettingsStore store, bool isDemo)
+    internal SettingsWindow(SettingsStore store, bool isDemo, Func<bool> isShortcutInUse)
     {
         _store = store;
         _isDemo = isDemo;
+        _isShortcutInUse = isShortcutInUse;
         InitializeComponent();
+        foreach (var preset in ShortcutGesture.Presets)
+        {
+            ShortcutPicker.Items.Add(preset.Text);
+        }
+
 
         _sections = new()
         {
@@ -88,6 +95,25 @@ public sealed partial class SettingsWindow : Window
         }
     }
 
+    /// <summary>
+    /// Development support (<c>--demo --snapshot</c>): renders every section offscreen, then closes.
+    /// Mica does not render into a bitmap, so a solid background stands in.
+    /// </summary>
+    public async Task SaveSnapshotsAsync(string directory)
+    {
+        AppWindow.Move(new PointInt32(-32000, -32000));
+        AppWindow.Show(activateWindow: false);
+        Root.Background = new SolidColorBrush(Root.ActualTheme == ElementTheme.Dark ? Color.FromArgb(255, 32, 32, 32) : Color.FromArgb(255, 243, 243, 243));
+        foreach (var name in _sections.Keys.ToList())
+        {
+            Select(name);
+            await Task.Delay(500);
+            await UI.Components.SnapshotWriter.SaveAsync(Root, Path.Combine(directory, "30-settings-" + name.ToLowerInvariant() + ".png"));
+        }
+
+        Close();
+    }
+
     public void ApplyTheme(AppTheme theme)
     {
         Root.RequestedTheme = theme == AppTheme.Dark ? ElementTheme.Dark : ElementTheme.Default;
@@ -130,6 +156,9 @@ public sealed partial class SettingsWindow : Window
             MusicToggle.IsOn = s.MusicEnabled;
             FocusToggle.IsOn = s.FocusEnabled;
             ShortcutToggle.IsOn = s.GlobalShortcutEnabled;
+            ShortcutPicker.SelectedItem = ShortcutGesture.FromText(s.GlobalShortcut).Text;
+            ShortcutPicker.IsEnabled = s.GlobalShortcutEnabled;
+            UpdateShortcutStatus(s);
             SmartHideToggle.IsOn = s.SmartHideEnabled;
             (s.SmartHideBehavior == SmartHideBehavior.Hide ? SmartHideHide : SmartHideRetract).IsChecked = true;
             BrowserChromeToggle.IsOn = s.SmartHideProcesses.Contains("chrome");
@@ -245,6 +274,30 @@ public sealed partial class SettingsWindow : Window
             }
         });
         Log.Info("settings", "Setting changed", new { setting = tag, value = on });
+    }
+
+    private void OnShortcutChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || ShortcutPicker.SelectedItem is not string text)
+        {
+            return;
+        }
+
+        _store.Update(s => s.GlobalShortcut = text);
+        Log.Info("settings", "Setting changed", new { setting = "GlobalShortcut", value = text });
+    }
+
+    /// <summary>Registration happens when settings apply; read the outcome right after.</summary>
+    private void UpdateShortcutStatus(AppSettings s)
+    {
+        ShortcutText.Text = "Opens or closes the island from anywhere.";
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+        {
+            if (s.GlobalShortcutEnabled && _isShortcutInUse())
+            {
+                ShortcutText.Text = "Another app already uses these keys. Choose another combination.";
+            }
+        });
     }
 
     private void OnSmartHideBehaviorChecked(object sender, RoutedEventArgs e)

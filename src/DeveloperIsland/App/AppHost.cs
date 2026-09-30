@@ -53,6 +53,8 @@ internal sealed class AppHost : IDisposable
     private DispatcherQueueTimer? _historyDebounce;
     private DispatcherQueueTimer? _midnight;
     private FocusState _lastFocusState = FocusState.Idle;
+    private DateTimeOffset? _lastFocusStartedAt;
+    private FocusSessionStore? _focusStore;
     private bool _mediaPrimed;
     private bool _hiddenByUser;
     private bool _hiddenForFullscreen;
@@ -120,10 +122,11 @@ internal sealed class AppHost : IDisposable
             _foreground = new ForegroundWatcher(_window.Handle, () => _settings.Current.SmartHideProcesses, _ => ApplySmartHide());
             _hotkey = new GlobalHotKey(_host);
             _hotkey.Pressed += OnShortcut;
-            _hotkey.SetEnabled(settings.GlobalShortcutEnabled);
+            _hotkey.Apply(settings.GlobalShortcutEnabled, ShortcutGesture.FromText(settings.GlobalShortcut));
         }
 
         WireEvents();
+        RestoreFocusSession(settings);
 
         // The installer may have registered autostart; a fresh install adopts that choice.
         if (_settings.IsFirstRun && !_options.IsDemo && AutostartService.IsEnabled())
@@ -223,6 +226,8 @@ internal sealed class AppHost : IDisposable
         _state.Dismiss();
         _state.SetRest(Core.Island.RestMode.Compact);
         await Task.Delay(600);
+
+        await new SettingsWindow(_settings, _options.IsDemo, () => false).SaveSnapshotsAsync(_options.SnapshotDirectory!);
     }
 
     /// <summary>Second launch of the app: show the island.</summary>
@@ -264,6 +269,29 @@ internal sealed class AppHost : IDisposable
             Log.Error("database", "Usage database unavailable; using a temporary in-memory store", ex);
             return UsageDatabase.OpenInMemory();
         }
+    }
+
+    /// <summary>A session running or paused when the app closed continues (or completes) now.</summary>
+    private void RestoreFocusSession(AppSettings settings)
+    {
+        if (_options.IsDemo)
+        {
+            return;
+        }
+
+        _focusStore = new FocusSessionStore(AppPaths.FocusSession);
+        var saved = _focusStore.Load();
+        if (saved is null || !settings.FocusEnabled)
+        {
+            _focusStore.Save(null);
+            return;
+        }
+
+        // Restoring is not a new start: no "focus started" peek.
+        _lastFocusState = saved.State;
+        _lastFocusStartedAt = saved.StartedAt;
+        _focusTimer.RestoreSession(saved);
+        Log.Info("focus", "Session restored", new { state = _focusTimer.Snapshot.State.ToString() });
     }
 
     private async Task StartBackgroundAsync()
@@ -330,7 +358,14 @@ internal sealed class AppHost : IDisposable
                 _viewModel.OnFocusStarted(snapshot);
             }
 
+            // Persist on start, pause, resume and stop; never per tick.
+            if (snapshot.State != _lastFocusState || snapshot.StartedAt != _lastFocusStartedAt)
+            {
+                _focusStore?.Save(_focusTimer.Capture());
+            }
+
             _lastFocusState = snapshot.State;
+            _lastFocusStartedAt = snapshot.StartedAt;
         });
         _focusTimer.SessionEnded += record =>
         {
@@ -361,7 +396,7 @@ internal sealed class AppHost : IDisposable
         PlaceIsland();
         SyncAutostart(settings);
         _settingsWindow?.ApplyTheme(settings.Theme);
-        _hotkey?.SetEnabled(settings.GlobalShortcutEnabled);
+        _hotkey?.Apply(settings.GlobalShortcutEnabled, ShortcutGesture.FromText(settings.GlobalShortcut));
         _foreground?.Refresh();
         ApplySmartHide();
         if (!settings.FocusEnabled && _focusTimer.Snapshot.IsActive)
@@ -553,7 +588,7 @@ internal sealed class AppHost : IDisposable
     {
         if (_settingsWindow is null)
         {
-            _settingsWindow = new SettingsWindow(_settings, _options.IsDemo);
+            _settingsWindow = new SettingsWindow(_settings, _options.IsDemo, () => _hotkey?.IsInUse ?? false);
             _settingsWindow.Closed += (_, _) => _settingsWindow = null;
         }
 

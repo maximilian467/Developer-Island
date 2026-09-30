@@ -22,6 +22,12 @@ public sealed record FocusSnapshot(FocusState State, TimeSpan Planned, TimeSpan 
     public double Progress => Planned <= TimeSpan.Zero ? 0 : Math.Clamp(Elapsed / Planned, 0, 1);
 }
 
+/// <summary>What survives an app restart: enough to continue the session where it was.</summary>
+/// <param name="State">Running or Paused.</param>
+/// <param name="EndsAt">When a running session ends.</param>
+/// <param name="Remaining">What a paused session has left.</param>
+public sealed record FocusSessionState(FocusState State, TimeSpan Planned, DateTimeOffset StartedAt, DateTimeOffset? EndsAt, TimeSpan? Remaining);
+
 /// <summary>
 /// Countdown focus timer. Ticks once per second only while running, so an idle timer costs nothing.
 /// Uses <see cref="TimeProvider"/> for testability. Remaining time is derived from the end timestamp,
@@ -103,6 +109,68 @@ public sealed class FocusTimer : IDisposable
             _endsAt = now + remaining;
             _state = FocusState.Running;
             StartTicker();
+        }
+
+        RaiseChanged();
+    }
+
+    /// <summary>The session to persist, or null when idle.</summary>
+    public FocusSessionState? Capture()
+    {
+        lock (_gate)
+        {
+            return _state switch
+            {
+                FocusState.Running => new FocusSessionState(FocusState.Running, _planned, _startedAt ?? _time.GetUtcNow(), _endsAt, null),
+                FocusState.Paused => new FocusSessionState(FocusState.Paused, _planned, _startedAt ?? _time.GetUtcNow(), null, _remainingAtPause),
+                _ => null,
+            };
+        }
+    }
+
+    /// <summary>
+    /// Continues a persisted session after a restart. A running session keeps counting while the app
+    /// is closed; if it ran out meanwhile, it is recorded as completed at its end time.
+    /// </summary>
+    public void RestoreSession(FocusSessionState saved)
+    {
+        FocusSessionRecord? completed = null;
+        lock (_gate)
+        {
+            if (_state != FocusState.Idle || saved.Planned <= TimeSpan.Zero)
+            {
+                return;
+            }
+
+            _planned = saved.Planned;
+            _startedAt = saved.StartedAt;
+            if (saved.State == FocusState.Paused && saved.Remaining is { } remaining)
+            {
+                _remainingAtPause = Clamp(remaining > saved.Planned ? saved.Planned : remaining);
+                _state = FocusState.Paused;
+            }
+            else if (saved.State == FocusState.Running && saved.EndsAt is { } endsAt)
+            {
+                _endsAt = endsAt;
+                _state = FocusState.Running;
+                if (_time.GetUtcNow() >= endsAt)
+                {
+                    completed = EndSession(completed: true, at: endsAt);
+                }
+                else
+                {
+                    StartTicker();
+                }
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        if (completed is not null)
+        {
+            SessionEnded?.Invoke(completed);
         }
 
         RaiseChanged();
@@ -209,9 +277,9 @@ public sealed class FocusTimer : IDisposable
         }
     }
 
-    private FocusSessionRecord? EndSession(bool completed)
+    private FocusSessionRecord? EndSession(bool completed, DateTimeOffset? at = null)
     {
-        var now = _time.GetUtcNow();
+        var now = at ?? _time.GetUtcNow();
         var remaining = _state switch
         {
             FocusState.Running => Clamp(_endsAt - now),

@@ -1,11 +1,8 @@
-using System.Runtime.InteropServices.WindowsRuntime;
-using DeveloperIsland.Core.Diagnostics;
+using DeveloperIsland.UI.Components;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Media.Imaging;
-using Windows.Graphics.Imaging;
-using Windows.Storage.Streams;
+using Windows.Foundation;
 
 namespace DeveloperIsland.UI.Island;
 
@@ -50,34 +47,9 @@ public sealed partial class IslandWindow
         _snapshotSurface.CornerRadius = new CornerRadius(ReferenceEquals(_current, Expanded) ? ExpandedRadius : rect.Height / 2);
         Root.UpdateLayout();
 
-        var bitmap = new RenderTargetBitmap();
-        await bitmap.RenderAsync(Root);
-        var pixels = await bitmap.GetPixelsAsync();
-        var scale = bitmap.PixelWidth / Math.Max(1, Root.ActualWidth);
-
-        uint Clamp(double v, int max) => (uint)Math.Clamp(v, 0, max);
-        var left = Clamp((rect.X - padding) * scale, bitmap.PixelWidth);
         // The notch sits half above the screen edge; crop there to show only what is visible.
-        var top = Clamp((ReferenceEquals(_current, Notch) ? ScreenEdgeY : rect.Y - padding) * scale, bitmap.PixelHeight);
-        var right = Clamp((rect.Right + padding) * scale, bitmap.PixelWidth);
-        var bottom = Clamp((rect.Bottom + padding) * scale, bitmap.PixelHeight);
-
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        using var stream = new InMemoryRandomAccessStream();
-        var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, stream);
-        encoder.SetPixelData(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied, (uint)bitmap.PixelWidth, (uint)bitmap.PixelHeight, 96, 96, pixels.ToArray());
-        encoder.BitmapTransform.Bounds = new BitmapBounds { X = left, Y = top, Width = right - left, Height = bottom - top };
-        await encoder.FlushAsync();
-
-        var bytes = new byte[stream.Size];
-        stream.Seek(0);
-        using (var reader = new DataReader(stream))
-        {
-            await reader.LoadAsync((uint)stream.Size);
-            reader.ReadBytes(bytes);
-        }
-
-        await File.WriteAllBytesAsync(path, bytes);
-        Log.Info("snapshot", "Saved", new { file = Path.GetFileName(path) });
+        var top = ReferenceEquals(_current, Notch) ? ScreenEdgeY : rect.Y - padding;
+        var crop = new Rect(rect.X - padding, top, rect.Width + 2 * padding, rect.Bottom + padding - top);
+        await SnapshotWriter.SaveAsync(Root, path, crop);
     }
 }

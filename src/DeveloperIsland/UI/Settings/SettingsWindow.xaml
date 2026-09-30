@@ -66,7 +66,7 @@
             </Grid.RowDefinitions>
             <Grid x:Name="DragArea" Background="Transparent" />
             <ScrollViewer Grid.Row="1" Padding="32,0,36,32" HorizontalScrollMode="Disabled">
-                <Grid MaxWidth="620" HorizontalAlignment="Left">
+                <Grid MaxWidth="620" HorizontalAlignment="Stretch">
 
                     <!-- General -->
                     <StackPanel x:Name="GeneralSection" Spacing="8">
@@ -117,12 +117,16 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel VerticalAlignment="Center">
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
                                         <TextBlock Text="Keyboard shortcut" Style="{StaticResource SettingsRowTitleStyle}" />
-                                        <TextBlock x:Name="ShortcutText" Text="Ctrl + Alt + Space opens or closes the island from anywhere." Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                        <TextBlock x:Name="ShortcutText" Text="Opens or closes the island from anywhere." Style="{StaticResource SettingsRowDescriptionStyle}" />
                                     </StackPanel>
-                                    <ToggleSwitch x:Name="ShortcutToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                                        <ComboBox x:Name="ShortcutPicker" MinWidth="176" VerticalAlignment="Center"
+                                                  AutomationProperties.Name="Keyboard shortcut keys" SelectionChanged="OnShortcutChanged" />
+                                    <ToggleSwitch x:Name="ShortcutToggle" Style="{StaticResource SettingsToggleStyle}"
                                                   AutomationProperties.Name="Keyboard shortcut" Toggled="OnToggle" Tag="Shortcut" />
+                                    </StackPanel>
                                 </Grid>
                             </StackPanel>
                         </Border>
@@ -222,7 +226,7 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="Behavior" Style="{StaticResource SettingsRowTitleStyle}" />
-                                        <TextBlock Text="Hide removes the notch too. Ctrl + Alt + Space still opens the island." Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                        <TextBlock Text="Hide removes the notch too. The keyboard shortcut still opens the island." Style="{StaticResource SettingsRowDescriptionStyle}" />
                                     </StackPanel>
                                     <Border Grid.Column="1" VerticalAlignment="Center" CornerRadius="8" Padding="2" Background="{ThemeResource SettingsSegmentBrush}">
                                         <StackPanel Orientation="Horizontal" AutomationProperties.Name="Browser notch behavior">

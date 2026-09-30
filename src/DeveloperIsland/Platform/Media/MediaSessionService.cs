@@ -19,7 +19,8 @@ internal interface IMediaSource : IMediaController, IDisposable
 /// <summary>
 /// Reads the current Windows media session (System Media Transport Controls), so it works with
 /// Spotify, Apple Music, browsers, Media Player and any other SMTC-aware app. No app-specific APIs.
-/// Event-driven: nothing polls.
+/// Event-driven: nothing polls. Which session to show is decided by <see cref="MediaSessionChooser"/>
+/// (the audible one first), re-evaluated when sessions come, go or change playback state.
 /// </summary>
 internal sealed class MediaSessionService : IMediaSource
 {
@@ -27,11 +28,13 @@ internal sealed class MediaSessionService : IMediaSource
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
     private GlobalSystemMediaTransportControlsSessionManager? _manager;
     private GlobalSystemMediaTransportControlsSession? _session;
+    private readonly List<GlobalSystemMediaTransportControlsSession> _watched = [];
     private MediaSnapshot _snapshot = MediaSnapshot.Empty;
     private string? _thumbnailTrackKey;
     private byte[]? _thumbnail;
     private CancellationTokenSource? _debounce;
     private bool _disposed;
+    private volatile bool _rechoose = true;
 
     public event Action<MediaSnapshot>? Changed;
 
@@ -42,8 +45,9 @@ internal sealed class MediaSessionService : IMediaSource
         try
         {
             _manager = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
-            _manager.CurrentSessionChanged += (_, _) => AttachCurrentSession();
-            AttachCurrentSession();
+            _manager.CurrentSessionChanged += (_, _) => ScheduleRefresh(rechoose: true);
+            _manager.SessionsChanged += (_, _) => WatchSessions();
+            WatchSessions();
             Log.Info("media", "Media sessions available");
         }
         catch (Exception ex)
@@ -64,6 +68,7 @@ internal sealed class MediaSessionService : IMediaSource
     public void Dispose()
     {
         _disposed = true;
+        UnwatchSessions();
         Detach();
         _debounce?.Cancel();
     }
@@ -86,24 +91,88 @@ internal sealed class MediaSessionService : IMediaSource
         }
     }
 
-    private void AttachCurrentSession()
+    /// <summary>Follows playback changes of every session, so a player that starts playing is noticed.</summary>
+    private void WatchSessions()
     {
         try
         {
-            Detach();
-            _session = _manager?.GetCurrentSession();
-            if (_session is not null)
+            UnwatchSessions();
+            foreach (var session in _manager?.GetSessions() ?? [])
             {
-                _session.MediaPropertiesChanged += OnSessionChanged;
-                _session.PlaybackInfoChanged += OnSessionChanged;
-                _session.TimelinePropertiesChanged += OnSessionChanged;
+                session.PlaybackInfoChanged += OnPlaybackChanged;
+                _watched.Add(session);
             }
-
-            ScheduleRefresh();
         }
         catch (Exception ex)
         {
-            Log.Warn("media", "Media session could not be attached", ex: ex);
+            Log.Warn("media", "Media sessions could not be listed", ex: ex);
+        }
+
+        ScheduleRefresh(rechoose: true);
+    }
+
+    private void UnwatchSessions()
+    {
+        foreach (var session in _watched)
+        {
+            try
+            {
+                session.PlaybackInfoChanged -= OnPlaybackChanged;
+            }
+            catch
+            {
+                // The owning app may already be gone.
+            }
+        }
+
+        _watched.Clear();
+    }
+
+    private async Task<GlobalSystemMediaTransportControlsSession?> ChooseSessionAsync()
+    {
+        if (_manager is null)
+        {
+            return null;
+        }
+
+        var sessions = _manager.GetSessions().ToList();
+        var candidates = new List<MediaSessionCandidate>(sessions.Count);
+        foreach (var session in sessions)
+        {
+            var state = MediaPlaybackState.None;
+            var hasTrack = false;
+            try
+            {
+                state = MapState(session.GetPlaybackInfo()?.PlaybackStatus);
+                var props = await session.TryGetMediaPropertiesAsync();
+                hasTrack = !string.IsNullOrWhiteSpace(props?.Title);
+            }
+            catch
+            {
+                // A session that cannot be read is not a candidate.
+            }
+
+            candidates.Add(new MediaSessionCandidate(session.SourceAppUserModelId ?? string.Empty, state, hasTrack));
+        }
+
+        var index = MediaSessionChooser.Choose(candidates, _manager.GetCurrentSession()?.SourceAppUserModelId);
+        return index >= 0 ? sessions[index] : null;
+    }
+
+    private void Attach(GlobalSystemMediaTransportControlsSession? session)
+    {
+        if (session is not null && _session is not null && session.SourceAppUserModelId == _session.SourceAppUserModelId)
+        {
+            return;
+        }
+
+        Detach();
+        _session = session;
+        if (session is not null)
+        {
+            session.MediaPropertiesChanged += OnSessionChanged;
+            session.TimelinePropertiesChanged += OnSessionChanged;
+            Log.Debug("media", "Following media session", new { app = FriendlyAppName(session.SourceAppUserModelId) });
         }
     }
 
@@ -117,7 +186,6 @@ internal sealed class MediaSessionService : IMediaSource
         try
         {
             _session.MediaPropertiesChanged -= OnSessionChanged;
-            _session.PlaybackInfoChanged -= OnSessionChanged;
             _session.TimelinePropertiesChanged -= OnSessionChanged;
         }
         catch
@@ -130,9 +198,17 @@ internal sealed class MediaSessionService : IMediaSource
 
     private void OnSessionChanged(GlobalSystemMediaTransportControlsSession sender, object args) => ScheduleRefresh();
 
+    /// <summary>Play or pause anywhere may change which session is shown.</summary>
+    private void OnPlaybackChanged(GlobalSystemMediaTransportControlsSession sender, object args) => ScheduleRefresh(rechoose: true);
+
     /// <summary>Players fire bursts of events on a track change; coalesce them.</summary>
-    private void ScheduleRefresh()
+    private void ScheduleRefresh(bool rechoose = false)
     {
+        if (rechoose)
+        {
+            _rechoose = true;
+        }
+
         _debounce?.Cancel();
         var cts = new CancellationTokenSource();
         _debounce = cts;
@@ -153,14 +229,24 @@ internal sealed class MediaSessionService : IMediaSource
         await _refreshLock.WaitAsync();
         try
         {
+            if (_rechoose)
+            {
+                _rechoose = false;
+                Attach(await ChooseSessionAsync());
+            }
+
             var session = _session;
             var snapshot = session is null ? MediaSnapshot.Empty : await ReadAsync(session);
-            _snapshot = snapshot;
-            Changed?.Invoke(snapshot);
+            Publish(snapshot);
         }
         catch (Exception ex)
         {
-            Log.Warn("media", "Media state could not be read", ex: ex);
+            // Usually the player quit between the event and the read: show nothing rather than a
+            // stale track, and choose again on the next event.
+            Log.Debug("media", "Media state could not be read", new { error = ex.GetType().Name });
+            Detach();
+            _rechoose = true;
+            Publish(MediaSnapshot.Empty);
         }
         finally
         {
@@ -168,19 +254,27 @@ internal sealed class MediaSessionService : IMediaSource
         }
     }
 
+    private void Publish(MediaSnapshot snapshot)
+    {
+        _snapshot = snapshot;
+        Changed?.Invoke(snapshot);
+    }
+
+    private static MediaPlaybackState MapState(GlobalSystemMediaTransportControlsSessionPlaybackStatus? status) => status switch
+    {
+        GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing => MediaPlaybackState.Playing,
+        GlobalSystemMediaTransportControlsSessionPlaybackStatus.Paused => MediaPlaybackState.Paused,
+        GlobalSystemMediaTransportControlsSessionPlaybackStatus.Stopped => MediaPlaybackState.Stopped,
+        _ => MediaPlaybackState.None,
+    };
+
     private async Task<MediaSnapshot> ReadAsync(GlobalSystemMediaTransportControlsSession session)
     {
         var props = await session.TryGetMediaPropertiesAsync();
         var playback = session.GetPlaybackInfo();
         var timeline = session.GetTimelineProperties();
 
-        var state = playback?.PlaybackStatus switch
-        {
-            GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing => MediaPlaybackState.Playing,
-            GlobalSystemMediaTransportControlsSessionPlaybackStatus.Paused => MediaPlaybackState.Paused,
-            GlobalSystemMediaTransportControlsSessionPlaybackStatus.Stopped => MediaPlaybackState.Stopped,
-            _ => MediaPlaybackState.None,
-        };
+        var state = MapState(playback?.PlaybackStatus);
 
         var title = props?.Title;
         var artist = string.IsNullOrWhiteSpace(props?.Artist) ? props?.AlbumArtist : props.Artist;

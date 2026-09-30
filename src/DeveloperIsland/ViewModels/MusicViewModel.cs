@@ -86,7 +86,7 @@ public sealed class MusicViewModel : ObservableObject
 
     public void Update(MediaSnapshot snapshot)
     {
-        var trackChanged = snapshot.HasTrack && snapshot.TrackKey != _snapshot.TrackKey;
+        var trackChanged = MediaSessionChooser.IsNewTrack(_snapshot, snapshot);
         _snapshot = snapshot;
         if (!ReferenceEquals(snapshot.Thumbnail, _artBytes))
         {
