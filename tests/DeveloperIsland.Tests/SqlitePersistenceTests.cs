@@ -43,7 +43,7 @@ public class SqlitePersistenceTests
         var e = Assert.Single(events);
         Assert.Equal("k1", e.Key);
         Assert.Equal(T, e.Timestamp);
-        Assert.Equal(100, e.Tokens.Total);
+        Assert.Equal(100, e.Tokens.Processed);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class SqlitePersistenceTests
         db.UpsertDaily(new DailyUsage(day, AiProviderKind.Codex, new TokenCounts(10, 20, 30, 40, 50), 6.02m, true, 2));
 
         var row = Assert.Single(db.GetDaily(day, day));
-        Assert.Equal(150, row.Tokens.Total);
+        Assert.Equal(150, row.Tokens.Processed);
         Assert.Equal(6.02m, row.ApiValueEur);
         Assert.True(row.ApiValuePartial);
         Assert.Equal(2, row.Sessions);

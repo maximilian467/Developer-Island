@@ -43,7 +43,7 @@ public sealed class AiProviderViewModel : ObservableObject
 
     public bool IsError => State == ProviderState.Error;
 
-    public bool HasUsageToday => IsReady && _snapshot.Today.Total > 0;
+    public bool HasUsageToday => IsReady && _snapshot.Today.Processed > 0;
 
     /// <summary>The API value line is only shown when there is something to value.</summary>
     public bool ShowValue => HasUsageToday;
@@ -53,13 +53,13 @@ public sealed class AiProviderViewModel : ObservableObject
     public bool HasLimit => IsReady && _snapshot.LimitPercent is not null;
 
     /// <summary>Whether the provider earns a place in the compact capsule.</summary>
-    public bool IsWorthShowingCompact => IsReady && (_snapshot.Today.Total > 0 || HasLimit || _snapshot.IsActive);
+    public bool IsWorthShowingCompact => IsReady && (_snapshot.Today.Processed > 0 || HasLimit || _snapshot.IsActive);
 
-    /// <summary>"68%" when the tool reports its limit locally, otherwise today's tokens.</summary>
+    /// <summary>"68%" when the tool reports its limit locally, otherwise today's fresh tokens (see TokenCounts).</summary>
     public string CompactValue => State switch
     {
         ProviderState.Ready when _snapshot.LimitPercent is { } p => $"{Math.Round(p):0}%",
-        ProviderState.Ready => DisplayFormat.Tokens(_snapshot.Today.Total),
+        ProviderState.Ready => DisplayFormat.Tokens(_snapshot.Today.Fresh),
         ProviderState.Error => "Error",
         _ => string.Empty,
     };
@@ -67,16 +67,30 @@ public sealed class AiProviderViewModel : ObservableObject
     public string CompactAccessibleText => State == ProviderState.Ready
         ? _snapshot.LimitPercent is { } p
             ? $"{ShortName} {Math.Round(p):0} percent of limit used"
-            : $"{ShortName} {DisplayFormat.Tokens(_snapshot.Today.Total)} tokens today"
+            : $"{ShortName} {DisplayFormat.Tokens(_snapshot.Today.Fresh)} fresh tokens today"
         : $"{ShortName} {StatusText}";
 
-    public string TokensText => DisplayFormat.Tokens(_snapshot.Today.Total);
+    /// <summary>Headline figure: fresh tokens (processed without a cache hit).</summary>
+    public string TokensText => DisplayFormat.Tokens(_snapshot.Today.Fresh);
 
-    public string TokensUnit => _snapshot.Today.Total == 1 ? "token" : "tokens";
+    public string TokensUnit => "fresh tokens";
+
+    // Breakdown of today's usage. Field meanings are documented on TokenCounts.
+    public string InputText => DisplayFormat.Tokens(_snapshot.Today.Input);
+
+    public string CacheWriteText => DisplayFormat.Tokens(_snapshot.Today.CacheWrite);
+
+    public string OutputText => DisplayFormat.Tokens(_snapshot.Today.Output);
+
+    public string CacheReadText => DisplayFormat.Tokens(_snapshot.Today.CacheRead);
+
+    public string ProcessedText => DisplayFormat.Tokens(_snapshot.Today.Processed);
+
+    public string SessionsText => _snapshot.SessionsToday.ToString(System.Globalization.CultureInfo.CurrentCulture);
 
     public string ValueText => _snapshot.ApiValueEur is { } value ? DisplayFormat.Euro(value) : "Unavailable";
 
-    public string ValueCaption => _snapshot.ApiValuePartial ? "API equivalent, partly priced" : "API equivalent";
+    public string ValueCaption => _snapshot.ApiValuePartial ? "estimated API equivalent, partly priced" : "estimated API equivalent";
 
     /// <summary>Limit usage when known, otherwise sessions.</summary>
     public string DetailText
@@ -88,11 +102,12 @@ public sealed class AiProviderViewModel : ObservableObject
                 return $"{Math.Round(p):0}% of {DisplayFormat.LimitWindow(_snapshot.LimitWindowMinutes ?? 0)}";
             }
 
-            return _snapshot.SessionsToday > 0
-                ? $"{DisplayFormat.Count(_snapshot.SessionsToday, "session", "sessions")} today"
-                : "No sessions today";
+            // Sessions are listed in the breakdown; without usage there is no breakdown.
+            return HasUsageToday ? string.Empty : "No sessions today";
         }
     }
+
+    public bool HasDetail => DetailText.Length > 0;
 
     /// <summary>"Opus 5.5 in developer_island".</summary>
     public string ContextText

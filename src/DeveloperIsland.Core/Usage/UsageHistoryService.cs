@@ -125,7 +125,7 @@ public sealed class UsageHistoryService
         var result = new List<UsageDay>(days);
         for (var day = from; day <= to; day = day.AddDays(1))
         {
-            result.Add(merged.TryGetValue(day, out var value) ? value : new UsageDay(day, 0, 0, 0m, 0m, 0));
+            result.Add(merged.TryGetValue(day, out var value) ? value : new UsageDay(day, TokenCounts.Zero, TokenCounts.Zero, 0m, 0m, 0));
         }
 
         return result;

@@ -100,8 +100,8 @@ public static class UsageAggregator
                 var codex = g.Where(d => d.Provider == AiProviderKind.Codex).ToList();
                 return new UsageDay(
                     g.Key,
-                    claude.Sum(d => d.Tokens.Total),
-                    codex.Sum(d => d.Tokens.Total),
+                    claude.Aggregate(TokenCounts.Zero, (sum, d) => sum + d.Tokens),
+                    codex.Aggregate(TokenCounts.Zero, (sum, d) => sum + d.Tokens),
                     claude.Sum(d => d.ApiValueEur),
                     codex.Sum(d => d.ApiValueEur),
                     g.Sum(d => d.Sessions),

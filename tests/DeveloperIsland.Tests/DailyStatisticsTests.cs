@@ -23,8 +23,8 @@ public class DailyStatisticsTests
             Berlin);
 
         Assert.Equal(2, daily.Count);
-        Assert.Equal((new DateOnly(2026, 9, 23), 50L), (daily[0].Day, daily[0].Tokens.Total));
-        Assert.Equal((new DateOnly(2026, 9, 24), 100L), (daily[1].Day, daily[1].Tokens.Total));
+        Assert.Equal((new DateOnly(2026, 9, 23), 50L), (daily[0].Day, daily[0].Tokens.Processed));
+        Assert.Equal((new DateOnly(2026, 9, 24), 100L), (daily[1].Day, daily[1].Tokens.Processed));
     }
 
     [Fact]
@@ -40,9 +40,9 @@ public class DailyStatisticsTests
         ], new ModelPricingService(), TimeZoneInfo.Utc);
 
         var claude = daily.Single(d => d.Provider == AiProviderKind.Claude);
-        Assert.Equal(200, claude.Tokens.Total);
+        Assert.Equal(200, claude.Tokens.Processed);
         Assert.Equal(2, claude.Sessions);
-        Assert.Equal(70, daily.Single(d => d.Provider == AiProviderKind.Codex).Tokens.Total);
+        Assert.Equal(70, daily.Single(d => d.Provider == AiProviderKind.Codex).Tokens.Processed);
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public class DailyStatisticsTests
         ]);
 
         var single = Assert.Single(merged);
-        Assert.Equal(2_440_000, single.TotalTokens);
+        Assert.Equal(2_440_000, single.ProcessedTokens);
         Assert.Equal(18.42m, single.TotalApiValueEur);
         Assert.Equal(5, single.Sessions);
     }
@@ -106,8 +106,8 @@ public class DailyStatisticsTests
         Assert.Equal(7, days.Count);
         Assert.Equal(new DateOnly(2026, 9, 22), days[0].Day);
         Assert.Equal(new DateOnly(2026, 9, 28), days[^1].Day);
-        Assert.Equal(500, days.Single(d => d.Day == new DateOnly(2026, 9, 26)).ClaudeTokens);
-        Assert.Equal(6, days.Count(d => d.TotalTokens == 0));
+        Assert.Equal(500, days.Single(d => d.Day == new DateOnly(2026, 9, 26)).Claude.Processed);
+        Assert.Equal(6, days.Count(d => !d.HasUsage));
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public class DailyStatisticsTests
                 Assert.Equal(expected.Tokens, actual.Tokens);
                 Assert.Equal(expected.ApiValueEur, actual.ApiValueEur);
                 Assert.Equal(expected.Sessions, actual.Sessions);
-                Assert.Equal(expected.Tokens.Total, stored?.Tokens.Total ?? 0);
+                Assert.Equal(expected.Tokens.Processed, stored?.Tokens.Processed ?? 0);
                 Assert.Equal(expected.ApiValueEur, stored?.ApiValueEur ?? 0m);
             }
         }
@@ -179,7 +179,7 @@ public class DailyStatisticsTests
         history.Ingest([TestData.Event(AiProviderKind.Claude, "1", t, 1_000_000), TestData.Event(AiProviderKind.Claude, "2", t, 1_000_000)]);
 
         var today = history.GetTodayTotals(AiProviderKind.Claude);
-        Assert.Equal(2_000_000, today.Tokens.Total);
+        Assert.Equal(2_000_000, today.Tokens.Processed);
         Assert.Equal(8m, today.ApiValueEur); // 2M input tokens of Opus 5.5 at $4
         Assert.Equal([new DateOnly(2026, 9, 28)], changed);
         Assert.Equal(8m, history.GetHistory(1)[0].ClaudeApiValueEur);

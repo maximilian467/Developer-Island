@@ -86,14 +86,19 @@ public sealed record DailyUsage(
 /// <summary>One cell of the usage history graph.</summary>
 public sealed record UsageDay(
     DateOnly Day,
-    long ClaudeTokens,
-    long CodexTokens,
+    TokenCounts Claude,
+    TokenCounts Codex,
     decimal ClaudeApiValueEur,
     decimal CodexApiValueEur,
     int Sessions,
     bool ApiValuePartial = false)
 {
-    public long TotalTokens => ClaudeTokens + CodexTokens;
+    /// <summary>Fresh tokens of both tools (drives the history graph intensity).</summary>
+    public long FreshTokens => Claude.Fresh + Codex.Fresh;
+
+    public long ProcessedTokens => Claude.Processed + Codex.Processed;
+
+    public bool HasUsage => ProcessedTokens > 0;
 
     public decimal TotalApiValueEur => ClaudeApiValueEur + CodexApiValueEur;
 }

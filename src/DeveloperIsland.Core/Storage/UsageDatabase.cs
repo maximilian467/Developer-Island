@@ -254,7 +254,7 @@ public sealed class UsageDatabase : IDisposable
             cmd.Parameters.AddWithValue("$w5", daily.Tokens.CacheWrite5m);
             cmd.Parameters.AddWithValue("$w1", daily.Tokens.CacheWrite1h);
             cmd.Parameters.AddWithValue("$cr", daily.Tokens.CacheRead);
-            cmd.Parameters.AddWithValue("$total", daily.Tokens.Total);
+            cmd.Parameters.AddWithValue("$total", daily.Tokens.Processed);
             cmd.Parameters.AddWithValue("$value", (double)daily.ApiValueEur);
             cmd.Parameters.AddWithValue("$partial", daily.ApiValuePartial ? 1 : 0);
             cmd.Parameters.AddWithValue("$sessions", daily.Sessions);

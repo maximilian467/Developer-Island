@@ -38,7 +38,7 @@ public sealed class UsageViewModel : ObservableObject
 
     public bool HasAnyProvider => ShowClaude || ShowCodex;
 
-    public bool HasHistory => _days.Any(d => d.TotalTokens > 0);
+    public bool HasHistory => _days.Any(d => d.HasUsage);
 
     public int InspectedIndex => _inspectedIndex;
 
@@ -48,9 +48,27 @@ public sealed class UsageViewModel : ObservableObject
 
     public string InspectedDate => IsInspecting ? DisplayFormat.ShortDay(_days[_inspectedIndex].Day) : string.Empty;
 
-    public string InspectedClaude => IsInspecting ? DisplayFormat.Tokens(_days[_inspectedIndex].ClaudeTokens) : string.Empty;
+    public string InspectedClaude => IsInspecting ? DisplayFormat.Tokens(_days[_inspectedIndex].Claude.Fresh) : string.Empty;
 
-    public string InspectedCodex => IsInspecting ? DisplayFormat.Tokens(_days[_inspectedIndex].CodexTokens) : string.Empty;
+    public string InspectedCodex => IsInspecting ? DisplayFormat.Tokens(_days[_inspectedIndex].Codex.Fresh) : string.Empty;
+
+    /// <summary>Complete breakdown of the inspected day (second readout line).</summary>
+    public string InspectedDetail
+    {
+        get
+        {
+            if (!IsInspecting)
+            {
+                return string.Empty;
+            }
+
+            var d = _days[_inspectedIndex];
+            var all = d.Claude + d.Codex;
+            return all.IsZero
+                ? "No usage"
+                : $"Input {DisplayFormat.Tokens(all.Input)}, cache write {DisplayFormat.Tokens(all.CacheWrite)}, output {DisplayFormat.Tokens(all.Output)}, cache read {DisplayFormat.Tokens(all.CacheRead)}";
+        }
+    }
 
     public string InspectedValue => !IsInspecting ? string.Empty
         : _days[_inspectedIndex].ApiValuePartial ? "Unavailable"
@@ -58,15 +76,15 @@ public sealed class UsageViewModel : ObservableObject
 
     /// <summary>Spoken description of the inspected day.</summary>
     public string InspectedAccessibleText => IsInspecting
-        ? $"{InspectedDate}: Claude {InspectedClaude} tokens, Codex {InspectedCodex} tokens, API equivalent {InspectedValue}"
+        ? $"{InspectedDate}: Claude {InspectedClaude} fresh tokens, Codex {InspectedCodex} fresh tokens, estimated API equivalent {InspectedValue}. {InspectedDetail}"
         : "Usage history, last 26 weeks. Use the arrow keys to inspect a day.";
 
     public string HistorySummary
     {
         get
         {
-            var active = _days.Count(d => d.TotalTokens > 0);
-            return active == 0 ? "No usage in the last 26 weeks" : $"{DisplayFormat.Count(active, "active day", "active days")} in 26 weeks";
+            var active = _days.Count(d => d.HasUsage);
+            return active == 0 ? "No usage in the last 26 weeks" : $"{DisplayFormat.Count(active, "active day", "active days")}, shaded by fresh tokens";
         }
     }
 
@@ -90,6 +108,9 @@ public sealed class UsageViewModel : ObservableObject
         }
     }
 
+    /// <summary>Mark for the peek: the tool with more fresh tokens today.</summary>
+    public string PeekMark => ShowCodex && Codex.IsReady && (!ShowClaude || !Claude.IsReady || Codex.Snapshot.Today.Fresh > Claude.Snapshot.Today.Fresh) ? "Codex" : "Claude";
+
     public string PeekSubtitle
     {
         get
@@ -105,14 +126,15 @@ public sealed class UsageViewModel : ObservableObject
                 }
             }
 
-            return any ? $"{DisplayFormat.Euro(total)} API equivalent today" : "Claude Code and Codex usage appears here";
+            return any ? $"{DisplayFormat.Euro(total)} estimated API equivalent today" : "Claude Code and Codex usage appears here";
         }
     }
 
     public void SetHistory(IReadOnlyList<UsageDay> days)
     {
         _days = days;
-        _levels = UsageAggregator.IntensityLevels(days.Select(d => d.TotalTokens).ToList());
+        // Intensity follows fresh tokens: cache reads would let one long session flatten every other day.
+        _levels = UsageAggregator.IntensityLevels(days.Select(d => d.FreshTokens).ToList());
         if (_inspectedIndex >= days.Count)
         {
             _inspectedIndex = -1;
@@ -138,6 +160,7 @@ public sealed class UsageViewModel : ObservableObject
         OnPropertyChanged(nameof(InspectedClaude));
         OnPropertyChanged(nameof(InspectedCodex));
         OnPropertyChanged(nameof(InspectedValue));
+        OnPropertyChanged(nameof(InspectedDetail));
         OnPropertyChanged(nameof(InspectedAccessibleText));
     }
 

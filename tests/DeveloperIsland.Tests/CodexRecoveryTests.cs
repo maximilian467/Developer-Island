@@ -44,7 +44,7 @@ public class CodexRecoveryTests
         restored.Activity += activities.Add;
         await restored.StartAsync(TestContext.Current.CancellationToken);
         Assert.Equal(31, restored.Snapshot.LimitPercent);
-        Assert.Equal(100, restored.Snapshot.Today.Total);
+        Assert.Equal(100, restored.Snapshot.Today.Processed);
         Assert.Empty(activities);
     }
 
@@ -78,7 +78,7 @@ public class CodexRecoveryTests
         var parser = new CodexLogParser();
         Assert.False(parser.TryParse(line, out _));
         Assert.True(parser.TryParse(TestData.CodexUsageRecord("r1", DateTimeOffset.UtcNow, 10, 0, 1), out var record));
-        Assert.Equal(11, record.Tokens.Total);
+        Assert.Equal(11, record.Tokens.Processed);
     }
 
     [Theory]

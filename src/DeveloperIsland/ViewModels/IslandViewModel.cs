@@ -212,7 +212,7 @@ public sealed class IslandViewModel : ObservableObject
         }
         else if (Usage.HasAnyProvider)
         {
-            Activity.Set(ActivityKind.Usage, Usage.PeekTitle, Usage.PeekSubtitle, glyph: "");
+            Activity.Set(ActivityKind.Usage, Usage.PeekTitle, Usage.PeekSubtitle, mark: Usage.PeekMark);
         }
         else if (Music.IsEnabled && Music.HasTrack)
         {
@@ -274,7 +274,7 @@ public sealed class IslandViewModel : ObservableObject
         }
 
         var trailing = activity.Kind == AiActivityKind.SessionStarted && provider.IsReady ? provider.CompactValue : string.Empty;
-        Activity.Set(ActivityKind.Usage, activity.Title, activity.Detail ?? string.Empty, trailing, glyph: "");
+        Activity.Set(ActivityKind.Usage, activity.Title, activity.Detail ?? string.Empty, trailing, mark: provider.ShortName);
         _lastEventKind = ActivityKind.Usage;
         ActivityRequested?.Invoke(null);
     }

@@ -114,14 +114,14 @@ public class ProviderIsolationTests
         var ready = new TaskCompletionSource();
         provider.SnapshotChanged += s =>
         {
-            if (s.State == ProviderState.Ready && s.Today.Total == 220)
+            if (s.State == ProviderState.Ready && s.Today.Processed == 220)
             {
                 ready.TrySetResult();
             }
         };
 
         await provider.StartAsync(TestContext.Current.CancellationToken);
-        Assert.Equal(110, provider.Snapshot.Today.Total);
+        Assert.Equal(110, provider.Snapshot.Today.Processed);
         Assert.Equal("island", provider.Snapshot.CurrentProject);
         Assert.Equal(1, provider.Snapshot.SessionsToday);
 
@@ -154,7 +154,7 @@ public class ProviderIsolationTests
         await provider.StartAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(ProviderState.Ready, provider.Snapshot.State);
-        Assert.Equal(1020, provider.Snapshot.Today.Total);
+        Assert.Equal(1020, provider.Snapshot.Today.Processed);
         Assert.Equal(31, provider.Snapshot.LimitPercent);
         Assert.Equal("api", provider.Snapshot.CurrentProject);
         Assert.Equal("gpt-5-codex", provider.Snapshot.CurrentModel);

@@ -56,7 +56,7 @@ public class UsageAggregationTests
         var totals = UsageAggregator.Summarize(events, new ModelPricingService());
 
         Assert.Equal(3, events.Count);
-        Assert.Equal(150, totals.Tokens.Total);
+        Assert.Equal(150, totals.Tokens.Processed);
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public class UsageAggregationTests
         Assert.Equal("api-gateway", e.Project);
         Assert.Equal("sess-1", e.SessionId);
         Assert.Equal(new TokenCounts(25862 - 21376, 103, 0, 0, 21376), e.Tokens);
-        Assert.Equal(25965, e.Tokens.Total);
+        Assert.Equal(25965, e.Tokens.Processed);
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public class UsageAggregationTests
         }
 
         Assert.Equal(2, events.Count);
-        Assert.Equal(800, events.Sum(e => e.Tokens.Total));
+        Assert.Equal(800, events.Sum(e => e.Tokens.Processed));
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public class UsageAggregationTests
         Assert.True(totals.HasPricedTokens);
         Assert.True(totals.HasUnpricedTokens);
         Assert.Equal(1.25m, totals.DisplayValueEur);
-        Assert.Equal(2_000_000, totals.Tokens.Total);
+        Assert.Equal(2_000_000, totals.Tokens.Processed);
     }
 
     [Fact]

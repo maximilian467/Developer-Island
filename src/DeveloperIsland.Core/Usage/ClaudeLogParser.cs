@@ -80,7 +80,7 @@ public static class ClaudeLogParser
             var messageId = GetString(message, "id");
             var requestId = GetString(root, "requestId");
             var key = messageId is null && requestId is null
-                ? GetString(root, "uuid") ?? $"{timestamp.ToUnixTimeMilliseconds()}:{tokens.Total}"
+                ? GetString(root, "uuid") ?? $"{timestamp.ToUnixTimeMilliseconds()}:{tokens.Processed}"
                 : $"{messageId}:{requestId}";
 
             usageEvent = new UsageEvent(

@@ -7,7 +7,8 @@
 <UserControl
     x:Class="DeveloperIsland.UI.Island.ActivityView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:components="using:DeveloperIsland.UI.Components">
 
     <Grid x:Name="Root" Width="360" Height="56" Padding="10,0,20,0" ColumnSpacing="12" Background="Transparent"
           AutomationProperties.Name="{x:Bind ViewModel.AccessibleText, Mode=OneWay}"
@@ -22,6 +23,9 @@
             <Border CornerRadius="18" Background="{StaticResource SurfaceRaisedBrush}" Visibility="{x:Bind ViewModel.ShowGlyph, Mode=OneWay}">
                 <FontIcon Glyph="{x:Bind ViewModel.Glyph, Mode=OneWay}" FontSize="15" FontFamily="{StaticResource IconFont}"
                           Foreground="{x:Bind ViewModel.GlyphBrush, Mode=OneWay}" />
+            </Border>
+            <Border CornerRadius="18" Background="{StaticResource SurfaceRaisedBrush}" Visibility="{x:Bind ViewModel.ShowMark, Mode=OneWay}">
+                <components:ProviderMark Kind="{x:Bind ViewModel.Mark, Mode=OneWay}" Width="15" Height="15" />
             </Border>
             <Border CornerRadius="10" Visibility="{x:Bind ViewModel.ShowArt, Mode=OneWay}">
                 <Border.Background>

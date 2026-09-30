@@ -1,12 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Today's usage of one AI tool. No card: grouping comes from spacing (Taste 4.4). -->
+<!--
+    Today's usage of one AI tool. No card: grouping comes from spacing (Taste 4.4).
+    Headline = fresh tokens; the breakdown names every recorded category (see TokenCounts).
+-->
 <UserControl
     x:Class="DeveloperIsland.UI.Expanded.ProviderSummary"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:components="using:DeveloperIsland.UI.Components">
+
+    <UserControl.Resources>
+        <Style x:Key="BreakdownLabel" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextStyle}">
+            <Setter Property="Foreground" Value="{StaticResource TextTertiaryBrush}" />
+        </Style>
+        <Style x:Key="BreakdownValue" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextStyle}">
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+        </Style>
+    </UserControl.Resources>
 
     <StackPanel Spacing="2">
-        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,2">
+        <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,0,0,2">
+            <components:ProviderMark Kind="{x:Bind ViewModel.ShortName, Mode=OneWay}" Width="12" Height="12" VerticalAlignment="Center" />
             <TextBlock Text="{x:Bind ViewModel.DisplayName, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />
             <Ellipse Width="6" Height="6" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center"
                      Visibility="{x:Bind ViewModel.IsActive, Mode=OneWay}"
@@ -18,10 +33,35 @@
                 <TextBlock Text="{x:Bind ViewModel.TokensText, Mode=OneWay}" Style="{StaticResource FigureTextStyle}" />
                 <TextBlock Text="{x:Bind ViewModel.TokensUnit, Mode=OneWay}" Style="{StaticResource BodyTextStyle}" VerticalAlignment="Bottom" Margin="0,0,0,5" />
             </StackPanel>
-            <TextBlock Style="{StaticResource CaptionTextStyle}" Visibility="{x:Bind ViewModel.ShowValue, Mode=OneWay}">
+
+            <Grid ColumnSpacing="12" RowSpacing="1" Margin="0,6,0,0" Visibility="{x:Bind ViewModel.HasUsageToday, Mode=OneWay}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
+                </Grid.RowDefinitions>
+                <TextBlock Text="Input" Style="{StaticResource BreakdownLabel}" />
+                <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.InputText, Mode=OneWay}" Style="{StaticResource BreakdownValue}" />
+                <TextBlock Grid.Row="1" Text="Cache write" Style="{StaticResource BreakdownLabel}" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind ViewModel.CacheWriteText, Mode=OneWay}" Style="{StaticResource BreakdownValue}" />
+                <TextBlock Grid.Row="2" Text="Output" Style="{StaticResource BreakdownLabel}" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Bind ViewModel.OutputText, Mode=OneWay}" Style="{StaticResource BreakdownValue}" />
+                <TextBlock Grid.Row="3" Text="Cache read" Style="{StaticResource BreakdownLabel}" />
+                <TextBlock Grid.Row="3" Grid.Column="1" Text="{x:Bind ViewModel.CacheReadText, Mode=OneWay}" Style="{StaticResource BreakdownValue}" />
+                <TextBlock Grid.Row="4" Text="Processed" Style="{StaticResource BreakdownLabel}" />
+                <TextBlock Grid.Row="4" Grid.Column="1" Text="{x:Bind ViewModel.ProcessedText, Mode=OneWay}" Style="{StaticResource BreakdownValue}" />
+                <TextBlock Grid.Row="5" Text="Sessions" Style="{StaticResource BreakdownLabel}" />
+                <TextBlock Grid.Row="5" Grid.Column="1" Text="{x:Bind ViewModel.SessionsText, Mode=OneWay}" Style="{StaticResource BreakdownValue}" />
+            </Grid>
+
+            <TextBlock Style="{StaticResource CaptionTextStyle}" Margin="0,6,0,0" TextWrapping="Wrap" TextTrimming="None"
+                       Visibility="{x:Bind ViewModel.ShowValue, Mode=OneWay}">
                 <Run Text="{x:Bind ViewModel.ValueText, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" /><Run Text=" " /><Run Text="{x:Bind ViewModel.ValueCaption, Mode=OneWay}" />
             </TextBlock>
-            <TextBlock Text="{x:Bind ViewModel.DetailText, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" Margin="0,6,0,0" />
+            <TextBlock Text="{x:Bind ViewModel.DetailText, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" Margin="0,4,0,0"
+                       Visibility="{x:Bind ViewModel.HasDetail, Mode=OneWay}" />
             <TextBlock Text="{x:Bind ViewModel.ContextText, Mode=OneWay}" Style="{StaticResource FineTextStyle}" />
         </StackPanel>
 

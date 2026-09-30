@@ -33,7 +33,7 @@ public static class DemoData
             }
 
             // Today is pinned so screenshots show the documented demo values.
-            var claudeTarget = back == 0 ? 1_824_310 : (long)(random.NextDouble() * random.NextDouble() * 3_400_000);
+            var claudeTarget = back == 0 ? 2_683_950 : (long)(random.NextDouble() * random.NextDouble() * 3_400_000);
             var codexTarget = back == 0 ? 618_950 : (random.NextDouble() < 0.55 ? (long)(random.NextDouble() * 1_100_000) : 0);
             AddDay(events, AiProviderKind.Claude, ClaudeModel, day, zoneOffset, claudeTarget, random, sessions: back == 0 ? 3 : 1 + random.Next(4));
             AddDay(events, AiProviderKind.Codex, CodexModel, day, zoneOffset, codexTarget, random, sessions: back == 0 ? 2 : 1 + random.Next(2));

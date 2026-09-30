@@ -20,6 +20,7 @@ public sealed class ActivityViewModel : ObservableObject
     private string _glyph = "";
     private ImageSource? _art;
     private bool _accentGlyph;
+    private string? _mark;
 
     public ActivityKind Kind => _kind;
 
@@ -37,15 +38,21 @@ public sealed class ActivityViewModel : ObservableObject
 
     public bool ShowArt => _art is not null;
 
-    public bool ShowGlyph => _art is null;
+    /// <summary>Provider mark ("Claude" or "Codex") shown instead of a glyph for AI activities.</summary>
+    public string Mark => _mark ?? "Claude";
+
+    public bool ShowMark => _art is null && _mark is not null;
+
+    public bool ShowGlyph => _art is null && _mark is null;
 
     /// <summary>Accent is reserved for a live state (a running focus session).</summary>
     public Brush GlyphBrush => (Brush)Microsoft.UI.Xaml.Application.Current.Resources[_accentGlyph ? "AccentBrush" : "TextPrimaryBrush"];
 
     public string AccessibleText => string.IsNullOrEmpty(_subtitle) ? _title : $"{_title}, {_subtitle}";
 
-    public void Set(ActivityKind kind, string title, string subtitle, string trailing = "", string glyph = "", ImageSource? art = null, bool accentGlyph = false)
+    public void Set(ActivityKind kind, string title, string subtitle, string trailing = "", string glyph = "", ImageSource? art = null, bool accentGlyph = false, string? mark = null)
     {
+        _mark = mark;
         _kind = kind;
         _title = title;
         _subtitle = subtitle;
@@ -64,6 +71,7 @@ public sealed class ActivityViewModel : ObservableObject
             OnPropertyChanged(nameof(Art));
             OnPropertyChanged(nameof(ShowArt));
             OnPropertyChanged(nameof(ShowGlyph));
+            OnPropertyChanged(nameof(ShowMark));
         }
     }
 
