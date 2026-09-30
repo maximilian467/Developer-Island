@@ -53,6 +53,7 @@ internal sealed class AppHost : IDisposable
     private ModuleHost _modules = null!;
     private DispatcherQueueTimer? _historyDebounce;
     private DispatcherQueueTimer? _midnight;
+    private DispatcherQueueTimer? _smartHideSettle;
     private FocusState _lastFocusState = FocusState.Idle;
     private DateTimeOffset? _lastFocusStartedAt;
     private FocusSessionStore? _focusStore;
@@ -125,7 +126,7 @@ internal sealed class AppHost : IDisposable
         {
             _tray.Add();
             _fullscreen = new FullscreenWatcher(_host, _window.Handle, OnFullscreenChanged);
-            _foreground = new ForegroundWatcher(_window.Handle, () => _settings.Current.SmartHideProcesses, _ => ApplySmartHide());
+            _foreground = new ForegroundWatcher(_window.Handle, () => _settings.Current.SmartHideProcesses, _ => ScheduleSmartHide());
             _hotkey = new GlobalHotKey(_host);
             _hotkey.Pressed += OnShortcut;
             _hotkey.Apply(settings.GlobalShortcutEnabled, ShortcutGesture.FromText(settings.GlobalShortcut));
@@ -528,6 +529,24 @@ internal sealed class AppHost : IDisposable
     {
         _hiddenByUser = true;
         _state.Hide();
+    }
+
+    /// <summary>
+    /// Foreground changes arrive in bursts (Alt+Tab, a click on the taskbar); let them settle for
+    /// 150 ms so the island does not retract and return within a frame.
+    /// </summary>
+    private void ScheduleSmartHide()
+    {
+        if (_smartHideSettle is null)
+        {
+            _smartHideSettle = _dispatcher.CreateTimer();
+            _smartHideSettle.IsRepeating = false;
+            _smartHideSettle.Interval = TimeSpan.FromMilliseconds(150);
+            _smartHideSettle.Tick += (_, _) => ApplySmartHide();
+        }
+
+        _smartHideSettle.Stop();
+        _smartHideSettle.Start();
     }
 
     /// <summary>

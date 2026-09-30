@@ -161,8 +161,7 @@ public abstract class LogFileUsageProvider : IAiUsageProvider
             {
                 // Clear the active flag once the window has passed without new writes.
                 _activityTimer?.Dispose();
-                var due = ActiveWindow - (now - lastActivity) + TimeSpan.FromSeconds(1);
-                _activityTimer = Time.CreateTimer(_ => RefreshSnapshot(), null, due, Timeout.InfiniteTimeSpan);
+                _activityTimer = Time.CreateTimer(_ => RefreshSnapshot(), null, ActiveRecheckDelay(now, lastActivity), Timeout.InfiniteTimeSpan);
             }
         }
         catch (Exception ex)
@@ -170,6 +169,17 @@ public abstract class LogFileUsageProvider : IAiUsageProvider
             Log.Error("provider", "Snapshot refresh failed", ex, new { provider = Kind.ToString() });
             SetSnapshot(Snapshot with { State = ProviderState.Error, ErrorMessage = $"Couldn't read {Kind} data. Details are in the log." });
         }
+    }
+
+    /// <summary>
+    /// When to look again whether the provider is still active. A busy live session can keep it active
+    /// after the last write is older than the window; the delay then restarts instead of going negative
+    /// (which made the timer throw and the provider report an error).
+    /// </summary>
+    internal static TimeSpan ActiveRecheckDelay(DateTimeOffset now, DateTimeOffset lastActivity)
+    {
+        var due = ActiveWindow - (now - lastActivity) + TimeSpan.FromSeconds(1);
+        return due >= TimeSpan.FromSeconds(1) ? due : ActiveWindow;
     }
 
     private void SetSnapshot(AiUsageSnapshot snapshot)

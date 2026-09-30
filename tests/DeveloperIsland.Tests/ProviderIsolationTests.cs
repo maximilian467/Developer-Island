@@ -178,4 +178,14 @@ public class ProviderIsolationTests
 
         Assert.Null(provider.Snapshot.LimitPercent);
     }
+
+    [Fact]
+    public void Active_recheck_never_goes_negative_when_a_busy_session_outlives_the_window()
+    {
+        var now = new DateTimeOffset(2026, 9, 30, 11, 20, 0, TimeSpan.Zero);
+
+        Assert.Equal(TimeSpan.FromMinutes(2) + TimeSpan.FromSeconds(1), Core.Providers.LogFileUsageProvider.ActiveRecheckDelay(now, now.AddMinutes(-1)));
+        Assert.Equal(TimeSpan.FromSeconds(1), Core.Providers.LogFileUsageProvider.ActiveRecheckDelay(now, now.AddMinutes(-3)));
+        Assert.Equal(TimeSpan.FromMinutes(3), Core.Providers.LogFileUsageProvider.ActiveRecheckDelay(now, now.AddHours(-9)));
+    }
 }

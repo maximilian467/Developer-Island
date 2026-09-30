@@ -9,8 +9,9 @@ namespace DeveloperIsland.Core.Git;
 /// <list type="bullet">
 /// <item>Event-driven: a watcher on each repository's <c>.git</c> folder reacts to commits, checkouts,
 /// staging and fetches (HEAD, index, refs). Nothing polls.</item>
-/// <item>Working-tree edits do not touch <c>.git</c>, so the panel refreshes when it is shown and when
-/// an AI session reports activity in that folder.</item>
+/// <item>Working-tree edits do not touch <c>.git</c>, so the panel refreshes when it is shown, and
+/// while it is shown, when an AI session reports activity in that folder. The compact island shows
+/// no Git data, so a hidden panel costs no git processes.</item>
 /// <item>Reads use <c>--no-optional-locks</c>, so git never rewrites the index on our behalf (which
 /// would also retrigger the watcher).</item>
 /// </list>
@@ -36,6 +37,7 @@ public sealed class GitService : IDisposable
     private string? _active;
     private string? _git;
     private bool _enabled;
+    private bool _visible;
     private bool _disposed;
 
     public GitService(Func<string?>? findGit = null, TimeProvider? time = null)
@@ -179,7 +181,9 @@ public sealed class GitService : IDisposable
             _active = root;
             recent = _recent.ToList();
             Watch(root);
-            read = !_lastRead.TryGetValue(root, out var last) || _time.GetUtcNow() - last >= ActivityThrottle;
+            // First sight of a repository: read once (branch and remote feed GitHub). Afterwards only
+            // while the panel is on screen.
+            read = !_lastRead.TryGetValue(root, out var last) || (_visible && _time.GetUtcNow() - last >= ActivityThrottle);
         }
 
         if (listChanged)
@@ -191,6 +195,15 @@ public sealed class GitService : IDisposable
         if (read)
         {
             _ = ReadAsync(root);
+        }
+    }
+
+    /// <summary>The Git panel is (or is no longer) on screen.</summary>
+    public void SetVisible(bool visible)
+    {
+        lock (_gate)
+        {
+            _visible = visible;
         }
     }
 
@@ -316,6 +329,19 @@ public sealed class GitService : IDisposable
         CancellationTokenSource cts;
         lock (_gate)
         {
+            if (!_visible)
+            {
+                // Editors touch the index constantly; with the panel hidden nothing shows it, and the
+                // panel re-reads when opened. Only a branch switch matters now (GitHub follows it),
+                // and HEAD can be read without starting git.
+                if (Path.GetFileName(fullPath) == "HEAD" && Path.GetDirectoryName(fullPath) == gitDir.TrimEnd(Path.DirectorySeparatorChar))
+                {
+                    _ = Task.Run(() => UpdateBranchFromHead(root, gitDir));
+                }
+
+                return;
+            }
+
             if (_pending.TryGetValue(root, out var previous))
             {
                 previous.Cancel();
@@ -330,6 +356,22 @@ public sealed class GitService : IDisposable
             cts.Token,
             TaskContinuationOptions.OnlyOnRanToCompletion,
             TaskScheduler.Default);
+    }
+
+    private void UpdateBranchFromHead(string root, string gitDir)
+    {
+        var branch = GitStatusParser.ReadHeadBranch(gitDir);
+        lock (_gate)
+        {
+            if (!_status.TryGetValue(root, out var status) || status.Branch == branch)
+            {
+                return;
+            }
+
+            _status[root] = status with { Branch = branch };
+        }
+
+        Changed?.Invoke();
     }
 
     private async Task ReadAsync(string root)

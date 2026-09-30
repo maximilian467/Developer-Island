@@ -86,6 +86,18 @@ public class GitModuleTests
     }
 
     [Fact]
+    public void Branch_is_read_from_head_without_git()
+    {
+        var gitDir = Directory.CreateDirectory(Path.Combine(TestData.TempDirectory(), ".git")).FullName;
+        File.WriteAllText(Path.Combine(gitDir, "HEAD"), "ref: refs/heads/feature/notch\n");
+        Assert.Equal("feature/notch", GitStatusParser.ReadHeadBranch(gitDir));
+
+        File.WriteAllText(Path.Combine(gitDir, "HEAD"), "7464d94c0ffee7464d94c0ffee7464d94c0ffee0\n");
+        Assert.Null(GitStatusParser.ReadHeadBranch(gitDir));
+        Assert.Null(GitStatusParser.ReadHeadBranch(Path.Combine(gitDir, "missing")));
+    }
+
+    [Fact]
     public void Worktree_git_file_points_to_its_git_directory()
     {
         var root = TestData.TempDirectory();
@@ -177,5 +189,36 @@ public class GitModuleTests
         Assert.Equal("first commit", status.LastCommitSubject);
         Assert.Equal("owner/sample-repo", status.GitHubRepository);
         Assert.Equal([root], git.Recent);
+    }
+
+    [Fact]
+    public async Task Ai_activity_rereads_only_while_the_panel_is_visible()
+    {
+        var gitPath = ProcessRunner.FindExecutable("git", @"%ProgramFiles%Gitcmdgit.exe");
+        Assert.SkipWhen(gitPath is null, "git is not installed");
+
+        var root = Directory.CreateDirectory(Path.Combine(TestData.TempDirectory(), "quiet-repo")).FullName;
+        Assert.True((await ProcessRunner.RunAsync(gitPath!, ["-C", root, "init", "-q"])).Succeeded);
+        var time = new Microsoft.Extensions.Time.Testing.FakeTimeProvider(DateTimeOffset.UtcNow);
+        using var git = new GitService(findGit: () => gitPath, time: time);
+        var first = new TaskCompletionSource();
+        git.Changed += () => { if (git.Active is not null) first.TrySetResult(); };
+        git.Configure(true, [], []);
+        git.NoteProjectPath(root);
+        await first.Task.WaitAsync(TimeSpan.FromSeconds(20), TestContext.Current.CancellationToken);
+
+        var reads = 0;
+        git.Changed += () => Interlocked.Increment(ref reads);
+        time.Advance(TimeSpan.FromMinutes(1));
+        git.NoteProjectPath(root);
+        await Task.Delay(1500, TestContext.Current.CancellationToken);
+        Assert.Equal(0, reads); // hidden panel: no git processes
+
+        var again = new TaskCompletionSource();
+        git.Changed += () => again.TrySetResult();
+        git.SetVisible(true);
+        time.Advance(TimeSpan.FromMinutes(1));
+        git.NoteProjectPath(root);
+        await again.Task.WaitAsync(TimeSpan.FromSeconds(20), TestContext.Current.CancellationToken);
     }
 }

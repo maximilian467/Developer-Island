@@ -198,6 +198,21 @@ public static class GitStatusParser
         return null;
     }
 
+    /// <summary>The checked-out branch from <c>.git/HEAD</c> without running git; null when detached or unreadable.</summary>
+    public static string? ReadHeadBranch(string gitDir)
+    {
+        try
+        {
+            var head = File.ReadAllText(Path.Combine(gitDir, "HEAD")).Trim();
+            const string Prefix = "ref: refs/heads/";
+            return head.StartsWith(Prefix, StringComparison.Ordinal) ? head[Prefix.Length..] : null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
     /// <summary>The git directory of a working tree (worktrees and submodules use a .git file).</summary>
     public static string? GitDirectory(string root)
     {

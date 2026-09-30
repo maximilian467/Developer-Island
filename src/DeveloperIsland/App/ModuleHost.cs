@@ -36,6 +36,9 @@ internal sealed class ModuleHost : IDisposable
     private readonly TaskStore _tasks;
     private DispatcherQueueTimer? _calendarTimer;
     private string? _announcedEvent;
+    private volatile bool _systemVisible;
+    private (ModuleState State, SystemAlert Alert)? _systemShown;
+    private (ModuleState State, SystemAlert Alert)? _systemPosted;
     private IReadOnlyList<CalendarEvent> _demoEvents = [];
 
     public ModuleHost(DispatcherQueue dispatcher, ModuleViewModels vms, IslandViewModel island, SettingsStore settings, bool demo)
@@ -60,7 +63,7 @@ internal sealed class ModuleHost : IDisposable
         _git.RecentChanged += recent => Post(() => _settings.Update(s => s.GitRecentRepositories = recent.ToList()));
         _github.Changed += () => Post(UpdateGitHub);
         _calendar.Changed += () => Post(UpdateCalendar);
-        _system.Changed += () => Post(UpdateSystem);
+        _system.Changed += OnSystemSampled;
         _vms.Git.RepositorySelected += root => _git.SetActive(root);
         foreach (var vm in _vms.All)
         {
@@ -105,7 +108,13 @@ internal sealed class ModuleHost : IDisposable
     /// <summary>The expanded island shows <paramref name="tab"/> (null: collapsed).</summary>
     public void OnPanelVisible(IslandTab? tab)
     {
-        _system.SetVisible(tab == IslandTab.System);
+        _git.SetVisible(tab == IslandTab.Git);
+        _systemVisible = tab == IslandTab.System;
+        _system.SetVisible(_systemVisible);
+        if (_systemVisible)
+        {
+            UpdateSystem();
+        }
         if (_demo)
         {
             return;
@@ -169,9 +178,41 @@ internal sealed class ModuleHost : IDisposable
         _island.EnsureValidTab();
     }
 
+    /// <summary>
+    /// Runs on the sampling thread. Waking the UI thread is the expensive part of a sample, so it
+    /// happens only while the panel is visible or when the state or alert changed.
+    /// </summary>
+    private void OnSystemSampled()
+    {
+        var key = (_system.Status.State, _system.Alert);
+        lock (_system)
+        {
+            if (!_systemVisible && _systemPosted == key)
+            {
+                return;
+            }
+
+            _systemPosted = key;
+        }
+
+        Post(UpdateSystem);
+    }
+
+    /// <summary>
+    /// Samples arrive every few seconds; the UI hears about them only while the System panel is on
+    /// screen, or when the state or alert changes (so an idle island does no binding work).
+    /// </summary>
     private void UpdateSystem()
     {
-        _vms.System.Update(_system.Status, _system.Latest, _system.Alert);
+        var status = _system.Status;
+        var alert = _system.Alert;
+        if (!_systemVisible && _systemShown == (status.State, alert))
+        {
+            return;
+        }
+
+        _systemShown = (status.State, alert);
+        _vms.System.Update(status, _system.Latest, alert);
     }
 
     private void SetCalendarTimer(bool on)
