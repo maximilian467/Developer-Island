@@ -141,6 +141,11 @@ public sealed class SettingsStore
         s.GitRepositories = CleanList(s.GitRepositories, 20);
         s.GitRecentRepositories = CleanList(s.GitRecentRepositories, Git.GitService.MaxRecent);
         s.CalendarSources = CleanList(s.CalendarSources, 10);
+        s.CalendarFeeds = (s.CalendarFeeds ?? [])
+            .Where(f => f is not null && !string.IsNullOrWhiteSpace(f.Id))
+            .DistinctBy(f => f.Id)
+            .Take(10)
+            .ToList();
         s.Version = AppSettings.CurrentVersion;
         return s;
     }

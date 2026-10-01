@@ -254,3 +254,77 @@ public class CalendarTests
                 : Task.FromResult<IReadOnlyList<CalendarEvent>>([new CalendarEvent("Robotics", from.AddHours(18), from.AddHours(19), false, null, Name)]);
     }
 }
+
+public class CalendarSecretTests
+{
+    private const string Link = "https://calendar.google.com/calendar/ical/me%40example.com/private-0123456789abcdef/basic.ics";
+
+    [Fact]
+    public void Plain_text_links_move_to_the_secret_store_and_leave_settings()
+    {
+        var path = Path.Combine(TestData.TempDirectory(), "settings.json");
+        File.WriteAllText(path, $$"""{ "calendarSources": ["{{Link}}", "C:/cal/uni.ics"] }""");
+        var store = new DeveloperIsland.Core.Settings.SettingsStore(path);
+        var secrets = new MemorySecretStore();
+
+        store.Update(s => CalendarFeeds.MigratePlainText(s, secrets));
+
+        var text = File.ReadAllText(path);
+        Assert.DoesNotContain("private-0123456789abcdef", text);
+        Assert.Contains("Google Calendar", text);
+        Assert.Empty(store.Current.CalendarSources);
+        Assert.Equal(2, store.Current.CalendarFeeds.Count);
+        Assert.Equal([Link, @"C:/cal/uni.ics"], CalendarFeeds.Resolve(store.Current.CalendarFeeds, secrets));
+    }
+
+    [Fact]
+    public void Removing_a_calendar_deletes_its_secret()
+    {
+        var settings = new DeveloperIsland.Core.Settings.AppSettings();
+        var secrets = new MemorySecretStore();
+        var feed = CalendarFeeds.Add(settings, secrets, Link);
+        Assert.Equal(Link, secrets.Load(CalendarFeeds.SecretKey(feed.Id)));
+
+        CalendarFeeds.Remove(settings, secrets, feed.Id);
+
+        Assert.Empty(settings.CalendarFeeds);
+        Assert.Null(secrets.Load(CalendarFeeds.SecretKey(feed.Id)));
+    }
+
+    [Fact]
+    public void A_missing_secret_skips_that_calendar_only()
+    {
+        var settings = new DeveloperIsland.Core.Settings.AppSettings();
+        var secrets = new MemorySecretStore();
+        var gone = CalendarFeeds.Add(settings, secrets, Link);
+        CalendarFeeds.Add(settings, secrets, "https://example.com/team.ics");
+        secrets.Delete(CalendarFeeds.SecretKey(gone.Id));
+
+        Assert.Equal(["https://example.com/team.ics"], CalendarFeeds.Resolve(settings.CalendarFeeds, secrets));
+    }
+
+    [Fact]
+    public void Nothing_to_migrate_changes_nothing()
+    {
+        Assert.False(CalendarFeeds.MigratePlainText(new DeveloperIsland.Core.Settings.AppSettings(), new MemorySecretStore()));
+    }
+
+    [Fact]
+    public void Windows_credential_manager_round_trip()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Windows only");
+        var store = new CredentialManagerSecretStore("DeveloperIsland.Tests");
+        var key = "calendar/" + Guid.NewGuid().ToString("N");
+        try
+        {
+            store.Save(key, Link);
+            Assert.Equal(Link, store.Load(key));
+        }
+        finally
+        {
+            store.Delete(key);
+        }
+
+        Assert.Null(store.Load(key));
+    }
+}

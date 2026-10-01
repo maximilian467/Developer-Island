@@ -218,12 +218,13 @@ public sealed partial class SettingsWindow
     private void BuildCalendarRows(AppSettings s)
     {
         CalendarRows.Children.Clear();
-        foreach (var location in s.CalendarSources)
+        foreach (var feed in s.CalendarFeeds)
         {
-            // Links often contain a private token: show the provider name, never the address.
-            var detail = IcsCalendarSource.IsWebAddress(location) ? "Calendar link" : location;
-            CalendarRows.Children.Add(ListRow(IcsCalendarSource.DisplayName(location), detail, "Remove calendar", () =>
-                _store.Update(x => x.CalendarSources.Remove(location))));
+            // Links contain a private token: show the provider name, never the address.
+            var detail = feed.FilePath ?? "Private link, kept in Windows Credential Manager";
+            var id = feed.Id;
+            CalendarRows.Children.Add(ListRow(feed.Name, detail, "Remove calendar", () =>
+                _store.Update(x => CalendarFeeds.Remove(x, _secrets, id))));
             CalendarRows.Children.Add(Divider());
         }
     }
@@ -275,9 +276,10 @@ public sealed partial class SettingsWindow
     {
         _store.Update(s =>
         {
-            if (!s.CalendarSources.Contains(location, StringComparer.Ordinal))
+            var duplicate = CalendarFeeds.Resolve(s.CalendarFeeds, _secrets).Contains(location, StringComparer.Ordinal);
+            if (!duplicate)
             {
-                s.CalendarSources.Add(location);
+                CalendarFeeds.Add(s, _secrets, location);
             }
 
             s.CalendarEnabled = true;

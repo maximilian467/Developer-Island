@@ -43,8 +43,11 @@ internal sealed class ModuleHost : IDisposable
     private (ModuleState State, SystemAlert Alert)? _systemPosted;
     private IReadOnlyList<CalendarEvent> _demoEvents = [];
 
-    public ModuleHost(DispatcherQueue dispatcher, ModuleViewModels vms, IslandViewModel island, SettingsStore settings, bool demo)
+    private readonly ISecretStore _secrets;
+
+    public ModuleHost(DispatcherQueue dispatcher, ModuleViewModels vms, IslandViewModel island, SettingsStore settings, bool demo, ISecretStore secrets)
     {
+        _secrets = secrets;
         _dispatcher = dispatcher;
         _vms = vms;
         _island = island;
@@ -88,7 +91,7 @@ internal sealed class ModuleHost : IDisposable
 
         _git.Configure(settings.GitEnabled, settings.GitRepositories, settings.GitRecentRepositories);
         _github.Configure(settings.GitHubEnabled);
-        _calendar.Configure(settings.CalendarEnabled, settings.CalendarSources);
+        _calendar.Configure(settings.CalendarEnabled, CalendarFeeds.Resolve(settings.CalendarFeeds, _secrets));
         // Sensors are opened only while System is on, and closed (with their drivers) when it is off.
         if (settings.SystemEnabled && _sensors is null)
         {
@@ -107,7 +110,7 @@ internal sealed class ModuleHost : IDisposable
         UpdateGitHub();
         UpdateCalendar();
         UpdateSystem();
-        SetCalendarTimer(settings.CalendarEnabled && settings.CalendarSources.Count > 0);
+        SetCalendarTimer(settings.CalendarEnabled && settings.CalendarFeeds.Count > 0);
     }
 
     /// <summary>An AI session reported activity: its folder may be a repository to follow.</summary>

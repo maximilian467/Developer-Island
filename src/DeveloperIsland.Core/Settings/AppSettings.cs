@@ -37,6 +37,22 @@ public sealed class AutoHideApp
     public AutoHideApp Clone() => (AutoHideApp)MemberwiseClone();
 }
 
+/// <summary>
+/// A calendar in settings: its private link lives in the secret store (Credential Manager) under
+/// <see cref="Id"/>; only the provider name is saved here. Local .ics files keep their path.
+/// </summary>
+public sealed class CalendarFeed
+{
+    public string Id { get; set; } = string.Empty;
+
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>Set for .ics files; null for links (kept in the secret store).</summary>
+    public string? FilePath { get; set; }
+
+    public CalendarFeed Clone() => (CalendarFeed)MemberwiseClone();
+}
+
 /// <summary>User settings, persisted as JSON. Every property has a safe default.</summary>
 public sealed class AppSettings
 {
@@ -97,8 +113,14 @@ public sealed class AppSettings
     /// <summary>Repositories of recent Claude Code and Codex sessions, most recent first.</summary>
     public List<string> GitRecentRepositories { get; set; } = [];
 
-    /// <summary>iCalendar links (https or webcal) or .ics file paths.</summary>
+    /// <summary>
+    /// Calendar links or .ics paths saved in plain text by earlier versions. Moved into
+    /// <see cref="CalendarFeeds"/> (links into the secret store) on start; empty afterwards.
+    /// </summary>
     public List<string> CalendarSources { get; set; } = [];
+
+    /// <summary>Calendars; links are in the secret store, never in this file.</summary>
+    public List<CalendarFeed> CalendarFeeds { get; set; } = [];
 
     // Appearance
     [JsonConverter(typeof(JsonStringEnumConverter<AppTheme>))]
@@ -186,6 +208,7 @@ public sealed class AppSettings
         copy.GitRepositories = [.. GitRepositories];
         copy.GitRecentRepositories = [.. GitRecentRepositories];
         copy.CalendarSources = [.. CalendarSources];
+        copy.CalendarFeeds = CalendarFeeds.Select(f => f.Clone()).ToList();
         return copy;
     }
 }

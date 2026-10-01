@@ -26,10 +26,12 @@ public sealed partial class SettingsWindow : Window
     private IReadOnlyList<MonitorInfo> _monitors = [];
     private bool _loading;
     private readonly Func<bool> _isShortcutInUse;
+    private readonly Core.Calendar.ISecretStore _secrets;
     private string _selected = "General";
 
-    internal SettingsWindow(SettingsStore store, bool isDemo, Func<bool> isShortcutInUse)
+    internal SettingsWindow(SettingsStore store, bool isDemo, Func<bool> isShortcutInUse, Core.Calendar.ISecretStore secrets)
     {
+        _secrets = secrets;
         _store = store;
         _isDemo = isDemo;
         _isShortcutInUse = isShortcutInUse;

@@ -1,4 +1,5 @@
 using System.Globalization;
+using DeveloperIsland.Core.Calendar;
 using DeveloperIsland.Core.Demo;
 using DeveloperIsland.Core.Diagnostics;
 using DeveloperIsland.Core.Focus;
@@ -53,6 +54,7 @@ internal sealed class AppHost : IDisposable
     private GlobalHotKey? _hotkey;
     private SettingsWindow? _settingsWindow;
     private ModuleHost _modules = null!;
+    private ISecretStore _secrets = null!;
     private UiStateStore _uiState = null!;
     private DispatcherQueueTimer? _rotation;
     private PlanUsageService? _plan;
@@ -106,7 +108,11 @@ internal sealed class AppHost : IDisposable
             minutes => _settings.Update(s => s.CustomFocusMinutes = minutes));
         var modules = ModuleViewModels.Create();
         _viewModel = new IslandViewModel(usage, music, focus, modules, _options.IsDemo);
-        _modules = new ModuleHost(_dispatcher, modules, _viewModel, _settings, _options.IsDemo) { OpenSettings = OpenSettings };
+        // Private calendar links live in Windows Credential Manager; demo mode keeps them in memory.
+        _secrets = _options.IsDemo ? new MemorySecretStore() : new CredentialManagerSecretStore();
+        MigrateCalendarLinks();
+        settings = _settings.Current;
+        _modules = new ModuleHost(_dispatcher, modules, _viewModel, _settings, _options.IsDemo, _secrets) { OpenSettings = OpenSettings };
         ApplyModuleFlags(settings);
         _modules.Apply(settings);
         _uiState = new UiStateStore(_options.IsDemo ? null : AppPaths.UiState);
@@ -285,7 +291,7 @@ internal sealed class AppHost : IDisposable
         _viewModel.SetLastActive(null);
         await Task.Delay(400);
 
-        await new SettingsWindow(_settings, _options.IsDemo, () => false).SaveSnapshotsAsync(_options.SnapshotDirectory!);
+        await new SettingsWindow(_settings, _options.IsDemo, () => false, _secrets).SaveSnapshotsAsync(_options.SnapshotDirectory!);
     }
 
     /// <summary>Second launch of the app: show the island.</summary>
@@ -535,6 +541,26 @@ internal sealed class AppHost : IDisposable
 
     private void OnPlanReset(DispatcherQueueTimer sender, object args) => _viewModel.Usage.Claude.RefreshPlanClock();
 
+    /// <summary>Earlier versions saved calendar links in settings.json; move them into Credential Manager.</summary>
+    private void MigrateCalendarLinks()
+    {
+        if (_settings.Current.CalendarSources.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var count = _settings.Current.CalendarSources.Count;
+            _settings.Update(s => CalendarFeeds.MigratePlainText(s, _secrets));
+            Log.Info("calendar", "Calendar links moved to Windows Credential Manager", new { count });
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("calendar", "Calendar links could not be moved; they stay in settings for now", new { error = ex.GetType().Name });
+        }
+    }
+
     /// <summary>Enabled favorites, in tab order, feature in the compact island.</summary>
     private void ApplyFavorites(AppSettings settings)
     {
@@ -775,7 +801,7 @@ internal sealed class AppHost : IDisposable
     {
         if (_settingsWindow is null)
         {
-            _settingsWindow = new SettingsWindow(_settings, _options.IsDemo, () => _hotkey?.IsInUse ?? false);
+            _settingsWindow = new SettingsWindow(_settings, _options.IsDemo, () => _hotkey?.IsInUse ?? false, _secrets);
             _settingsWindow.Closed += (_, _) => _settingsWindow = null;
         }
 
