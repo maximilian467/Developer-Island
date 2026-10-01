@@ -138,7 +138,10 @@ public sealed partial class ExpandedView : UserControl
                 Height = 32,
                 CornerRadius = new CornerRadius(16),
                 Tag = tab,
-                Content = new ModuleIcon { Module = IslandViewModel.TabModule(tab) },
+                // Usage holds Claude and Codex together: a usage chart, not one provider's mark.
+                Content = tab == IslandTab.Usage
+                    ? new FontIcon { Glyph = "\uE9D2", FontSize = 15, FontFamily = (FontFamily)Application.Current.Resources["IconFont"] }
+                    : new ModuleIcon { Module = IslandViewModel.TabModule(tab) },
             };
             AutomationProperties.SetName(button, name);
             ToolTipService.SetToolTip(button, name);

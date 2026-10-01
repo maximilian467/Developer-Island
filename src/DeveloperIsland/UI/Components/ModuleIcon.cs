@@ -34,7 +34,6 @@ public sealed class ModuleIcon : UserControl
     /// <summary>Segoe Fluent Icons code point, or null for drawn icons.</summary>
     public static string? Glyph(ModuleId module) => module switch
     {
-        ModuleId.Claude or ModuleId.Codex => "", // sparkle: AI usage
         ModuleId.Music => "",
         ModuleId.Focus => "",
         ModuleId.Calendar => "",
@@ -45,6 +44,15 @@ public sealed class ModuleIcon : UserControl
 
     private void Build()
     {
+        // The AI tools use their provider marks (see ProviderMark).
+        if (Module is ModuleId.Claude or ModuleId.Codex)
+        {
+            var mark = new ProviderMark { Kind = Module == ModuleId.Claude ? "Claude" : "Codex", Width = 14, Height = 14 };
+            mark.SetBinding(ForegroundProperty, new Microsoft.UI.Xaml.Data.Binding { Source = this, Path = new PropertyPath(nameof(Foreground)) });
+            Content = mark;
+            return;
+        }
+
         if (Glyph(Module) is { } glyph)
         {
             var icon = new FontIcon
