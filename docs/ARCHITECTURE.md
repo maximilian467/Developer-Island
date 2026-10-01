@@ -6,7 +6,7 @@ Developer Island is two projects plus tests:
 |---|---|---|
 | `DeveloperIsland.Core` | `net10.0` | Everything that does not need Windows UI: models, parsers, providers, pricing, SQLite storage, settings, placement math, focus timer, island state machine, module logic (Git, GitHub, calendar, tasks, system, plan usage, favorites), demo data. Fully unit-tested. |
 | `DeveloperIsland` | `net10.0-windows10.0.22621.0`, WinUI 3 | The app: composition root, view models, views, motion, and platform integration (windowing, tray, autostart, media sessions, monitors, hardware sensors, hotkey). |
-| `DeveloperIsland.Tests` | `net10.0`, xUnit v3 | 294 tests against Core, including a real `git` repository and a Windows Credential Manager round trip. |
+| `DeveloperIsland.Tests` | `net10.0`, xUnit v3 | 368 tests against Core, including a real `git` repository and a Windows Credential Manager round trip. |
 
 ## Data flow
 
