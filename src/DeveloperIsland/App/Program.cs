@@ -21,6 +21,15 @@ public static class Program
         }
 
         var options = AppOptions.Parse(args);
+        if (options.SnapshotCulture is { Length: > 0 } cultureName)
+        {
+            // Documentation renders only: one number and date format whatever the machine uses.
+            var culture = System.Globalization.CultureInfo.GetCultureInfo(cultureName);
+            System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture;
+            System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;
+            System.Globalization.CultureInfo.CurrentCulture = culture;
+            System.Globalization.CultureInfo.CurrentUICulture = culture;
+        }
 
         // One island per user session. A second launch (Start menu, installer "Launch") shows the
         // running island instead. Demo mode uses its own instance name so it can run side by side.

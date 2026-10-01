@@ -29,9 +29,10 @@ internal static class AppPaths
 
 /// <summary>
 /// Command-line options: <c>--demo</c>, <c>--autostart</c>, <c>--settings[=section]</c>, and for development
-/// <c>--snapshot=folder</c> (demo only: renders every state to PNG offscreen, then exits).
+/// <c>--snapshot=folder</c> (demo only: renders every state to PNG offscreen, then exits), with an
+/// optional <c>--culture=en-US</c> so documentation renders use one number and date format.
 /// </summary>
-internal sealed record AppOptions(bool IsDemo, bool IsAutostart, string? SettingsSection, string? SnapshotDirectory = null)
+internal sealed record AppOptions(bool IsDemo, bool IsAutostart, string? SettingsSection, string? SnapshotDirectory = null, string? SnapshotCulture = null)
 {
     public static AppOptions Parse(IEnumerable<string> args)
     {
@@ -39,6 +40,7 @@ internal sealed record AppOptions(bool IsDemo, bool IsAutostart, string? Setting
         var set = new HashSet<string>(list.Select(a => a.ToLowerInvariant()));
         string? settings = null;
         string? snapshot = null;
+        string? culture = null;
         foreach (var arg in list)
         {
             if (arg.Equals("--settings", StringComparison.OrdinalIgnoreCase))
@@ -49,6 +51,10 @@ internal sealed record AppOptions(bool IsDemo, bool IsAutostart, string? Setting
             {
                 snapshot = arg["--snapshot=".Length..].Trim('"');
             }
+            else if (arg.StartsWith("--culture=", StringComparison.OrdinalIgnoreCase))
+            {
+                culture = arg["--culture=".Length..].Trim('"');
+            }
             else if (arg.StartsWith("--settings=", StringComparison.OrdinalIgnoreCase))
             {
                 var name = arg["--settings=".Length..];
@@ -57,6 +63,7 @@ internal sealed record AppOptions(bool IsDemo, bool IsAutostart, string? Setting
         }
 
         var demo = set.Contains("--demo");
-        return new AppOptions(demo, set.Contains(Platform.Startup.AutostartService.Argument), settings, demo ? snapshot : null);
+        var snapshotDirectory = demo ? snapshot : null;
+        return new AppOptions(demo, set.Contains(Platform.Startup.AutostartService.Argument), settings, snapshotDirectory, snapshotDirectory is null ? null : culture);
     }
 }
