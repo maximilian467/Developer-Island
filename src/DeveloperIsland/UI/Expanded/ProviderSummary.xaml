@@ -21,7 +21,7 @@
     </UserControl.Resources>
 
     <StackPanel Spacing="2">
-        <Grid Margin="0,-4,0,-2">
+        <Grid Margin="0,-7,0,-5">
             <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
                 <components:ProviderMark Kind="{x:Bind ViewModel.ShortName, Mode=OneWay}" Width="12" Height="12" VerticalAlignment="Center" />
                 <TextBlock Text="{x:Bind ViewModel.DisplayName, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />
@@ -29,7 +29,7 @@
                          Visibility="{x:Bind ViewModel.IsActive, Mode=OneWay}"
                          AutomationProperties.Name="Session active" />
             </StackPanel>
-            <Button x:Name="StarButton" Style="{StaticResource IslandStarButtonStyle}" HorizontalAlignment="Right" Margin="0,0,-6,0"
+            <Button x:Name="StarButton" Style="{StaticResource IslandStarButtonStyle}" HorizontalAlignment="Right" Margin="0,0,-9,0"
                     Content="{x:Bind ViewModel.FavoriteGlyph, Mode=OneWay}" Click="OnStar"
                     AutomationProperties.Name="{x:Bind ViewModel.FavoriteLabel, Mode=OneWay}"
                     ToolTipService.ToolTip="{x:Bind ViewModel.FavoriteLabel, Mode=OneWay}" />
@@ -39,7 +39,7 @@
             <!-- Plan usage -->
             <Grid Margin="0,6,0,0" MinHeight="22">
                 <TextBlock Text="Plan usage" Style="{StaticResource FineTextStyle}" VerticalAlignment="Center" />
-                <Border HorizontalAlignment="Right" CornerRadius="10" Padding="2" Background="{StaticResource SurfaceRaisedBrush}"
+                <Border HorizontalAlignment="Right" CornerRadius="14" Padding="2" Background="{StaticResource SurfaceRaisedBrush}"
                         Visibility="{x:Bind ViewModel.HasBothPlanWindows, Mode=OneWay}">
                     <StackPanel Orientation="Horizontal" AutomationProperties.Name="Plan window">
                         <Button x:Name="CurrentButton" Style="{StaticResource IslandSegmentButtonStyle}" Content="Current" Click="OnShowCurrent" />
@@ -65,7 +65,7 @@
                 <TextBlock Text="Unavailable" Style="{StaticResource LabelTextStyle}" Foreground="{StaticResource TextSecondaryBrush}" />
                 <TextBlock Text="{x:Bind ViewModel.PlanUnavailableReason, Mode=OneWay}" Style="{StaticResource FineTextStyle}"
                            TextWrapping="Wrap" TextTrimming="None" MaxLines="2" MaxWidth="180" HorizontalAlignment="Left" />
-                <Button Style="{StaticResource IslandPillButtonStyle}" Height="26" MinWidth="0" Padding="12,0" FontSize="12" Margin="0,4,0,0"
+                <Button Style="{StaticResource IslandPillButtonStyle}" Height="32" MinWidth="0" Padding="14,0" FontSize="12" Margin="0,4,0,0"
                         Content="Connect…" Click="OnConnectPlan" Visibility="{x:Bind ViewModel.CanConnectPlan, Mode=OneWay}"
                         AutomationProperties.Name="Connect Claude plan usage in Settings" />
             </StackPanel>

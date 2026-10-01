@@ -58,7 +58,7 @@
                                         <MenuFlyoutItem Text="Delete" Tag="{x:Bind Id}" Click="OnDelete" />
                                     </MenuFlyout>
                                 </Grid.ContextFlyout>
-                                <Button Style="{StaticResource IslandIconButtonStyle}" Width="28" Height="28" CornerRadius="14" Tag="{x:Bind Id}"
+                                <Button Style="{StaticResource IslandIconButtonStyle}" Width="32" Height="32" CornerRadius="16" Tag="{x:Bind Id}"
                                         Click="OnToggle" KeyDown="OnRowKeyDown" AutomationProperties.Name="{x:Bind AccessibleName, Mode=OneWay}">
                                     <Grid Width="18" Height="18">
                                         <Ellipse Stroke="{StaticResource TextTertiaryBrush}" StrokeThickness="1.4" />
@@ -68,7 +68,7 @@
                                 </Button>
                                 <TextBlock Grid.Column="1" Text="{x:Bind Title, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" FontSize="13"
                                            Foreground="{StaticResource TextPrimaryBrush}" Opacity="{x:Bind TitleOpacity, Mode=OneWay}" VerticalAlignment="Center" />
-                                <Button Grid.Column="2" Style="{StaticResource IslandIconButtonStyle}" Width="28" Height="28" CornerRadius="14" FontSize="10"
+                                <Button Grid.Column="2" Style="{StaticResource IslandIconButtonStyle}" Width="32" Height="32" CornerRadius="16" FontSize="10"
                                         Content="&#xE711;" Tag="{x:Bind Id}" Click="OnDelete" Opacity="0" IsTabStop="False"
                                         AutomationProperties.Name="Delete task" Foreground="{StaticResource TextSecondaryBrush}" />
                             </Grid>
