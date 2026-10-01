@@ -14,6 +14,12 @@ public static class Program
             return StatusLineBridge.Run();
         }
 
+        // Hardware support check: prints what the System module can read, then exits.
+        if (SystemReport.IsRequested(args))
+        {
+            return SystemReport.Run();
+        }
+
         var options = AppOptions.Parse(args);
 
         // One island per user session. A second launch (Start menu, installer "Launch") shows the

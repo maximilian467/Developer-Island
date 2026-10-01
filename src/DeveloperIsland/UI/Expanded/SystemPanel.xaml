@@ -1,42 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- System: CPU, memory and (on laptops) battery as three quiet meters. -->
+<!--
+    System: CPU, memory, GPU and battery as quiet tiles with a 60-second history, and only the
+    sensors this device has (temperatures, fans) as fine rows below. Hardware that does not exist
+    is not shown at all; the tiles re-flow (up to three in a row, four as two by two).
+-->
 <UserControl
     x:Class="DeveloperIsland.UI.Expanded.SystemPanel"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:DeveloperIsland.UI.Expanded">
+    xmlns:local="using:DeveloperIsland.UI.Expanded"
+    xmlns:components="using:DeveloperIsland.UI.Components"
+    xmlns:vm="using:DeveloperIsland.ViewModels">
 
     <Grid>
         <local:ModuleStateView x:Name="StateView" Visibility="{x:Bind ViewModel.ShowState, Mode=OneWay}" />
 
         <StackPanel Visibility="{x:Bind ViewModel.IsReady, Mode=OneWay}" AutomationProperties.Name="{x:Bind ViewModel.AccessibleSummary, Mode=OneWay}">
-            <Grid x:Name="Tiles" ColumnSpacing="8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition x:Name="BatteryColumn" Width="*" />
-                </Grid.ColumnDefinitions>
-
-                <Border Style="{StaticResource ModuleTileStyle}">
+            <Grid x:Name="Tiles" ColumnSpacing="8" RowSpacing="8">
+                <Border x:Name="CpuTile" Style="{StaticResource ModuleTileStyle}">
                     <StackPanel>
                         <TextBlock Text="CPU" Style="{StaticResource FineTextStyle}" />
                         <TextBlock Text="{x:Bind ViewModel.CpuFigure, Mode=OneWay}" Style="{StaticResource FigureTextStyle}" Margin="0,2,0,0" />
-                        <Grid Height="3" Margin="0,8,0,0" CornerRadius="1.5" Background="{StaticResource ProgressTrackBrush}">
+                        <components:Sparkline x:Name="CpuSpark" Margin="0,6,0,0" />
+                        <Grid Height="3" Margin="0,4,0,0" CornerRadius="1.5" Background="{StaticResource ProgressTrackBrush}">
                             <Rectangle Fill="{StaticResource AccentBrush}" RadiusX="1.5" RadiusY="1.5" RenderTransformOrigin="0,0.5">
                                 <Rectangle.RenderTransform>
                                     <ScaleTransform ScaleX="{x:Bind ViewModel.CpuFraction, Mode=OneWay}" />
                                 </Rectangle.RenderTransform>
                             </Rectangle>
                         </Grid>
-                        <TextBlock Text="{x:Bind CpuCaption, Mode=OneWay}" Style="{StaticResource FineTextStyle}" Margin="0,6,0,0" />
+                        <TextBlock x:Name="CpuCaptionText" Text="{x:Bind ViewModel.CpuCaption, Mode=OneWay}" Style="{StaticResource FineTextStyle}" Margin="0,6,0,0" />
                     </StackPanel>
                 </Border>
 
-                <Border Grid.Column="1" Style="{StaticResource ModuleTileStyle}">
+                <Border x:Name="MemoryTile" Style="{StaticResource ModuleTileStyle}">
                     <StackPanel>
                         <TextBlock Text="Memory" Style="{StaticResource FineTextStyle}" />
                         <TextBlock Text="{x:Bind ViewModel.MemoryFigure, Mode=OneWay}" Style="{StaticResource FigureTextStyle}" Margin="0,2,0,0" />
-                        <Grid Height="3" Margin="0,8,0,0" CornerRadius="1.5" Background="{StaticResource ProgressTrackBrush}">
+                        <components:Sparkline x:Name="MemorySpark" Margin="0,6,0,0" />
+                        <Grid Height="3" Margin="0,4,0,0" CornerRadius="1.5" Background="{StaticResource ProgressTrackBrush}">
                             <Rectangle Fill="{StaticResource AccentBrush}" RadiusX="1.5" RadiusY="1.5" RenderTransformOrigin="0,0.5">
                                 <Rectangle.RenderTransform>
                                     <ScaleTransform ScaleX="{x:Bind ViewModel.MemoryFraction, Mode=OneWay}" />
@@ -47,7 +49,23 @@
                     </StackPanel>
                 </Border>
 
-                <Border Grid.Column="2" Style="{StaticResource ModuleTileStyle}" Visibility="{x:Bind ViewModel.HasBattery, Mode=OneWay}">
+                <Border x:Name="GpuTile" Style="{StaticResource ModuleTileStyle}" Visibility="Collapsed">
+                    <StackPanel>
+                        <TextBlock Text="GPU" Style="{StaticResource FineTextStyle}" />
+                        <TextBlock Text="{x:Bind ViewModel.GpuFigure, Mode=OneWay}" Style="{StaticResource FigureTextStyle}" Margin="0,2,0,0" />
+                        <components:Sparkline x:Name="GpuSpark" Margin="0,6,0,0" />
+                        <Grid Height="3" Margin="0,4,0,0" CornerRadius="1.5" Background="{StaticResource ProgressTrackBrush}">
+                            <Rectangle Fill="{StaticResource AccentBrush}" RadiusX="1.5" RadiusY="1.5" RenderTransformOrigin="0,0.5">
+                                <Rectangle.RenderTransform>
+                                    <ScaleTransform ScaleX="{x:Bind ViewModel.GpuFraction, Mode=OneWay}" />
+                                </Rectangle.RenderTransform>
+                            </Rectangle>
+                        </Grid>
+                        <TextBlock x:Name="GpuCaptionText" Text="{x:Bind ViewModel.GpuCaption, Mode=OneWay}" Style="{StaticResource FineTextStyle}" Margin="0,6,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="BatteryTile" Style="{StaticResource ModuleTileStyle}" Visibility="Collapsed">
                     <StackPanel>
                         <TextBlock Text="Battery" Style="{StaticResource FineTextStyle}" />
                         <TextBlock Text="{x:Bind ViewModel.BatteryFigure, Mode=OneWay}" Style="{StaticResource FigureTextStyle}" Margin="0,2,0,0" />
@@ -62,6 +80,18 @@
                     </StackPanel>
                 </Border>
             </Grid>
+
+            <ItemsControl ItemsSource="{x:Bind ViewModel.SensorRows, Mode=OneWay}" Margin="2,12,2,0" IsTabStop="False"
+                          Visibility="{x:Bind ViewModel.HasSensorRows, Mode=OneWay}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SensorRow">
+                        <Grid Height="22">
+                            <TextBlock Text="{x:Bind Label}" Style="{StaticResource FineTextStyle}" VerticalAlignment="Center" />
+                            <TextBlock Text="{x:Bind Value}" Style="{StaticResource CaptionTextStyle}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </StackPanel>
     </Grid>
 </UserControl>

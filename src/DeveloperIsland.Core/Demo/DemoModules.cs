@@ -71,4 +71,29 @@ public static class DemoModules
     }
 
     public static SystemSample System => new(23, 11_400UL * 1024 * 1024, 32UL * 1024 * 1024 * 1024, 84, true);
+
+    /// <summary>A calm minute of a laptop with a GPU, a CPU temperature and one fan (demo only).</summary>
+    public static IReadOnlyList<SystemSample> SystemHistory(DateTimeOffset now)
+    {
+        var samples = new List<SystemSample>();
+        for (var i = 0; i < 60; i++)
+        {
+            var wave = Math.Sin(i / 6.0) * 8 + Math.Sin(i / 2.3) * 4;
+            var burst = i is > 38 and < 46 ? 30 : 0;
+            samples.Add(System with
+            {
+                CpuPercent = Math.Clamp(21 + wave + burst, 2, 100),
+                MemoryUsedBytes = (ulong)((11_200 + i * 3) * 1024L * 1024),
+                GpuPercent = Math.Clamp(9 + wave / 2 + burst / 3, 0, 100),
+                Temperatures =
+                [
+                    new TemperatureReading(TemperatureKind.Cpu, "CPU", 52 + burst / 6.0),
+                    new TemperatureReading(TemperatureKind.Storage, "Samsung SSD 990 PRO", 41),
+                ],
+                Fans = [new FanReading("CPU fan", 2340 + burst * 20)],
+            });
+        }
+
+        return samples;
+    }
 }

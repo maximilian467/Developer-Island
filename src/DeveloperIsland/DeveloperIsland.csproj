@@ -37,6 +37,7 @@
     AI, ML/ONNX and Widgets, about 45 MB the island never loads). Versions match WinAppSDK 1.8.260921001.
   -->
   <ItemGroup>
+    <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
     <PackageReference Include="Microsoft.WindowsAppSDK.Base" Version="1.8.251216001" />
     <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" Version="1.8.260803002" />
     <PackageReference Include="Microsoft.WindowsAppSDK.InteractiveExperiences" Version="1.8.260708001" />

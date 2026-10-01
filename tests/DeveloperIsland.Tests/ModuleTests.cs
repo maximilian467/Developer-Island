@@ -194,7 +194,13 @@ public class SystemModuleTests
     public void A_single_spike_is_not_an_alert()
     {
         Assert.Equal(SystemAlert.None, SystemAlertPolicy.Evaluate([Cpu(10), Cpu(10), Cpu(99)]));
-        Assert.Equal(SystemAlert.CpuHigh, SystemAlertPolicy.Evaluate([Cpu(90), Cpu(95), Cpu(99)]));
+
+        // 15 seconds at one sample per second.
+        var busy = Enumerable.Repeat(Cpu(95), SystemAlertPolicy.CpuHighSamples).ToList();
+        Assert.Equal(SystemAlert.CpuHigh, SystemAlertPolicy.Evaluate(busy));
+        Assert.Equal(SystemAlert.None, SystemAlertPolicy.Evaluate(busy.Skip(1).ToList()));
+        busy[^5] = Cpu(40);
+        Assert.Equal(SystemAlert.None, SystemAlertPolicy.Evaluate(busy));
     }
 
     [Fact]
@@ -224,15 +230,15 @@ public class SystemModuleTests
 
         monitor.Configure(true);
         time.Advance(TimeSpan.FromSeconds(10));
-        Assert.Equal(3, samples); // at 0, 5 and 10 s
+        Assert.Equal(11, samples); // at 0, 1, ... 10 s
 
         monitor.SetVisible(true);
         time.Advance(TimeSpan.FromSeconds(4));
-        Assert.Equal(6, samples); // immediately, then every 2 s
+        Assert.Equal(15, samples); // still once a second
 
         monitor.Configure(false);
         time.Advance(TimeSpan.FromMinutes(1));
-        Assert.Equal(6, samples);
+        Assert.Equal(15, samples);
         Assert.Equal(ModuleState.Disabled, monitor.Status.State);
     }
 
@@ -326,5 +332,107 @@ public class CompactFavoritesTests
         File.WriteAllText(path, "{ nope");
 
         Assert.Null(new UiStateStore(path).LastActiveModule);
+    }
+}
+
+public class HardwareMonitoringTests
+{
+    private static SystemSample Sample(double cpu = 10, double? gpu = null, int? battery = null, params TemperatureReading[] temps) =>
+        new(cpu, 8UL << 30, 16UL << 30, battery, false) { GpuPercent = gpu, Temperatures = temps };
+
+    [Fact]
+    public void History_keeps_the_last_sixty_seconds()
+    {
+        var time = new FakeTimeProvider();
+        var n = 0;
+        using var monitor = new SystemMonitor(() => Sample(cpu: ++n), time);
+        monitor.Configure(true);
+
+        time.Advance(TimeSpan.FromSeconds(90));
+
+        var history = monitor.History;
+        Assert.Equal(SystemMonitor.HistoryLength, history.Count);
+        Assert.Equal(n, history[^1].CpuPercent);           // newest last
+        Assert.Equal(n - 59, history[0].CpuPercent);       // oldest first
+    }
+
+    [Fact]
+    public void Capabilities_list_only_what_the_device_reports()
+    {
+        var laptop = HardwareCapabilities.From([Sample(gpu: 3, battery: 80, temps: new TemperatureReading(TemperatureKind.ThermalZone, "TZ0", 51))]);
+        Assert.True(laptop.HasGpu);
+        Assert.True(laptop.HasBattery);
+        Assert.Equal([TemperatureKind.ThermalZone], laptop.Temperatures);
+        Assert.False(laptop.HasFans);
+        Assert.False(laptop.Has(TemperatureKind.Cpu));
+
+        var desktop = HardwareCapabilities.From([Sample()]);
+        Assert.False(desktop.HasGpu);
+        Assert.False(desktop.HasBattery);
+        Assert.Empty(desktop.Temperatures);
+    }
+
+    [Fact]
+    public void A_sensor_that_blinks_out_once_does_not_reshuffle_the_layout()
+    {
+        var samples = new[] { Sample(gpu: 5), Sample(gpu: null), Sample(gpu: 7) };
+
+        Assert.True(HardwareCapabilities.From(samples).HasGpu);
+    }
+
+    [Fact]
+    public void Hottest_reading_per_component()
+    {
+        var sample = Sample(temps:
+        [
+            new TemperatureReading(TemperatureKind.Cpu, "Core 1", 61),
+            new TemperatureReading(TemperatureKind.Cpu, "Package", 66),
+            new TemperatureReading(TemperatureKind.Storage, "NVMe", 41),
+        ]);
+
+        Assert.Equal(66, sample.Hottest(TemperatureKind.Cpu));
+        Assert.Equal(41, sample.Hottest(TemperatureKind.Storage));
+        Assert.Null(sample.Hottest(TemperatureKind.Gpu));
+    }
+
+    [Fact]
+    public void Manual_fan_control_needs_a_crash_safe_interface()
+    {
+        // Controllable fans and rights are not enough: without a guaranteed fallback to firmware
+        // control on a crash, manual control is never offered.
+        Assert.False(new FanControlCapability(HasControllableFans: true, RevertsToFirmwareOnCrash: false, HasRights: true, MinimumPercent: 20).IsManualAllowed);
+        Assert.False(new FanControlCapability(true, true, HasRights: false, 20).IsManualAllowed);
+        Assert.False(FanControlCapability.None.IsManualAllowed);
+        Assert.True(new FanControlCapability(true, true, true, 20).IsManualAllowed);
+    }
+
+    [Fact]
+    public void Fan_safety_starts_in_auto_and_refuses_manual_when_not_allowed()
+    {
+        var fan = new FanSafetyState(new FanControlCapability(true, RevertsToFirmwareOnCrash: false, true, 20));
+
+        Assert.Equal(FanMode.Auto, fan.Mode);
+        Assert.False(fan.RequestManual(65));
+        Assert.Equal(FanMode.Auto, fan.Mode);
+    }
+
+    [Fact]
+    public void Fan_safety_clamps_to_the_minimum_and_falls_back_to_auto()
+    {
+        var fan = new FanSafetyState(new FanControlCapability(true, true, true, MinimumPercent: 25));
+
+        Assert.True(fan.RequestManual(0));       // never off
+        Assert.Equal(25, fan.ManualPercent);
+        Assert.True(fan.RequestManual(140));
+        Assert.Equal(100, fan.ManualPercent);
+        Assert.False(fan.RequestManual(double.NaN));
+        Assert.Equal(FanMode.Auto, fan.Mode);
+
+        foreach (var failure in new Action[] { fan.OnFailure, fan.OnSensorLost, fan.OnExit })
+        {
+            fan.RequestManual(60);
+            failure();
+            Assert.Equal(FanMode.Auto, fan.Mode);
+        }
     }
 }

@@ -37,6 +37,8 @@ internal sealed class ModuleHost : IDisposable
     private DispatcherQueueTimer? _calendarTimer;
     private string? _announcedEvent;
     private volatile bool _systemVisible;
+    private volatile bool _systemInCompact;
+    private HardwareSensors? _sensors;
     private (ModuleState State, SystemAlert Alert)? _systemShown;
     private (ModuleState State, SystemAlert Alert)? _systemPosted;
     private IReadOnlyList<CalendarEvent> _demoEvents = [];
@@ -52,7 +54,7 @@ internal sealed class ModuleHost : IDisposable
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("DeveloperIsland/1.0 (+calendar; read-only)");
         _calendar = new CalendarService(location => new IcsCalendarSource(location, _http));
         var reader = new SystemMetricsReader();
-        _system = new SystemMonitor(reader.Read);
+        _system = new SystemMonitor(() => reader.Read() is { } basic ? _sensors?.Enrich(basic) ?? basic : null);
         _tasks = new TaskStore(demo ? null : AppPaths.Tasks);
         if (demo)
         {
@@ -87,6 +89,18 @@ internal sealed class ModuleHost : IDisposable
         _git.Configure(settings.GitEnabled, settings.GitRepositories, settings.GitRecentRepositories);
         _github.Configure(settings.GitHubEnabled);
         _calendar.Configure(settings.CalendarEnabled, settings.CalendarSources);
+        // Sensors are opened only while System is on, and closed (with their drivers) when it is off.
+        if (settings.SystemEnabled && _sensors is null)
+        {
+            _sensors = new HardwareSensors();
+            _sensors.Open();
+        }
+        else if (!settings.SystemEnabled && _sensors is not null)
+        {
+            _sensors.Dispose();
+            _sensors = null;
+        }
+
         _system.Configure(settings.SystemEnabled);
         _vms.Tasks.Attach(_tasks, settings.TasksEnabled);
         UpdateGit();
@@ -105,13 +119,28 @@ internal sealed class ModuleHost : IDisposable
         }
     }
 
+    /// <summary>The compact island features System: it needs a fresh value every second.</summary>
+    public void SetSystemInCompact(bool featured)
+    {
+        if (_systemInCompact == featured)
+        {
+            return;
+        }
+
+        _systemInCompact = featured;
+        if (featured && !_demo)
+        {
+            UpdateSystem();
+        }
+    }
+
     /// <summary>The expanded island shows <paramref name="tab"/> (null: collapsed).</summary>
     public void OnPanelVisible(IslandTab? tab)
     {
         _git.SetVisible(tab == IslandTab.Git);
         _systemVisible = tab == IslandTab.System;
         _system.SetVisible(_systemVisible);
-        if (_systemVisible && !_demo) // demo data is static; the real monitor never runs in demo mode
+        if ((_systemVisible || _systemInCompact) && !_demo) // demo data is static; the real monitor never runs in demo mode
         {
             UpdateSystem();
         }
@@ -141,6 +170,7 @@ internal sealed class ModuleHost : IDisposable
         _github.Dispose();
         _calendar.Dispose();
         _system.Dispose();
+        _sensors?.Dispose();
         _http.Dispose();
     }
 
@@ -187,7 +217,7 @@ internal sealed class ModuleHost : IDisposable
         var key = (_system.Status.State, _system.Alert);
         lock (_system)
         {
-            if (!_systemVisible && _systemPosted == key)
+            if (!_systemVisible && !_systemInCompact && _systemPosted == key)
             {
                 return;
             }
@@ -206,13 +236,13 @@ internal sealed class ModuleHost : IDisposable
     {
         var status = _system.Status;
         var alert = _system.Alert;
-        if (!_systemVisible && _systemShown == (status.State, alert))
+        if (!_systemVisible && !_systemInCompact && _systemShown == (status.State, alert))
         {
             return;
         }
 
         _systemShown = (status.State, alert);
-        _vms.System.Update(status, _system.Latest, alert);
+        _vms.System.Update(status, _system.Latest, alert, _system.History, _system.Capabilities);
     }
 
     private void SetCalendarTimer(bool on)
@@ -302,7 +332,8 @@ internal sealed class ModuleHost : IDisposable
         _vms.GitHub.Update(settings.GitHubEnabled ? ModuleStatus.Ready : ModuleStatus.Disabled, settings.GitHubEnabled ? DemoModules.GitHub(now) : null, now);
         _vms.Calendar.Update(settings.CalendarEnabled ? ModuleStatus.Ready : ModuleStatus.Disabled, _demoEvents, [], now);
         _vms.Tasks.Attach(_tasks, settings.TasksEnabled);
-        _vms.System.Update(settings.SystemEnabled ? ModuleStatus.Ready : ModuleStatus.Disabled, DemoModules.System, SystemAlert.None);
+        var demoHistory = DemoModules.SystemHistory(DateTimeOffset.UtcNow);
+        _vms.System.Update(settings.SystemEnabled ? ModuleStatus.Ready : ModuleStatus.Disabled, demoHistory[^1], SystemAlert.None, demoHistory, HardwareCapabilities.From(demoHistory));
         SetCalendarTimer(settings.CalendarEnabled);
         _island.EnsureValidTab();
     }

@@ -464,6 +464,7 @@ internal sealed class AppHost : IDisposable
             _viewModel.SetLastActive(module);
         };
         _state.ModeChanged += (_, _) => UpdateRotation();
+        _viewModel.CompactModuleChanged += UpdateRotation;
     }
 
     // Settings --------------------------------------------------------------------------------------
@@ -549,7 +550,9 @@ internal sealed class AppHost : IDisposable
             return;
         }
 
-        var needed = _viewModel.CompactRotates && _state.Mode == Core.Island.IslandMode.Compact;
+        var compact = _state.Mode == Core.Island.IslandMode.Compact;
+        _modules.SetSystemInCompact(compact && _viewModel.CompactModule == ModuleId.System);
+        var needed = _viewModel.CompactRotates && compact;
         if (needed && _rotation is null)
         {
             _rotation = _dispatcher.CreateTimer();
