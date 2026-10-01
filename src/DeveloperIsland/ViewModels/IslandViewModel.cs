@@ -175,10 +175,9 @@ public sealed class IslandViewModel : ObservableObject
         _ => string.Empty,
     };
 
+    /// <summary>A secondary part after a dot (Git changes). Claude and Codex show no money in the capsule.</summary>
     public string CompactPrimaryDetail => _compactModule switch
     {
-        ModuleId.Claude => Usage.Claude.CompactEuro,
-        ModuleId.Codex => Usage.Codex.CompactEuro,
         ModuleId.Git => Git.CompactDetail,
         _ => string.Empty,
     };
@@ -382,6 +381,19 @@ public sealed class IslandViewModel : ObservableObject
         set => SetProperty(ref _selectedTab, value);
     }
 
+    /// <summary>The tab that shows a module (Claude and Codex share Usage).</summary>
+    public static IslandTab TabFor(ModuleId module) => module switch
+    {
+        ModuleId.Claude or ModuleId.Codex => IslandTab.Usage,
+        ModuleId.Music => IslandTab.Music,
+        ModuleId.Git => IslandTab.Git,
+        ModuleId.GitHub => IslandTab.GitHub,
+        ModuleId.Focus => IslandTab.Focus,
+        ModuleId.Calendar => IslandTab.Calendar,
+        ModuleId.Tasks => IslandTab.Tasks,
+        _ => IslandTab.System,
+    };
+
     /// <summary>The module a tab stands for (Usage: the active provider, else Claude, else Codex).</summary>
     public ModuleId ModuleForTab(IslandTab tab) => tab switch
     {
@@ -390,8 +402,18 @@ public sealed class IslandViewModel : ObservableObject
         _ => TabModule(tab),
     };
 
-    /// <summary>The user looked at a tab in the expanded island.</summary>
-    public void NoteTabOpened(IslandTab tab) => ModuleOpened?.Invoke(ModuleForTab(tab));
+    /// <summary>
+    /// The user picked a tab (click or arrow keys). Only this changes the module opened last; the
+    /// tab the island opens on by itself never does.
+    /// </summary>
+    public void NoteTabOpened(IslandTab tab)
+    {
+        // Usage holds both providers: keep the one already featured if it is one of them.
+        var module = tab == IslandTab.Usage && _compactModule is ModuleId.Claude or ModuleId.Codex
+            ? _compactModule.Value
+            : ModuleForTab(tab);
+        ModuleOpened?.Invoke(module);
+    }
 
     public void SetModuleOrder(IReadOnlyList<ModuleId> order)
     {
@@ -405,19 +427,20 @@ public sealed class IslandViewModel : ObservableObject
     /// <summary>Picks the tab that matches what the user just saw, before expanding.</summary>
     public void SelectTabForExpand()
     {
-        IslandTab? preferred = _pendingTab ?? _lastEventKind switch
+        ModuleId? announced = _lastEventKind switch
         {
-            ActivityKind.Music => IslandTab.Music,
-            ActivityKind.Focus => IslandTab.Focus,
-            ActivityKind.Usage => IslandTab.Usage,
-            ActivityKind.Calendar => IslandTab.Calendar,
-            ActivityKind.System => IslandTab.System,
+            ActivityKind.Music => ModuleId.Music,
+            ActivityKind.Focus => ModuleId.Focus,
+            ActivityKind.Usage => ModuleId.Claude,
+            ActivityKind.Calendar => ModuleId.Calendar,
+            ActivityKind.System => ModuleId.System,
             _ => null,
         };
+        var requested = _pendingTab is { } pending ? TabModule(pending) : (ModuleId?)null;
         _lastEventKind = null;
         _pendingTab = null;
 
-        preferred ??= Focus.IsActive ? IslandTab.Focus : null;
+        IslandTab? preferred = IslandContent.ChooseTabOnOpen(requested, announced, _compactModule, Focus.IsActive) is { } module ? TabFor(module) : null;
         var tabs = AvailableTabs;
         if (preferred is { } p && tabs.Contains(p))
         {
@@ -460,6 +483,13 @@ public sealed class IslandViewModel : ObservableObject
     public void PreparePeek()
     {
         _lastEventKind = null;
+        var facts = new IslandFacts(Focus.IsActive, Calendar.HasCompact, System.HasCompact, Music.IsEnabled && Music.HasTrack && Music.IsPlaying, Music.IsEnabled && Music.HasTrack, Usage.HasAnyProvider);
+        if (IslandContent.ChoosePeek(_compactModule, facts) == PeekContent.Featured && _compactModule is { } featured)
+        {
+            SetFeaturedActivity(featured);
+            return;
+        }
+
         if (Focus.IsActive)
         {
             SetFocusActivity(Focus.IsPaused ? "Focus paused" : "Focus", Focus.StatusText);
@@ -564,6 +594,53 @@ public sealed class IslandViewModel : ObservableObject
         if (Activity.Kind == ActivityKind.Focus && Focus.IsActive)
         {
             Activity.SetTrailing(Focus.RemainingText);
+        }
+    }
+
+    /// <summary>The hover peek of the featured module (no API equivalent here; that lives in the expanded view).</summary>
+    private void SetFeaturedActivity(ModuleId module)
+    {
+        switch (module)
+        {
+            case ModuleId.Claude or ModuleId.Codex:
+                var provider = module == ModuleId.Claude ? Usage.Claude : Usage.Codex;
+                Activity.Set(ActivityKind.Usage, provider.DisplayName, provider.PeekLine, provider.PlanPeekTrailing, mark: provider.ShortName);
+                break;
+            case ModuleId.Music when Music.IsEnabled && Music.HasTrack:
+                SetMusicActivity();
+                break;
+            case ModuleId.Music:
+                Activity.Set(ActivityKind.Music, "Music", "Nothing playing", glyph: "\uE8D6");
+                break;
+            case ModuleId.Focus when Focus.IsActive:
+                SetFocusActivity(Focus.IsPaused ? "Focus paused" : "Focus", Focus.StatusText);
+                break;
+            case ModuleId.Focus:
+                Activity.Set(ActivityKind.Focus, "Focus", Focus.TodayText, glyph: "\uE916");
+                break;
+            case ModuleId.Calendar:
+                if (Calendar.HasNext)
+                {
+                    SetCalendarActivity();
+                }
+                else
+                {
+                    Activity.Set(ActivityKind.Calendar, "Calendar", Calendar.NextWhen, glyph: "\uE787");
+                }
+
+                break;
+            case ModuleId.System:
+                Activity.Set(ActivityKind.System, System.CompactSummary, System.PeekLine, module: ModuleId.System);
+                break;
+            case ModuleId.Git:
+                Activity.Set(ActivityKind.Info, Git.Active?.Name ?? "Git", Git.Active is null ? Git.StateTitle : $"{Git.BranchText} · {Git.CompactDetail}", module: ModuleId.Git);
+                break;
+            case ModuleId.GitHub:
+                Activity.Set(ActivityKind.Info, "GitHub", GitHub.IsReady ? GitHub.CompactSummary : GitHub.StateTitle, module: ModuleId.GitHub);
+                break;
+            case ModuleId.Tasks:
+                Activity.Set(ActivityKind.Info, "Tasks", Tasks.SummaryText, module: ModuleId.Tasks);
+                break;
         }
     }
 

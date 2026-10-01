@@ -105,8 +105,25 @@ public sealed class AiProviderViewModel : ObservableObject
     /// <summary>"€8.42": today's estimated API equivalent for the compact island, when there is usage to value.</summary>
     public string CompactEuro => IsReady && HasUsageToday && _snapshot.ApiValueEur is { } value ? DisplayFormat.Euro(value) : string.Empty;
 
-    /// <summary>The featured value in the compact island: plan usage when known, otherwise today's fresh tokens.</summary>
-    public string CompactPrimaryValue => IsReady ? CompactValue : string.Empty;
+    /// <summary>
+    /// The featured value in the compact island: today's fresh tokens and, when known, the current
+    /// (5-hour) plan window: "1.12M · 72%", else "1.12M tokens". No money here; the estimated API
+    /// equivalent lives in the expanded view.
+    /// </summary>
+    public string CompactPrimaryValue => !IsReady ? string.Empty
+        : CurrentWindow is { } w ? $"{DisplayFormat.Tokens(_snapshot.Today.Fresh)} · {Math.Round(w.UsedPercent):0}%"
+        : _snapshot.LimitPercent is { } p ? $"{DisplayFormat.Tokens(_snapshot.Today.Fresh)} · {Math.Round(p):0}%"
+        : $"{DisplayFormat.Tokens(_snapshot.Today.Fresh)} tokens";
+
+    /// <summary>Hover peek: today's tokens; the plan window goes to the trailing slot.</summary>
+    public string PeekLine => !IsReady ? StatusText
+        : CurrentWindow is { } w && w.ResetsAt != DateTimeOffset.MaxValue
+            ? $"{DisplayFormat.Tokens(_snapshot.Today.Fresh)} fresh tokens · {ResetText(w.ResetsAt, DateTimeOffset.UtcNow).ToLowerInvariant()}"
+            : $"{DisplayFormat.Tokens(_snapshot.Today.Fresh)} fresh tokens today";
+
+    public string PlanPeekTrailing => IsReady && (CurrentWindow ?? (_snapshot.LimitPercent is { } p ? new PlanWindow(p, DateTimeOffset.MaxValue) : null)) is { } window
+        ? $"{Math.Round(window.UsedPercent):0}%"
+        : string.Empty;
 
     public string CompactAccessibleText => State == ProviderState.Ready
         ? _snapshot.LimitPercent is { } p

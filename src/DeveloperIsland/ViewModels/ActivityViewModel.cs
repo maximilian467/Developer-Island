@@ -23,6 +23,7 @@ public sealed class ActivityViewModel : ObservableObject
     private ImageSource? _art;
     private bool _accentGlyph;
     private string? _mark;
+    private DeveloperIsland.Core.Modules.ModuleId? _module;
 
     public ActivityKind Kind => _kind;
 
@@ -45,16 +46,22 @@ public sealed class ActivityViewModel : ObservableObject
 
     public bool ShowMark => _art is null && _mark is not null;
 
-    public bool ShowGlyph => _art is null && _mark is null;
+    /// <summary>A module icon (Git, GitHub, Tasks, ...) instead of a glyph.</summary>
+    public DeveloperIsland.Core.Modules.ModuleId ModuleIcon => _module ?? DeveloperIsland.Core.Modules.ModuleId.System;
+
+    public bool ShowModuleIcon => _art is null && _mark is null && _module is not null;
+
+    public bool ShowGlyph => _art is null && _mark is null && _module is null;
 
     /// <summary>Accent is reserved for a live state (a running focus session).</summary>
     public Brush GlyphBrush => (Brush)Microsoft.UI.Xaml.Application.Current.Resources[_accentGlyph ? "AccentBrush" : "TextPrimaryBrush"];
 
     public string AccessibleText => string.IsNullOrEmpty(_subtitle) ? _title : $"{_title}, {_subtitle}";
 
-    public void Set(ActivityKind kind, string title, string subtitle, string trailing = "", string glyph = "", ImageSource? art = null, bool accentGlyph = false, string? mark = null)
+    public void Set(ActivityKind kind, string title, string subtitle, string trailing = "", string glyph = "", ImageSource? art = null, bool accentGlyph = false, string? mark = null, DeveloperIsland.Core.Modules.ModuleId? module = null)
     {
         _mark = mark;
+        _module = module;
         _kind = kind;
         _title = title;
         _subtitle = subtitle;
@@ -74,6 +81,7 @@ public sealed class ActivityViewModel : ObservableObject
             OnPropertyChanged(nameof(ShowArt));
             OnPropertyChanged(nameof(ShowGlyph));
             OnPropertyChanged(nameof(ShowMark));
+            OnPropertyChanged(nameof(ShowModuleIcon));
         }
     }
 

@@ -70,6 +70,25 @@ public sealed class SystemViewModel : ModuleViewModel
         : _sample.GpuPercent is not null ? $"CPU {CpuFigure} · GPU {GpuFigure}"
         : $"CPU {CpuFigure} · RAM {MemoryFigure}";
 
+    /// <summary>Hover peek line: what is not in the title (GPU, temperature, memory size), only if it exists.</summary>
+    public string PeekLine
+    {
+        get
+        {
+            if (_sample is null)
+            {
+                return StateTitle;
+            }
+
+            var parts = new List<string>();
+            if (_sample.GpuPercent is not null && !CompactSummary.Contains("GPU", StringComparison.Ordinal)) parts.Add($"GPU {GpuFigure}");
+            if (_sample.Hottest(TemperatureKind.Cpu) is null && _sample.Hottest(TemperatureKind.ThermalZone) is { } zone) parts.Add($"{Math.Round(zone):0}{DisplayFormat.Nbsp}°C");
+            parts.Add(MemoryDetail);
+            if (HasBattery) parts.Add($"Battery {BatteryFigure}");
+            return string.Join(" · ", parts);
+        }
+    }
+
     // History and optional hardware -------------------------------------------------------------------
 
     public HardwareCapabilities Capabilities => _capabilities;

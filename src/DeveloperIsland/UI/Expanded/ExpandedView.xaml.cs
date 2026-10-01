@@ -161,6 +161,7 @@ public sealed partial class ExpandedView : UserControl
         if (sender is Button { Tag: IslandTab tab })
         {
             _viewModel.SelectedTab = tab;
+            _viewModel.NoteTabOpened(tab);
         }
     }
 
@@ -180,6 +181,7 @@ public sealed partial class ExpandedView : UserControl
 
         index = (index + (e.Key == VirtualKey.Right ? 1 : tabs.Count - 1)) % tabs.Count;
         _viewModel.SelectedTab = tabs[index];
+        _viewModel.NoteTabOpened(tabs[index]);
         if (_tabButtons.TryGetValue(tabs[index], out var button))
         {
             button.Focus(FocusState.Keyboard);
@@ -237,10 +239,6 @@ public sealed partial class ExpandedView : UserControl
 
         SectionName.Text = selected is { } s ? IslandViewModel.TabName(s) : string.Empty;
         UpdateStar();
-        if (selected is { } opened && _isShown)
-        {
-            _viewModel.NoteTabOpened(opened);
-        }
         UpdateSelectedForeground();
         if (selected is { } shown)
         {
