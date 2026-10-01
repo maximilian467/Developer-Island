@@ -23,7 +23,7 @@
                         <TextBlock Text="{x:Bind ViewModel.CpuFigure, Mode=OneWay}" Style="{StaticResource FigureTextStyle}" Margin="0,2,0,0" />
                         <components:Sparkline x:Name="CpuSpark" Margin="0,6,0,0" />
                         <Grid Height="3" Margin="0,4,0,0" CornerRadius="1.5" Background="{StaticResource ProgressTrackBrush}">
-                            <Rectangle Fill="{StaticResource AccentBrush}" RadiusX="1.5" RadiusY="1.5" RenderTransformOrigin="0,0.5">
+                            <Rectangle x:Name="CpuBar" Fill="{StaticResource AccentBrush}" RadiusX="1.5" RadiusY="1.5" RenderTransformOrigin="0,0.5">
                                 <Rectangle.RenderTransform>
                                     <ScaleTransform ScaleX="{x:Bind ViewModel.CpuFraction, Mode=OneWay}" />
                                 </Rectangle.RenderTransform>
@@ -39,7 +39,7 @@
                         <TextBlock Text="{x:Bind ViewModel.MemoryFigure, Mode=OneWay}" Style="{StaticResource FigureTextStyle}" Margin="0,2,0,0" />
                         <components:Sparkline x:Name="MemorySpark" Margin="0,6,0,0" />
                         <Grid Height="3" Margin="0,4,0,0" CornerRadius="1.5" Background="{StaticResource ProgressTrackBrush}">
-                            <Rectangle Fill="{StaticResource AccentBrush}" RadiusX="1.5" RadiusY="1.5" RenderTransformOrigin="0,0.5">
+                            <Rectangle x:Name="MemoryBar" Fill="{StaticResource AccentBrush}" RadiusX="1.5" RadiusY="1.5" RenderTransformOrigin="0,0.5">
                                 <Rectangle.RenderTransform>
                                     <ScaleTransform ScaleX="{x:Bind ViewModel.MemoryFraction, Mode=OneWay}" />
                                 </Rectangle.RenderTransform>
@@ -55,7 +55,7 @@
                         <TextBlock Text="{x:Bind ViewModel.GpuFigure, Mode=OneWay}" Style="{StaticResource FigureTextStyle}" Margin="0,2,0,0" />
                         <components:Sparkline x:Name="GpuSpark" Margin="0,6,0,0" />
                         <Grid Height="3" Margin="0,4,0,0" CornerRadius="1.5" Background="{StaticResource ProgressTrackBrush}">
-                            <Rectangle Fill="{StaticResource AccentBrush}" RadiusX="1.5" RadiusY="1.5" RenderTransformOrigin="0,0.5">
+                            <Rectangle x:Name="GpuBar" Fill="{StaticResource AccentBrush}" RadiusX="1.5" RadiusY="1.5" RenderTransformOrigin="0,0.5">
                                 <Rectangle.RenderTransform>
                                     <ScaleTransform ScaleX="{x:Bind ViewModel.GpuFraction, Mode=OneWay}" />
                                 </Rectangle.RenderTransform>
@@ -87,7 +87,7 @@
                     <DataTemplate x:DataType="vm:SensorRow">
                         <Grid Height="22">
                             <TextBlock Text="{x:Bind Label}" Style="{StaticResource FineTextStyle}" VerticalAlignment="Center" />
-                            <TextBlock Text="{x:Bind Value}" Style="{StaticResource CaptionTextStyle}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                            <TextBlock Text="{x:Bind Value}" Style="{StaticResource CaptionTextStyle}" Foreground="{x:Bind components:StatusColors.Text(Level, 'TextPrimaryBrush')}" HorizontalAlignment="Right" VerticalAlignment="Center" />
                         </Grid>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

@@ -6,7 +6,7 @@ using DeveloperIsland.Core.SystemInfo;
 namespace DeveloperIsland.ViewModels;
 
 /// <summary>A quiet detail line under the System tiles (a sensor or a fan).</summary>
-public sealed record SensorRow(string Label, string Value, bool IsWarning);
+public sealed record SensorRow(string Label, string Value, bool IsWarning, SystemLevel Level = SystemLevel.Good);
 
 /// <summary>
 /// CPU, memory, GPU, temperatures, fans and battery: only what this device exposes, each with its
@@ -122,6 +122,24 @@ public sealed class SystemViewModel : ModuleViewModel
 
     public bool GpuHot => GpuTemperature >= HotCelsius;
 
+    /// <summary>Load levels over the last few seconds: they color the graph line and the bar.</summary>
+    public SystemLevel CpuLevel => SystemLevels.RecentLoad(CpuHistory, SystemLevels.Load);
+
+    public SystemLevel MemoryLevel => SystemLevels.RecentLoad(MemoryHistory, SystemLevels.Memory);
+
+    public SystemLevel GpuLevel => SystemLevels.RecentLoad(GpuHistory, SystemLevels.Load);
+
+    /// <summary>Temperature levels: they color only the temperature text.</summary>
+    public SystemLevel CpuTemperatureLevel => CpuTemperature is { } t ? SystemLevels.Temperature(TemperatureKind.Cpu, t) : SystemLevel.Good;
+
+    public SystemLevel GpuTemperatureLevel => GpuTemperature is { } t ? SystemLevels.Temperature(TemperatureKind.Gpu, t) : SystemLevel.Good;
+
+    private static SensorRow TemperatureRow(TemperatureReading t)
+    {
+        var level = SystemLevels.Temperature(t.Kind, t.Celsius);
+        return new SensorRow(t.Name, Celsius(t.Celsius), level != SystemLevel.Good, level);
+    }
+
     /// <summary>Storage, board, battery and thermal-zone temperatures, and fans: only those that exist.</summary>
     public IReadOnlyList<SensorRow> SensorRows
     {
@@ -135,12 +153,12 @@ public sealed class SystemViewModel : ModuleViewModel
             var rows = new List<SensorRow>();
             foreach (var t in _sample.Temperatures.Where(t => t.Kind is TemperatureKind.Storage or TemperatureKind.Motherboard or TemperatureKind.Battery or TemperatureKind.ThermalZone))
             {
-                rows.Add(new SensorRow(t.Name, Celsius(t.Celsius), t.Celsius >= HotCelsius));
+                rows.Add(TemperatureRow(t));
             }
 
             if (GpuTemperature is null && _sample.Temperatures.FirstOrDefault(t => t.Kind == TemperatureKind.Gpu) is { } gpuOnly)
             {
-                rows.Add(new SensorRow(gpuOnly.Name, Celsius(gpuOnly.Celsius), gpuOnly.Celsius >= HotCelsius));
+                rows.Add(TemperatureRow(gpuOnly));
             }
 
             foreach (var fan in _sample.Fans)

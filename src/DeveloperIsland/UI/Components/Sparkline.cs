@@ -17,14 +17,13 @@ public sealed class Sparkline : UserControl
     private readonly Path _area = new();
     private readonly Path _line = new() { StrokeThickness = 1.3, StrokeLineJoin = PenLineJoin.Round };
     private IReadOnlyList<double> _values = [];
+    private Color _color;
 
     public Sparkline()
     {
         IsTabStop = false;
         Height = 24;
-        var accent = (Color)Application.Current.Resources["AccentColor"];
-        _area.Fill = new SolidColorBrush(Color.FromArgb(0x2E, accent.R, accent.G, accent.B));
-        _line.Stroke = new SolidColorBrush(accent);
+        SetColor((Color)Application.Current.Resources["AccentColor"]);
         Content = new Grid { Children = { _area, _line } };
         SizeChanged += (_, _) => Render();
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetAccessibilityView(this, Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
@@ -32,6 +31,19 @@ public sealed class Sparkline : UserControl
 
     /// <summary>Number of points the full width represents (one per second).</summary>
     public int Capacity { get; set; } = 60;
+
+    /// <summary>The line color (the fill is a faint tint of it); changes only when it differs.</summary>
+    public void SetColor(Color color)
+    {
+        if (color == _color)
+        {
+            return;
+        }
+
+        _color = color;
+        _area.Fill = new SolidColorBrush(Color.FromArgb(0x2E, color.R, color.G, color.B));
+        _line.Stroke = new SolidColorBrush(color);
+    }
 
     /// <summary>Values 0-100, oldest first.</summary>
     public void SetValues(IReadOnlyList<double> values)

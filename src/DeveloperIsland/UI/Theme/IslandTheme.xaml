@@ -35,6 +35,11 @@
     <SolidColorBrush x:Key="CriticalBrush" Color="#FFFF453A" />
     <SolidColorBrush x:Key="DividerBrush" Color="#14FFFFFF" />
 
+    <!-- Hardware levels (good, warning, critical): only on a graph line, a thin bar or a temperature. -->
+    <Color x:Key="StatusGoodColor">#FF30D158</Color>
+    <Color x:Key="StatusWarningColor">#FFFF9F0A</Color>
+    <Color x:Key="StatusCriticalColor">#FFFF453A</Color>
+
     <!-- Type -->
     <FontFamily x:Key="DisplayFont">Segoe UI Variable Display, Segoe UI</FontFamily>
     <FontFamily x:Key="TextFont">Segoe UI Variable Text, Segoe UI</FontFamily>

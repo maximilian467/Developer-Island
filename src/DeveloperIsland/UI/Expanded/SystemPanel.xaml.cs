@@ -1,9 +1,12 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using DeveloperIsland.Core.SystemInfo;
+using DeveloperIsland.UI.Components;
 using DeveloperIsland.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Shapes;
 
 namespace DeveloperIsland.UI.Expanded;
 
@@ -47,9 +50,12 @@ public sealed partial class SystemPanel : UserControl, INotifyPropertyChanged
             GpuSpark.SetValues(_viewModel.GpuHistory);
         }
 
-        var resources = Application.Current.Resources;
-        CpuCaptionText.Foreground = (Brush)resources[_viewModel.CpuHot ? "CriticalBrush" : "TextTertiaryBrush"];
-        GpuCaptionText.Foreground = (Brush)resources[_viewModel.GpuHot ? "CriticalBrush" : "TextTertiaryBrush"];
+        // Load colors the line and the bar; a temperature colors only its own text.
+        Paint(CpuSpark, CpuBar, _viewModel.CpuLevel);
+        Paint(MemorySpark, MemoryBar, _viewModel.MemoryLevel);
+        Paint(GpuSpark, GpuBar, _viewModel.GpuLevel);
+        CpuCaptionText.Foreground = StatusColors.Text(_viewModel.CpuTemperatureLevel, "TextTertiaryBrush");
+        GpuCaptionText.Foreground = StatusColors.Text(_viewModel.GpuTemperatureLevel, "TextTertiaryBrush");
         Raise(nameof(BatteryBrush));
         Raise(nameof(CpuCaption));
     }
@@ -100,6 +106,15 @@ public sealed partial class SystemPanel : UserControl, INotifyPropertyChanged
                 Grid.SetColumn(tile, index % columns);
                 Grid.SetRow(tile, index / columns);
             }
+        }
+    }
+
+    private static void Paint(Sparkline spark, Rectangle bar, SystemLevel level)
+    {
+        spark.SetColor(StatusColors.Color(level));
+        if (bar.Fill is not SolidColorBrush brush || brush.Color != StatusColors.Color(level))
+        {
+            bar.Fill = StatusColors.Brush(level);
         }
     }
 
