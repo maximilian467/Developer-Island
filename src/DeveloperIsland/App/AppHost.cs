@@ -62,7 +62,9 @@ internal sealed class AppHost : IDisposable
     private DispatcherQueueTimer? _planReset;
     private DispatcherQueueTimer? _historyDebounce;
     private DispatcherQueueTimer? _midnight;
-    private DispatcherQueueTimer? _smartHideSettle;
+    private Core.Island.AutoHideCoordinator? _autoHide;
+    private DispatcherQueueTimer? _autoHideCheck;
+    private (IslandAnchor Anchor, double OffsetY) _autoHidePlacement = (IslandAnchor.TopCenter, 0);
     private FocusState _lastFocusState = FocusState.Idle;
     private DateTimeOffset? _lastFocusStartedAt;
     private FocusSessionStore? _focusStore;
@@ -131,6 +133,12 @@ internal sealed class AppHost : IDisposable
         ApplyFavorites(settings);
 
         _state = new IslandStateMachine(TimeProvider.System, action => _dispatcher.TryEnqueue(() => action()));
+        _autoHide = new Core.Island.AutoHideCoordinator(
+            TimeProvider.System,
+            action => _dispatcher.TryEnqueue(() => action()),
+            () => _foreground?.Probe(),
+            DecideRest,
+            SetRest);
         _window = new IslandWindow(_viewModel, _state, settings.AlwaysOnTop) { SnapshotMode = IsSnapshot };
         _window.SettingsRequested += OpenSettings;
         _window.VisiblePanelChanged += tab => _modules.OnPanelVisible(tab);
@@ -152,7 +160,7 @@ internal sealed class AppHost : IDisposable
         {
             _tray.Add();
             _fullscreen = new FullscreenWatcher(_host, _window.Handle, OnFullscreenChanged);
-            _foreground = new ForegroundWatcher(_window.Handle, () => _settings.Current.SmartHideProcesses, _ => ScheduleSmartHide());
+            _foreground = new ForegroundWatcher(_window.Handle, () => _settings.Current.SmartHideProcesses, info => _autoHide?.ForegroundChanged(info));
             _privacy = new Platform.Privacy.PrivacyWatcher(state => _dispatcher.TryEnqueue(() => OnPrivacyChanged(state)));
             _hotkey = new GlobalHotKey(_host);
             _hotkey.Pressed += OnShortcut;
@@ -337,6 +345,8 @@ internal sealed class AppHost : IDisposable
         _state?.Dispose();
         _fullscreen?.Dispose();
         _foreground?.Dispose();
+        _autoHideCheck?.Stop();
+        _autoHide?.Dispose();
         _privacy?.Dispose();
         _hotkey?.Dispose();
         _tray?.Dispose();
@@ -723,36 +733,59 @@ internal sealed class AppHost : IDisposable
     }
 
     /// <summary>
-    /// Foreground changes arrive in bursts (Alt+Tab, a click on the taskbar); let them settle for
-    /// 150 ms so the island does not retract and return within a frame.
-    /// </summary>
-    private void ScheduleSmartHide()
-    {
-        if (_smartHideSettle is null)
-        {
-            _smartHideSettle = _dispatcher.CreateTimer();
-            _smartHideSettle.IsRepeating = false;
-            _smartHideSettle.Interval = TimeSpan.FromMilliseconds(150);
-            _smartHideSettle.Tick += (_, _) => ApplySmartHide();
-        }
-
-        _smartHideSettle.Stop();
-        _smartHideSettle.Start();
-    }
-
-    /// <summary>
     /// Smart Auto-Hide: rest as a notch (or hidden) while a maximized browser is in front of a
-    /// top-center island; rest as the compact capsule otherwise.
+    /// top-center island; rest as the compact capsule otherwise. Called when the rule itself changes
+    /// (settings, placement, camera or microphone); foreground changes go straight to
+    /// <see cref="Core.Island.AutoHideCoordinator"/> (latest event wins, stepping aside at once).
     /// </summary>
     private void ApplySmartHide()
     {
         var s = _settings.Current;
         var placement = IslandPlacement.Resolve(MonitorService.GetMonitors(), s.MonitorDevice, s.Anchor, s.OffsetX, s.OffsetY);
-        var rest = Core.Island.SmartHidePolicy.Decide(s, placement.Anchor, placement.OffsetY, _foreground?.Current, _viewModel.Privacy.IsActive);
+        _autoHidePlacement = (placement.Anchor, placement.OffsetY);
+        _autoHide?.Reevaluate();
+        UpdateAutoHideCheck();
+    }
+
+    private Core.Island.RestMode DecideRest(Core.Island.ForegroundInfo? foreground) =>
+        Core.Island.SmartHidePolicy.Decide(_settings.Current, _autoHidePlacement.Anchor, _autoHidePlacement.OffsetY, foreground, _viewModel.Privacy.IsActive);
+
+    private void SetRest(Core.Island.RestMode rest)
+    {
         if (rest != _state.Rest)
         {
             Log.Info("window", "Smart Auto-Hide", new { rest = rest.ToString(), process = _foreground?.Current?.ProcessName });
             _state.SetRest(rest);
+        }
+    }
+
+    /// <summary>
+    /// The fallback for a foreground event Windows never delivered: every 750 ms, compare the window
+    /// in front with the applied rest (a few cheap Win32 reads, no allocation of note). Runs only while
+    /// Smart Auto-Hide can apply (enabled, top center, near the top edge).
+    /// </summary>
+    private void UpdateAutoHideCheck()
+    {
+        var s = _settings.Current;
+        var applies = _foreground is not null && s.SmartHideEnabled && _autoHidePlacement.Anchor == IslandAnchor.TopCenter
+            && _autoHidePlacement.OffsetY <= Core.Island.SmartHidePolicy.MaxTopOffset;
+        if (!applies)
+        {
+            _autoHideCheck?.Stop();
+            return;
+        }
+
+        if (_autoHideCheck is null)
+        {
+            _autoHideCheck = _dispatcher.CreateTimer();
+            _autoHideCheck.Interval = TimeSpan.FromMilliseconds(750);
+            _autoHideCheck.IsRepeating = true;
+            _autoHideCheck.Tick += (_, _) => _autoHide?.Reconcile(_state.Rest);
+        }
+
+        if (!_autoHideCheck.IsRunning)
+        {
+            _autoHideCheck.Start();
         }
     }
 
