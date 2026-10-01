@@ -233,6 +233,13 @@ internal sealed class AppHost : IDisposable
                 await Shot("10-expanded-" + tab.ToString().ToLowerInvariant());
             }
 
+            // The heatmap tooltip on a busy day (as on hover), then cleared again.
+            _viewModel.SelectedTab = IslandTab.Usage;
+            var busiest = _viewModel.Usage.Days.Select((d, i) => (d.FreshTokens, i)).Max().i;
+            _viewModel.Usage.Inspect(busiest);
+            await Shot("11-usage-tooltip");
+            _viewModel.Usage.Inspect(-1);
+
             _state.Dismiss();
             await ExtraSnapshotsAsync(Shot);
         }

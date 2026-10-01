@@ -90,6 +90,29 @@ public sealed class UsageViewModel : ObservableObject
 
     public bool HasInspectedPlan => InspectedPlan.Length > 0;
 
+    /// <summary>Tooltip: the day's fresh tokens (Claude and Codex together).</summary>
+    public string InspectedTooltipTokens => !IsInspecting ? string.Empty
+        : _days[_inspectedIndex].FreshTokens == 0 ? "No usage"
+        : $"{DisplayFormat.Tokens(_days[_inspectedIndex].FreshTokens)} fresh tokens";
+
+    /// <summary>Tooltip: sessions and the estimated API equivalent, when there was usage.</summary>
+    public string InspectedTooltipDetail
+    {
+        get
+        {
+            if (!IsInspecting || !_days[_inspectedIndex].HasUsage)
+            {
+                return string.Empty;
+            }
+
+            var d = _days[_inspectedIndex];
+            var parts = new List<string>();
+            if (d.Sessions > 0) parts.Add(DisplayFormat.Count(d.Sessions, "session", "sessions"));
+            parts.Add(d.ApiValuePartial ? "API equivalent unavailable" : $"{DisplayFormat.Euro(d.TotalApiValueEur)} API equivalent");
+            return string.Join(" · ", parts);
+        }
+    }
+
     /// <summary>The readout grows by one line once plan usage has ever been measured (no jump per day).</summary>
     public double ReadoutHeight => _planPeaks.Count > 0 ? 52 : 36;
 

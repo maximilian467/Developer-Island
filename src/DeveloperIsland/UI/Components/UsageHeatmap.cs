@@ -38,6 +38,12 @@ public sealed class UsageHeatmap : UserControl
     private readonly Rectangle _ring;
     private readonly List<Rectangle> _cells = [];
     private readonly List<(int Column, int Row)> _positions = [];
+    private readonly Border _tip;
+    private readonly TextBlock _tipDate = new();
+    private readonly TextBlock _tipTokens = new();
+    private readonly TextBlock _tipDetail = new();
+    private DeveloperIsland.Core.Usage.HeatmapLayout _layout = DeveloperIsland.Core.Usage.HeatmapLayout.For([], DayOfWeek.Monday);
+    private bool _tipShown;
     private UsageViewModel? _viewModel;
     private int _columns;
     private DateOnly _firstDay;
@@ -61,6 +67,30 @@ public sealed class UsageHeatmap : UserControl
         };
         Content = _canvas;
         AutomationProperties.SetLiveSetting(this, AutomationLiveSetting.Polite);
+
+        // Tooltip: a small floating capsule in the island's own style (not the system tooltip).
+        var resources = Application.Current.Resources;
+        _tipDate.Style = (Style)resources["CaptionTextStyle"];
+        _tipDate.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
+        _tipDate.Foreground = (Brush)resources["TextPrimaryBrush"];
+        _tipTokens.Style = (Style)resources["CaptionTextStyle"];
+        _tipTokens.Foreground = (Brush)resources["TextPrimaryBrush"];
+        Microsoft.UI.Xaml.Documents.Typography.SetNumeralAlignment(_tipTokens, Microsoft.UI.Xaml.FontNumeralAlignment.Tabular);
+        _tipDetail.Style = (Style)resources["FineTextStyle"];
+        _tip = new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(0xF2, 0x23, 0x23, 0x26)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(0x24, 0xFF, 0xFF, 0xFF)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(10, 6, 10, 7),
+            IsHitTestVisible = false,
+            Opacity = 0,
+            Child = new StackPanel { Spacing = 1, Children = { _tipDate, _tipTokens, _tipDetail } },
+        };
+        _tip.Shadow = new ThemeShadow();
+        _tip.Translation = new System.Numerics.Vector3(0, 0, 12);
+        AutomationProperties.SetAccessibilityView(_tip, Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
 
         PointerMoved += (_, e) => InspectAt(e.GetCurrentPoint(_canvas).Position);
         PointerExited += (_, _) =>
@@ -139,6 +169,7 @@ public sealed class UsageHeatmap : UserControl
         if (e.PropertyName is nameof(UsageViewModel.InspectedIndex) or "" or null)
         {
             UpdateRing();
+            UpdateTip();
         }
     }
 
@@ -167,17 +198,11 @@ public sealed class UsageHeatmap : UserControl
         }
 
         var firstDay = CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek;
-        int RowOf(DateOnly day) => ((int)day.DayOfWeek - (int)firstDay + 7) % 7;
+        _layout = DeveloperIsland.Core.Usage.HeatmapLayout.For(vm.Days.Select(d => d.Day).ToList(), firstDay);
 
-        var column = 0;
         for (var i = 0; i < vm.Days.Count; i++)
         {
-            var row = RowOf(vm.Days[i].Day);
-            if (i > 0 && row == 0)
-            {
-                column++;
-            }
-
+            var (column, row) = _layout.Positions[i];
             var level = i < vm.Levels.Count ? vm.Levels[i] : 0;
             var cell = new Rectangle
             {
@@ -195,9 +220,10 @@ public sealed class UsageHeatmap : UserControl
             _positions.Add((column, row));
         }
 
-        _columns = column + 1;
+        _columns = _layout.Columns;
         _firstDay = vm.Days[0].Day;
         _canvas.Children.Add(_ring);
+        _canvas.Children.Add(_tip);
         Width = _columns * Pitch - Gap;
         Height = 7 * Pitch - Gap;
         UpdateRing();
@@ -210,10 +236,41 @@ public sealed class UsageHeatmap : UserControl
             return;
         }
 
-        var column = (int)Math.Floor(point.X / Pitch);
-        var row = (int)Math.Floor(point.Y / Pitch);
-        var index = _positions.FindIndex(p => p.Column == column && p.Row == row);
-        _viewModel.Inspect(index);
+        _viewModel.Inspect(_layout.IndexAt(point.X, point.Y, Pitch));
+    }
+
+    /// <summary>
+    /// Shows the inspected day above its cell (never under the pointer), fades in once, follows from
+    /// cell to cell without blinking, and disappears as soon as nothing is inspected.
+    /// </summary>
+    private void UpdateTip()
+    {
+        if (_viewModel is not { IsInspecting: true } vm || vm.InspectedIndex >= _positions.Count)
+        {
+            _tip.Opacity = 0;
+            _tipShown = false;
+            return;
+        }
+
+        _tipDate.Text = vm.InspectedDate;
+        _tipTokens.Text = vm.InspectedTooltipTokens;
+        _tipDetail.Text = vm.InspectedTooltipDetail;
+        _tipDetail.Visibility = vm.InspectedTooltipDetail.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        _tip.Measure(new Windows.Foundation.Size(double.PositiveInfinity, double.PositiveInfinity));
+        var size = _tip.DesiredSize;
+
+        var (column, row) = _positions[vm.InspectedIndex];
+        var x = column * Pitch + CellSize / 2 - size.Width / 2;
+        x = Math.Clamp(x, 0, Math.Max(0, Width - size.Width));
+        var y = row * Pitch - size.Height - 6;
+        Canvas.SetLeft(_tip, x);
+        Canvas.SetTop(_tip, y);
+        if (!_tipShown)
+        {
+            _tipShown = true;
+            _tip.Opacity = 1;
+            DeveloperIsland.UI.Animations.Motion.FadeIn(_tip, delay: TimeSpan.Zero, fromY: 3);
+        }
     }
 
     private void UpdateRing()
