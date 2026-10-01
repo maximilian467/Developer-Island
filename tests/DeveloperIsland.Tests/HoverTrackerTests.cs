@@ -86,3 +86,29 @@ public class HoverTrackerTests
         Assert.Equal(HoverChange.None, tracker.PointerLeftWindow());
     }
 }
+
+public class ClickArmingTests
+{
+    private static readonly CapsuleBounds Small = new(100, 10, 120, 36);
+    private static readonly CapsuleBounds Grown = new(40, 10, 360, 56);
+
+    [Fact]
+    public void A_capsule_that_grows_under_a_resting_pointer_is_not_armed()
+    {
+        var tracker = new HoverTracker();
+        tracker.PointerAt(50, 30, Small); // outside the small capsule
+        tracker.PointerAt(50, 30, Grown); // same spot, now inside the grown one: no movement
+
+        Assert.False(tracker.IsInside); // a press here is not a click on the island
+    }
+
+    [Fact]
+    public void Moving_onto_the_capsule_arms_it()
+    {
+        var tracker = new HoverTracker();
+        tracker.PointerAt(50, 30, Grown);
+        tracker.PointerAt(52, 31, Grown);
+
+        Assert.True(tracker.IsInside);
+    }
+}

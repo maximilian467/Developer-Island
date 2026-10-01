@@ -65,6 +65,7 @@ public sealed partial class IslandWindow : Window
     // Drag state (physical pixels).
     private bool _pointerDown;
     private bool _dragging;
+    private readonly OutsideClickWatcher _outsideClicks;
     private POINT _dragStartCursor;
     private RECT _dragStartWindow;
 
@@ -111,6 +112,8 @@ public sealed partial class IslandWindow : Window
         Expanded.SizeChanged += OnViewSizeChanged;
 
         _state.ModeChanged += OnModeChanged;
+        _state.PointerProbe = ProbePointer;
+        _outsideClicks = new OutsideClickWatcher(() => DispatcherQueue.TryEnqueue(OnClickedOutside));
         _viewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(IslandViewModel.SelectedTab))
@@ -262,6 +265,7 @@ public sealed partial class IslandWindow : Window
 
                     HideIsland();
                     UpdateMediaTicker();
+                    UpdateOutsideClickWatch();
                     return;
                 case IslandMode.Activity when _state.ActivitySource == ActivitySource.Hover:
                     _viewModel.PreparePeek();
@@ -284,6 +288,7 @@ public sealed partial class IslandWindow : Window
             }
 
             TransitionTo(ViewFor(newMode), animate: true);
+            UpdateOutsideClickWatch();
 
             if (newMode == IslandMode.Expanded)
             {
@@ -489,6 +494,48 @@ public sealed partial class IslandWindow : Window
     {
         ApplyRegion(finalRegion);
         RevalidatePointer();
+        UpdateOutsideClickWatch();
+    }
+
+    /// <summary>
+    /// Where the pointer really is, for the state machine's timers: over the visible capsule or not.
+    /// Null while dragging or when the position cannot be read.
+    /// </summary>
+    private bool? ProbePointer()
+    {
+        if (_dragging || !IsIslandVisible || !GetCursorPos(out var cursor) || !GetWindowRect(_hwnd, out var window))
+        {
+            return _dragging ? null : false;
+        }
+
+        return Capsule.Contains((cursor.X - window.Left) / _scale, (cursor.Y - window.Top) / _scale);
+    }
+
+    /// <summary>While expanded, a press anywhere outside the capsule closes it (ClickedOutside).</summary>
+    private void UpdateOutsideClickWatch()
+    {
+        if (SnapshotMode || _state.Mode != IslandMode.Expanded || !GetWindowRect(_hwnd, out var window))
+        {
+            _outsideClicks.Stop();
+            return;
+        }
+
+        var t = _morph.Target;
+        _outsideClicks.Watch(
+            window.Left + (int)Math.Floor(t.X * _scale),
+            window.Top + (int)Math.Floor(t.Y * _scale),
+            window.Left + (int)Math.Ceiling(t.Right * _scale),
+            window.Top + (int)Math.Ceiling(t.Bottom * _scale));
+    }
+
+    private void OnClickedOutside()
+    {
+        if (_state.Mode == IslandMode.Expanded)
+        {
+            Log.Debug("island", "Clicked outside");
+            _restoreFocusOnCollapse = false;
+            _state.Dismiss();
+        }
     }
 
     /// <summary>The OS reports no leave when a shrinking region slides out from under a still pointer.</summary>
@@ -552,6 +599,15 @@ public sealed partial class IslandWindow : Window
             return;
         }
 
+        // A capsule that just grew under a resting mouse (an event, a peek) is not a target yet: the
+        // click was meant for whatever was there before. Moving onto it arms it (HoverTracker).
+        if (e.Pointer.PointerDeviceType == Microsoft.UI.Input.PointerDeviceType.Mouse && !_hover.IsInside)
+        {
+            Log.Debug("island", "Unarmed click ignored");
+            e.Handled = true;
+            return;
+        }
+
         if (!point.Properties.IsLeftButtonPressed)
         {
             return;
@@ -581,6 +637,7 @@ public sealed partial class IslandWindow : Window
         {
             Log.Debug("island", "Drag started", new { dx, dy, sx = _dragStartCursor.X, sy = _dragStartCursor.Y, cx = cursor.X, cy = cursor.Y });
             _dragging = true;
+            _state.BeginDrag();
             Root.SetCursor(InputSystemCursor.Create(InputSystemCursorShape.SizeAll));
         }
 
@@ -625,6 +682,7 @@ public sealed partial class IslandWindow : Window
         }
 
         _dragging = false;
+        _state.EndDrag();
         Root.SetCursor(null);
         if (commit)
         {

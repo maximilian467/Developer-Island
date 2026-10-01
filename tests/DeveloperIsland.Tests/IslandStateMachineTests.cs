@@ -240,3 +240,141 @@ public class IslandRestModeTests
         Assert.Equal(IslandMode.Retracted, island.Mode);
     }
 }
+
+/// <summary>Inputs that used to leave the island open or open it without intent.</summary>
+public class IslandInputTests
+{
+    private readonly FakeTimeProvider _time = new();
+    private bool? _pointerReallyOver;
+
+    private IslandStateMachine Create() => new(_time) { PointerProbe = () => _pointerReallyOver };
+
+    [Fact]
+    public void A_lost_pointer_exit_no_longer_keeps_an_event_open()
+    {
+        var island = Create();
+        island.PointerEntered();          // reported...
+        _pointerReallyOver = false;       // ...but the pointer has gone; the exit never arrived
+        island.ShowEvent(TimeSpan.FromSeconds(3));
+
+        _time.Advance(TimeSpan.FromSeconds(3.1));
+
+        Assert.Equal(IslandMode.Compact, island.Mode);
+        Assert.False(island.IsPointerOver);
+    }
+
+    [Fact]
+    public void A_hovered_event_stays_open_and_closes_once_the_pointer_leaves()
+    {
+        var island = Create();
+        _pointerReallyOver = true;
+        island.ShowEvent(TimeSpan.FromSeconds(2));
+
+        _time.Advance(TimeSpan.FromSeconds(10));
+        Assert.Equal(IslandMode.Activity, island.Mode);
+
+        _pointerReallyOver = false;
+        _time.Advance(IslandStateMachine.MinimumAfterHover + TimeSpan.FromMilliseconds(50));
+        Assert.Equal(IslandMode.Compact, island.Mode);
+    }
+
+    [Fact]
+    public void A_hover_peek_closes_when_the_exit_was_lost()
+    {
+        var island = Create();
+        _pointerReallyOver = true;
+        island.PointerEntered();
+        _time.Advance(IslandStateMachine.HoverDwell + TimeSpan.FromMilliseconds(10));
+        Assert.Equal(IslandMode.Activity, island.Mode);
+
+        _pointerReallyOver = false; // no PointerExited
+        _time.Advance(IslandStateMachine.HoverRecheck + TimeSpan.FromMilliseconds(10));
+
+        Assert.Equal(IslandMode.Compact, island.Mode);
+    }
+
+    [Fact]
+    public void Hover_delay_does_not_open_when_the_pointer_is_already_gone()
+    {
+        var island = Create();
+        _pointerReallyOver = true;
+        island.PointerEntered();
+        _pointerReallyOver = false;
+
+        _time.Advance(IslandStateMachine.HoverDwell + TimeSpan.FromMilliseconds(10));
+
+        Assert.Equal(IslandMode.Compact, island.Mode);
+    }
+
+    [Fact]
+    public void Dragging_freezes_timers_events_and_clicks()
+    {
+        var island = Create();
+        _pointerReallyOver = true;
+        island.ShowEvent(TimeSpan.FromSeconds(1));
+        island.Handle(IslandInput.DragStarted);
+
+        Assert.False(island.ShowEvent());
+        island.Handle(IslandInput.Clicked);
+        _time.Advance(TimeSpan.FromSeconds(5));
+        Assert.Equal(IslandMode.Activity, island.Mode);
+        Assert.True(island.IsDragging);
+
+        _pointerReallyOver = false;
+        island.Handle(IslandInput.DragEnded);
+        _time.Advance(IslandStateMachine.MinimumAfterHover + TimeSpan.FromMilliseconds(10));
+        Assert.Equal(IslandMode.Compact, island.Mode);
+    }
+
+    [Fact]
+    public void Hovering_during_a_drag_does_not_start_a_peek()
+    {
+        var island = Create();
+        _pointerReallyOver = true;
+        island.BeginDrag();
+        island.PointerEntered();
+        _time.Advance(TimeSpan.FromSeconds(2));
+        Assert.Equal(IslandMode.Compact, island.Mode);
+    }
+
+    [Fact]
+    public void Inputs_by_name_follow_the_transition_table()
+    {
+        var island = Create();
+        island.Handle(IslandInput.Clicked);
+        Assert.Equal(IslandMode.Expanded, island.Mode);
+
+        island.Handle(IslandInput.ModuleEvent); // ignored while expanded
+        Assert.Equal(IslandMode.Expanded, island.Mode);
+
+        island.Handle(IslandInput.ClickedOutside);
+        Assert.Equal(IslandMode.Compact, island.Mode);
+
+        island.Handle(IslandInput.ModuleEvent);
+        Assert.Equal(IslandMode.Activity, island.Mode);
+        Assert.Equal(ActivitySource.Event, island.ActivitySource);
+    }
+
+    [Fact]
+    public void The_notch_asks_for_a_deliberate_dwell()
+    {
+        Assert.InRange(IslandStateMachine.NotchDwell.TotalMilliseconds, 350, 600);
+        Assert.True(IslandStateMachine.NotchDwell > IslandStateMachine.HoverDwell);
+    }
+
+    [Fact]
+    public void A_stale_expiry_timer_cannot_close_a_newer_event()
+    {
+        var island = Create();
+        _pointerReallyOver = false;
+        island.ShowEvent(TimeSpan.FromSeconds(2));
+        _time.Advance(TimeSpan.FromSeconds(1.5));
+        island.ShowEvent(TimeSpan.FromSeconds(2)); // restarts
+
+        _time.Advance(TimeSpan.FromSeconds(1));
+        Assert.Equal(IslandMode.Activity, island.Mode);
+
+        _time.Advance(TimeSpan.FromSeconds(1.1));
+        Assert.Equal(IslandMode.Compact, island.Mode);
+    }
+}
