@@ -159,3 +159,34 @@ public class ClaudeStatusLineSetupTests
         Assert.Equal("{ this is not json", File.ReadAllText(broken));
     }
 }
+
+public class PlanStatusTests
+{
+    private static readonly DateTimeOffset Now = new(2026, 10, 1, 9, 0, 0, TimeSpan.Zero);
+
+    private static PlanUsage Measured(TimeSpan ago, TimeSpan resetsIn) =>
+        new(new PlanWindow(40, Now + resetsIn), new PlanWindow(20, Now.AddDays(3)), Now - ago);
+
+    [Fact]
+    public void Connected_without_data_is_not_reported_as_available()
+    {
+        Assert.Equal(PlanDataState.WaitingForData, PlanStatus.StateOf(PlanConnection.Connected, null, Now));
+        Assert.Contains("terminal", PlanStatus.Reason(PlanDataState.WaitingForData));
+    }
+
+    [Fact]
+    public void Recent_data_is_receiving_and_old_data_is_stale()
+    {
+        Assert.Equal(PlanDataState.Receiving, PlanStatus.StateOf(PlanConnection.Connected, Measured(TimeSpan.FromMinutes(5), TimeSpan.FromHours(2)), Now));
+        Assert.Equal(PlanDataState.Stale, PlanStatus.StateOf(PlanConnection.Connected, Measured(TimeSpan.FromHours(3), TimeSpan.FromHours(2)), Now));
+    }
+
+    [Fact]
+    public void Connection_problems_win_over_data()
+    {
+        var usage = Measured(TimeSpan.FromMinutes(1), TimeSpan.FromHours(1));
+        Assert.Equal(PlanDataState.NotConnected, PlanStatus.StateOf(PlanConnection.NotConnected, usage, Now));
+        Assert.Equal(PlanDataState.OtherStatusLine, PlanStatus.StateOf(PlanConnection.OtherStatusLine, null, Now));
+        Assert.Equal(PlanDataState.Unreadable, PlanStatus.StateOf(PlanConnection.Unreadable, null, Now));
+    }
+}

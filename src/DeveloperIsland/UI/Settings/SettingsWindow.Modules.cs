@@ -118,12 +118,19 @@ public sealed partial class SettingsWindow
     private void UpdatePlanConnection()
     {
         var state = _isDemo ? PlanConnection.NotConnected : ClaudeStatusLineSetup.Inspect(ClaudeStatusLineSetup.SettingsPath());
-        (PlanStatusTitle.Text, PlanStatusText.Text) = (_isDemo, state) switch
+        var usage = _isDemo ? null : new PlanUsageStore(AppPaths.ClaudePlan).Load();
+        var data = PlanStatus.StateOf(state, usage, DateTimeOffset.UtcNow);
+        var lastUpdate = usage is null ? string.Empty : Core.Formatting.DisplayFormat.Ago(DateTimeOffset.UtcNow - usage.MeasuredAt);
+
+        // "Connected" alone is not "available": say whether plan usage actually arrives.
+        (PlanStatusTitle.Text, PlanStatusText.Text) = (_isDemo, data) switch
         {
             (true, _) => ("Not available in demo mode", "Demo mode never changes Claude Code's settings."),
-            (_, PlanConnection.Connected) => ("Connected", "Plan usage updates with every Claude Code reply. Shown for Claude subscriptions only; API keys have no plan usage."),
-            (_, PlanConnection.OtherStatusLine) => ("Your own status line is in use", "Claude Code already runs a status line, which Developer Island leaves alone. To combine both, pipe its input to: " + ClaudeStatusLineSetup.CommandFor(Environment.ProcessPath ?? "DeveloperIsland.exe")),
-            (_, PlanConnection.Unreadable) => ("Claude Code settings unreadable", "Its settings.json could not be read, so nothing was changed."),
+            (_, PlanDataState.Receiving) => ("Connected, receiving plan usage", $"Last update {lastUpdate}. It refreshes with every reply in a Claude Code terminal session."),
+            (_, PlanDataState.Stale) => ("Connected, no recent update", $"Last update {lastUpdate}. Plan usage refreshes with your next reply in a Claude Code terminal session."),
+            (_, PlanDataState.WaitingForData) => ("Connected, plan usage unavailable so far", "Claude Code hands over plan usage only in terminal sessions, after a reply (its status line is part of the terminal view; the VS Code extension does not run it). Claude subscriptions only."),
+            (_, PlanDataState.OtherStatusLine) => ("Your own status line is in use", "Claude Code already runs a status line, which Developer Island leaves alone. To combine both, pipe its input to: " + ClaudeStatusLineSetup.CommandFor(Environment.ProcessPath ?? "DeveloperIsland.exe")),
+            (_, PlanDataState.Unreadable) => ("Claude Code settings unreadable", "Its settings.json could not be read, so nothing was changed."),
             _ => ("Not connected", "Shows your current and weekly Claude plan usage. Developer Island becomes Claude Code's status line, which Claude Code uses to hand over these two percentages. Nothing else is read or sent."),
         };
         PlanConnectButton.Visibility = state == PlanConnection.Connected ? Visibility.Collapsed : Visibility.Visible;

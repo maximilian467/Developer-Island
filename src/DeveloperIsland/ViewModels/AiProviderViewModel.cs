@@ -201,17 +201,28 @@ public sealed class AiProviderViewModel : ObservableObject
 
     public string PlanWindowName => ShowWeekly ? "Weekly" : "Current";
 
-    public string PlanResetText => ShownWindow is { } w && w.ResetsAt != DateTimeOffset.MaxValue ? ResetText(w.ResetsAt, DateTimeOffset.UtcNow) : string.Empty;
+    /// <summary>"Resets in 2 h 14 min", plus when the figure was measured if that was a while ago.</summary>
+    public string PlanResetText
+    {
+        get
+        {
+            var reset = ShownWindow is { } w && w.ResetsAt != DateTimeOffset.MaxValue ? ResetText(w.ResetsAt, DateTimeOffset.UtcNow) : string.Empty;
+            if (Kind == AiProviderKind.Claude && _plan is { } plan && DateTimeOffset.UtcNow - plan.MeasuredAt > TimeSpan.FromMinutes(15))
+            {
+                var age = $"as of {DisplayFormat.Ago(DateTimeOffset.UtcNow - plan.MeasuredAt)}";
+                return reset.Length > 0 ? $"{reset} · {age}" : age;
+            }
+
+            return reset;
+        }
+    }
+
+    /// <summary>What the plan link can deliver: connected is not the same as available.</summary>
+    public PlanDataState PlanState => PlanStatus.StateOf(_planConnection, _plan, DateTimeOffset.UtcNow);
 
     /// <summary>Why plan usage is missing, in one short line.</summary>
     public string PlanUnavailableReason => Kind == AiProviderKind.Claude
-        ? _planConnection switch
-        {
-            PlanConnection.Connected when _plan is not null => "Window reset; updates with your next Claude Code reply.",
-            PlanConnection.Connected => "Appears after your next Claude Code reply (subscribers only).",
-            PlanConnection.OtherStatusLine => "Claude Code already runs another status line.",
-            _ => "Connect Claude Code in Settings, Modules.",
-        }
+        ? PlanStatus.Reason(PlanState)
         : "Codex has not recorded a limit yet.";
 
     public bool CanConnectPlan => Kind == AiProviderKind.Claude && HasNoPlan && _planConnection == PlanConnection.NotConnected;
@@ -261,7 +272,7 @@ public sealed class AiProviderViewModel : ObservableObject
         {
             nameof(CurrentWindow), nameof(WeeklyWindow), nameof(HasPlan), nameof(HasNoPlan), nameof(HasBothPlanWindows),
             nameof(ShowWeekly), nameof(ShowCurrent), nameof(PlanPercentText), nameof(PlanFraction), nameof(PlanWindowName),
-            nameof(PlanResetText), nameof(PlanUnavailableReason), nameof(CanConnectPlan), nameof(CompactValue),
+            nameof(PlanResetText), nameof(PlanUnavailableReason), nameof(PlanState), nameof(CanConnectPlan), nameof(CompactValue),
             nameof(CompactPrimaryValue), nameof(CompactAccessibleText), nameof(DetailSummary),
         })
         {

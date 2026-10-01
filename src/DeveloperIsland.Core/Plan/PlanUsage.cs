@@ -292,3 +292,49 @@ public sealed class PlanUsageService : IDisposable
         Changed?.Invoke(usage);
     }
 }
+
+/// <summary>What the plan usage link can deliver right now; "connected" alone is not "available".</summary>
+public enum PlanDataState
+{
+    NotConnected,
+
+    /// <summary>The status line is set up, but Claude Code has not handed over any plan usage yet.</summary>
+    WaitingForData,
+
+    /// <summary>Plan usage arrived recently.</summary>
+    Receiving,
+
+    /// <summary>The last plan usage is old (no terminal session for a while), or its windows have reset.</summary>
+    Stale,
+
+    OtherStatusLine,
+    Unreadable,
+}
+
+/// <summary>Turns the connection and the last measurement into one honest state and its wording.</summary>
+public static class PlanStatus
+{
+    /// <summary>Older than this, plan usage is reported as stale.</summary>
+    public static readonly TimeSpan StaleAfter = TimeSpan.FromHours(1);
+
+    public static PlanDataState StateOf(PlanConnection connection, PlanUsage? usage, DateTimeOffset now) => connection switch
+    {
+        PlanConnection.OtherStatusLine => PlanDataState.OtherStatusLine,
+        PlanConnection.Unreadable => PlanDataState.Unreadable,
+        PlanConnection.NotConnected => PlanDataState.NotConnected,
+        _ when usage is null => PlanDataState.WaitingForData,
+        _ when now - usage.MeasuredAt > StaleAfter || (usage.CurrentAt(now) is null && usage.WeeklyAt(now) is null) => PlanDataState.Stale,
+        _ => PlanDataState.Receiving,
+    };
+
+    /// <summary>Why the plan block says "Unavailable" (or that it may be out of date), in one line.</summary>
+    public static string Reason(PlanDataState state) => state switch
+    {
+        PlanDataState.WaitingForData => "Connected, no data yet. Claude Code sends plan usage from terminal sessions, after a reply; the VS Code extension does not.",
+        PlanDataState.Stale => "No recent update. Plan usage refreshes with your next reply in a Claude Code terminal session.",
+        PlanDataState.OtherStatusLine => "Claude Code already runs another status line.",
+        PlanDataState.Unreadable => "Claude Code settings could not be read.",
+        PlanDataState.NotConnected => "Connect Claude Code in Settings, Modules.",
+        _ => string.Empty,
+    };
+}
