@@ -77,3 +77,9 @@ if (-not $SkipInstaller) {
     if ($LASTEXITCODE -ne 0) { throw "Installer build failed" }
     Write-Host "Installer: $(Join-Path $artifacts "DeveloperIsland-Setup-$Version.exe")"
 }
+
+# Checksums for the release page.
+$files = @($zip) + @(Get-ChildItem $artifacts -Filter "DeveloperIsland-Setup-$Version.exe" | ForEach-Object FullName)
+$sums = Join-Path $artifacts "SHA256SUMS-$Version.txt"
+$files | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_ -Algorithm SHA256).Hash.ToLowerInvariant(), (Split-Path $_ -Leaf) } | Set-Content -Encoding ascii $sums
+Write-Host "Checksums: $sums"
