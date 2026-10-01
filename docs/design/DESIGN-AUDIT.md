@@ -41,7 +41,7 @@ Reviewed 2026-09-28. This records the current source review and targeted runtime
 
 ## Sources and scope
 
-Priority remains [the local Apple analysis](../../vorlage/DESIGN.md), then [design-taste-frontend](../../.agents/skills/design-taste-frontend/SKILL.md), then [Web Interface Guidelines](https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/main/command.md). Their native adaptation is documented in [DESIGN-PRINCIPLES.md](DESIGN-PRINCIPLES.md). Web-only requirements such as HTML semantics, URL navigation and browser autofill do not apply literally to WinUI.
+Priority remains [the Apple design analysis](apple-design-analysis.md), then [design-taste-frontend](https://github.com/Leonxlnx/taste-skill), then [Web Interface Guidelines](https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/main/command.md). Their native adaptation is documented in [DESIGN-PRINCIPLES.md](DESIGN-PRINCIPLES.md). Web-only requirements such as HTML semantics, URL navigation and browser autofill do not apply literally to WinUI.
 
 No layout, stack, brand or feature redesign was introduced. Existing capsule geometry, typography, near-black surfaces, restrained blue accent, shadows and compositor motion were retained.
 

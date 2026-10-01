@@ -2,7 +2,7 @@
 
 Consolidated from the three binding sources, in priority order:
 
-1. `vorlage/DESIGN.md` (Apple design analysis)
+1. [`apple-design-analysis.md`](apple-design-analysis.md) (Apple design analysis, from [awesome-design-md](https://github.com/VoltAgent/awesome-design-md), MIT)
 2. Developer Island product brief
 3. Taste Skill `design-taste-frontend`
 4. Vercel Web Interface Guidelines (`docs/design/web-interface-guidelines*.md`)
