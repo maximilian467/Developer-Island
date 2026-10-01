@@ -1,0 +1,79 @@
+name: Bug report
+description: Something in Developer Island does not work as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please do not paste secrets: no calendar links, tokens, prompts or private paths.
+        Security problems belong in a [private report](https://github.com/maximilian467/Developer-Island/security/advisories/new), not here.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Chrome maximized
+        2. Hover the notch
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Developer Island version
+      description: Settings, About (or the installer or zip name).
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      description: Run `winver`.
+      placeholder: Windows 11 24H2 (26100), x64
+    validations:
+      required: true
+  - type: dropdown
+    id: module
+    attributes:
+      label: Module or area
+      options:
+        - Claude Code / Codex usage
+        - Music
+        - Focus
+        - Calendar
+        - System
+        - Git / GitHub
+        - Tasks
+        - Auto-hide / notch
+        - Island states, hover, animation
+        - Settings
+        - Installer
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: monitors
+    attributes:
+      label: Monitor setup
+      description: Number of monitors, resolutions and scaling, and where the island sits (anchor).
+      placeholder: Two monitors, 2560x1440 at 125 % (primary) and 1920x1080 at 100 %; island at Top Center
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        From `%LOCALAPPDATA%\DeveloperIsland\logs` (the lines around the problem). Logs never contain prompts, titles or calendar links, but please look through them before posting.
+      render: text
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshot or recording
+      description: If it is visual. Demo mode (`DeveloperIsland.exe --demo`) avoids showing your own data.

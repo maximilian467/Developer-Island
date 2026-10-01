@@ -1,0 +1,22 @@
+# Dependabot: weekly pull requests for NuGet packages and GitHub Actions.
+# Minor and patch updates are grouped; the Windows App SDK packages move together because their
+# versions must match one Windows App SDK release.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      windows-app-sdk:
+        patterns: ["Microsoft.WindowsAppSDK*"]
+      nuget-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]
