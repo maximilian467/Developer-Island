@@ -6,13 +6,13 @@ What was verified, how, and what is still open. Updated 2026-10-01.
 
 | Area | How |
 |---|---|
-| Unit and integration tests | 356 tests pass (`dotnet test`), including a real `git` repository, a Windows Credential Manager round trip, ICS recurrence across daylight saving and the island state machine's transitions. |
+| Unit and integration tests | 368 tests pass (`dotnet test`), including a real `git` repository, a Windows Credential Manager round trip, ICS recurrence across daylight saving and the island state machine's transitions. |
 | Release build | `tools/build-release.ps1` builds tests, publish, portable zip and installer in a shell whose PATH has no .NET 10 SDK (the script finds it). |
 | Every island state | Rendered offscreen with `--demo --snapshot` (41 renders) and compared with the previous build: compact, peek, activities, notch, each expanded module, the usage-graph tooltip, empty and error states, each featured module, favorite rotation, camera and microphone marks in compact, notch, activity and expanded, every Settings page. |
-| Camera and microphone | `--system-report` reads the consent store on this machine (both "not in use" at the time). The in-use rule and the island behavior (marks in every state, notch instead of hide, never opening) are covered by tests. |
+| Camera and microphone | `--system-report` reads the consent store on this machine (both "not in use" at the time). The in-use rule and the island behavior (marks in every state, dots in the notch, notch instead of hide, never opening) are covered by tests. |
 | Claude plan bridge | `--claude-statusline` fed with a sample in the documented format: exit 0, no output, only percentages and reset times stored (no path, model, cost or session). |
 | Hardware detection | `--system-report` on a Lenovo laptop without admin rights: CPU, memory, Intel GPU load, battery and two ACPI thermal zones detected; no CPU temperature, no fans, so those are hidden. |
-| Auto-hide | Earlier iteration: Chrome maximized in front retracted the island live; foreground changes are now debounced. One rule for every module: tests cover Claude, Codex, Music, Focus, System, Calendar and the open island with Chrome and VS Code in front. |
+| Auto-hide | Earlier iteration: Chrome maximized in front retracted the island live. Fast switching (Chrome, VS Code, Chrome; a five-app chain; late stale events; missed events) is covered by tests of `AutoHideCoordinator`; it was not re-checked by hand, since input is never simulated. One rule for every module: tests cover Claude, Codex, Music, Focus, System, Calendar and the open island with Chrome and VS Code in front. |
 | Performance | See [PERFORMANCE.md](PERFORMANCE.md). |
 
 ## Not verified on real hardware or accounts

@@ -125,7 +125,7 @@ Four things are kept apart:
 | Foreground app | `ForegroundWatcher`, `SmartHidePolicy` | The resting mode (Compact, Retracted or Hidden) |
 | Privacy | `PrivacyWatcher`, `PrivacyIndicator` | Whether the camera and microphone marks show |
 
-The display priority is Dragging > Auto-hide or hidden > explicitly expanded > hover peek > compact. An auto-hide app in front retracts the island at once from any state, even when expanded; a drag finishes first. Favorites and the last active module only choose content: `IslandContent.ChoosePeek` and `ChooseTabOnOpen` show the featured module (favorite, else the one opened last) on hover and on open, never a fixed default. The privacy marks are visible in every state except a hide the user asked for (tray, fullscreen); with a device in use, `SmartHidePolicy` turns "hide" into the notch.
+The display priority is Dragging > Auto-hide or hidden > explicitly expanded > hover peek > compact. An auto-hide app in front retracts the island at once from any state, even when expanded; a drag finishes first. Favorites and the last active module only choose content: `IslandContent.ChoosePeek` and `ChooseTabOnOpen` show the featured module (favorite, else the one opened last) on hover and on open, never a fixed default. The privacy marks are visible in every state except a hide the user asked for (tray, fullscreen): icons in compact, activity and expanded, 4 DIP dots in the notch (whose size never changes); with a device in use, `SmartHidePolicy` turns "hide" into the notch.
 
 ## Compact island and favorites
 
@@ -143,7 +143,7 @@ Claude plan usage comes from Claude Code's documented status line input (`rate_l
 
 ## Auto-hide in apps
 
-`AutoHideApps` (settings) lists apps with their own switches; the older `SmartHideProcesses` list is kept in sync for compatibility. `ForegroundWatcher` (WinEvent hooks, no polling) reports the foreground app; `SmartHidePolicy` decides Compact, Retracted or Hidden from the rules, the anchor (top center only) and, optionally, whether the window is maximized. Foreground bursts settle for 150 ms.
+`AutoHideApps` (settings) lists apps with their own switches; the older `SmartHideProcesses` list is kept in sync for compatibility. `ForegroundWatcher` (WinEvent hooks, no polling) reports the foreground app; `SmartHidePolicy` decides Compact, Retracted or Hidden from the rules, the anchor (top center only) and, optionally, whether the window is maximized. `ForegroundWatcher` judges the root owner of the window actually in front (`GetForegroundWindow` when an event is processed), so a queued event from a fast switch or a browser popup cannot decide. `AutoHideCoordinator` (Core, tested) numbers every change: stepping aside applies at once, a return to the capsule waits 80 ms and is verified against the real foreground, and only the newest version may apply. A 750 ms check, running only while auto-hide can apply, re-reads the foreground and catches an event Windows never delivered.
 
 ## Secrets
 

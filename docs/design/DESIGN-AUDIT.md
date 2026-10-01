@@ -12,7 +12,7 @@ Checked against [DESIGN-PRINCIPLES.md](DESIGN-PRINCIPLES.md) with offscreen rend
 | Compact | No money in the capsule ("Claude 1.12M · 72%"); values reserve their widest form, so the capsule does not jitter. |
 | Tooltip | The usage graph's tooltip is a small dark floating capsule with a hairline and a soft shadow, above the cell (never under the pointer), fading in once and following from cell to cell without blinking. |
 | Color | Hardware levels use green, orange and red only on a graph line, a thin bar or a temperature; temperatures stay neutral until their own threshold. Orange microphone and green camera follow the convention people know from phones. |
-| Notch | One fixed size at rest and one fixed, slightly taller size while a camera or microphone is in use, whatever is in use. |
+| Notch | One fixed size. A microphone or camera in use shows as a 4 DIP orange or green dot centered in the visible strip, never an icon. |
 | Icons | Microphone and camera are Segoe Fluent vector glyphs, no emoji. In the expanded island they sit centered at the top edge, so the header keeps its room. |
 
 Remaining: Narrator pass of the privacy marks and the tooltip, and seeing the marks with a real call.
