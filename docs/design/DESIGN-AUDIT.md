@@ -1,4 +1,24 @@
-# Design audit — V1 continuation
+# Design audit
+
+## Iteration 3: favorites, plan usage, system history (2026-10-01)
+
+Checked against [DESIGN-PRINCIPLES.md](DESIGN-PRINCIPLES.md) using offscreen renders of every state (`--demo --snapshot`), before and after, side by side.
+
+| Area | Result |
+|---|---|
+| Preservation | Every view of the previous build still exists (22 of 22 renders), every settings field and view-model property is still present, and the classic compact summary is unchanged when nothing is featured. Intended visual changes only: the Claude mark, the Usage tab icon, the favorite stars. |
+| Hierarchy | Claude and Codex columns read top to bottom: plan usage, then "Today on this PC" with the unchanged breakdown, value, limit and context lines. The compact island features one module at a time; time-critical chips stay in front. |
+| Color | One accent. Status colors stay semantic and small (CI dots, battery and temperature warnings at 90 °C); the sparkline fill is the accent at 18 %. Claude and Codex are still not color-coded. |
+| Icons | The Claude mark is now an open "C" ring that pairs with the Codex hexagon (same stroke and grid); the four-point spark read as Gemini. The Usage tab shows a usage chart, not a provider. Official logos are not bundled. |
+| Typography | 400/600 only. Ticking numbers use tabular figures, so the capsule no longer changes width every second. |
+| Hit targets | Fixed: favorite stars (26 → 32), plan segments (20 → 28 within a 32 control), plan Connect (26 → 32), task check and delete (28 → 32). |
+| Copy | No em or en dashes, "…" for ellipses, "estimated API equivalent today" for money, "Unavailable" with a reason when plan usage is missing. |
+| Honest data | Plan percentages are only shown when Claude Code or Codex reported them; history stores only measured peaks. Hardware that does not exist is not shown at all (no "GPU unavailable"). |
+| Layout | The expanded island may grow to 700 DIP; panels scroll instead of clipping if they ever outgrow it. System tiles re-flow without gaps (up to three in a row, four as two by two). |
+
+Remaining: Narrator pass of the new controls (segments, stars, app list), and checking the Auto-hide app picker with many running apps.
+
+## V1 continuation (2026-09-28)
 
 Reviewed 2026-09-28. This records the current source review and targeted runtime inspection, not a claim that every earlier implementation phase was independently audited.
 

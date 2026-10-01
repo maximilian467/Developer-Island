@@ -21,15 +21,18 @@ Developer Island is a small capsule at the top of your screen. It shows your AI 
   - A **live activity** (medium state) appears for song changes, focus sessions, AI events and upcoming meetings, or while you hover.
   - The **expanded** island opens on click.
 - **Spring motion from the anchor.** The capsule morphs on the GPU compositor and grows away from the edge it rests on. Every animation can be interrupted and respects Windows "Animation effects".
-- **Hover that behaves.** A peek opens after a short, deliberate hover (about 280 ms). Hover is judged against the visible capsule, so it never sticks, and a click outside the expanded island closes it without reopening it.
-- **Browser notch.** A top-center island covers the tab strip of a maximized browser. While Chrome, Edge or Firefox is maximized in front, the island retracts into a small notch in the screen edge (48 × 5 px). Hover it for 400 ms or click it to open. You can hide it completely instead, or turn it off per browser.
+- **Your module, in the capsule.** Star any module in the expanded island and the compact island features it: "Claude 68% · €2.96", the song, the focus countdown, "CPU 38% · 54°", "14:30 Robotics". Several favorites take turns every 7 seconds; without favorites the module you opened last is shown. Time-critical signals (focus, next event, system alert, failing CI) stay in front.
+- **Hover that behaves.** A peek opens after a short, deliberate hover (about 280 ms). Hover is judged against the visible capsule, so it never sticks. A capsule that just grew under a resting mouse does not take your next click, and any click outside the expanded island closes it.
+- **Auto-hide in apps.** A top-center island covers tabs and title bars. While an app you list is in front (Chrome, Edge and Firefox by default, or any app you add), the island retracts into a small notch in the screen edge (48 × 5 px). Hover it for 450 ms or click it to open. Choose per app, hide completely instead, or retract only while the app is maximized.
 - **Anywhere you want it.** It sits at Top Center by default. There are five more anchors, or you can drag it anywhere; near an anchor it snaps into place. The monitor, anchor and offset are saved, and the island falls back to the primary monitor when that display is disconnected.
 - **Out of the way.** The window region follows the capsule, leaving the rest of the desktop clickable. Hovering or dragging does not activate the island. It steps aside while a fullscreen app is on its monitor.
 - **Keyboard.** **Ctrl + Alt + Space** opens or closes the island from anywhere; three other combinations are available if another app already uses it. Esc closes the island, and focus returns to where you were. Tab and the arrow keys move through the expanded view.
 - **Tray and autostart.** The notification-area menu offers Show, Hide, Start Focus, New Task, Settings and Quit. Start with Windows is a native per-user setting, with no scripts.
 
 <p align="center">
-  <img src="docs/assets/notch.png" alt="The browser notch: a small dark tab in the top screen edge" width="120">
+  <img src="docs/assets/compact-featured-claude.png" alt="Compact island featuring Claude: plan usage and today's estimated API equivalent" width="440">
+  <br>
+  <img src="docs/assets/notch.png" alt="The notch: a small dark tab in the top screen edge" width="120">
 </p>
 
 ## Modules
@@ -53,9 +56,15 @@ Tokens are counted the way the providers bill them:
 | **Fresh** | Input + cache write + output: the work of the day |
 | **Processed** | Fresh + cache read: everything the model processed |
 
-The compact island shows **fresh** tokens; the expanded view shows the full breakdown. Cache reads repeat the whole conversation context on every turn, so in long agent sessions they are often 80–90 % of processed tokens; counting them as "usage" made earlier numbers look inflated. The usage graph is shaded by fresh tokens too.
+Each provider shows its **plan usage** first, when it is known:
 
-The **estimated API equivalent** in euros prices every category at public list prices, including cache writes (1.25× or 2× input) and cache reads (0.1× input unless listed). If you use a subscription, it is not what you pay. Models without a known list price are reported as "partly priced" instead of being guessed. Codex also shows its latest primary rate-limit usage (usually a 5-hour window), with a live activity at 50, 75 and 90 %.
+- **Claude Code:** the current (5-hour) and weekly (7-day) windows with their reset times, as Claude Code reports them to its status line. Connect it once in Settings, Modules, "Claude plan usage": Developer Island becomes Claude Code's status line command, receives only those two percentages and reset times, shows nothing in the terminal, and leaves an existing status line of yours alone. Plan usage exists for Claude subscriptions only.
+- **Codex:** the 5-hour and weekly windows from its own logs.
+- A **Current / Weekly** switch picks the window. Without data the block says "Unavailable" and why. Percentages are never computed from token counts.
+
+Below it, **Today on this PC** keeps the full local breakdown. The compact island shows plan usage when known, otherwise **fresh** tokens, plus today's estimated API equivalent; the expanded view shows the full breakdown, and a tooltip on the figure lists every exact count. Cache reads repeat the whole conversation context on every turn, so in long agent sessions they are often 80–90 % of processed tokens; counting them as "usage" made earlier numbers look inflated. The usage graph is shaded by fresh tokens too.
+
+The **estimated API equivalent today** in euros prices every category at public list prices, including cache writes (1.25× or 2× input) and cache reads (0.1× input unless listed). If you use a subscription, it is not what you pay. Models without a known list price are reported as "partly priced" instead of being guessed. Codex also shows its latest primary rate-limit usage (usually a 5-hour window), with a live activity at 50, 75 and 90 %.
 
 ### Music
 
@@ -83,7 +92,7 @@ Notifications, your open pull requests, review requests, and the active reposito
   <img src="docs/assets/expanded-calendar.png" alt="Calendar module: the next event and today's agenda" width="480">
 </p>
 
-Your next event and today's agenda. Add a calendar's private iCal link (Google, Outlook and iCloud offer one in their sharing settings) or an `.ics` file. Within the hour, the compact island shows the next event, for example **14:30 · Robotics**, and announces it once. Time zones, all-day events, recurring events (daily, weekly, monthly, yearly, with exceptions) and cancelled or moved occurrences are handled. Calendars are refreshed every 15 minutes. The architecture is provider-based, so account-based calendars can be added later without changing the module.
+Your next event and today's agenda. Add a calendar's private iCal link (kept in Windows Credential Manager, never in settings or logs) (Google, Outlook and iCloud offer one in their sharing settings) or an `.ics` file. Within the hour, the compact island shows the next event, for example **14:30 · Robotics**, and announces it once. Time zones, all-day events, recurring events (daily, weekly, monthly, yearly, with exceptions) and cancelled or moved occurrences are handled. Calendars are refreshed every 15 minutes. The architecture is provider-based, so account-based calendars can be added later without changing the module.
 
 ### Tasks
 
@@ -102,19 +111,26 @@ A small local to-do list. Type and press Enter to add a task; click the circle t
 
 ### System
 
-CPU, memory and battery. The compact island speaks up only when something needs attention: a battery at 20 % or less that is not charging, or a CPU busy above 85 % for 15 seconds.
+<p align="center">
+  <img src="docs/assets/expanded-system.png" alt="System module: CPU, memory and GPU with 60-second graphs, battery, a storage temperature and a fan" width="480">
+</p>
+
+CPU, memory, GPU and battery, each with its last 60 seconds as a quiet graph, plus the temperatures and fans this device exposes (CPU and GPU temperatures in their tiles, storage, board and ACPI thermal zones and fan speeds as rows below). Hardware that does not exist, or that Windows does not expose without administrator rights, is not shown at all; the tiles re-flow. Readings come from Windows and [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor), read-only. Manual fan control is not offered: no supported interface guarantees that fans return to firmware control if the app crashes. Run `DeveloperIsland.exe --system-report` to see what your device exposes.
+
+The compact island speaks up only when something needs attention: a battery at 20 % or less that is not charging, or a CPU busy above 85 % for 15 seconds. Featured, it shows "CPU 38% · 54°" (or GPU or memory, whatever exists).
 
 ## Settings
 
 <p align="center">
   <img src="docs/assets/settings-modules.png" alt="Settings, Modules section with every module, its order and its switch" width="720">
+  <img src="docs/assets/settings-auto-hide.png" alt="Settings, Auto-hide in apps with Chrome, Edge and Firefox and buttons to add apps" width="720">
 </p>
 
 | Section | Settings |
 |---|---|
 | General | Start with Windows, always on top, launch hidden, keyboard shortcut |
-| Position | Monitor, anchor, custom position; browser notch (on or off, notch or hide, per browser) |
-| Modules | Every module on or off and in which order; Git repositories; calendars |
+| Position | Monitor, anchor, custom position; Auto-hide in apps (on or off, notch or hide, only when maximized, an app list with icons and Add application or Browse) |
+| Modules | Every module on or off and in which order; Claude plan usage (connect or disconnect); Git repositories; calendars |
 | Appearance | System or Dark (the island itself is always dark) |
 
 Changes apply immediately.
@@ -126,7 +142,8 @@ Changes apply immediately.
 - No accounts, telemetry or cloud sync. The only network requests are the ones you set up: the calendar links you add, and the GitHub CLI's read-only requests to GitHub when the GitHub module is on and `gh` is signed in.
 - The app reads local JSONL files that can also contain conversation content, but extracts only usage and session metadata: token counts, model, timestamps, session IDs and the working directory. It does not retain, display, log or upload prompt, message or code content.
 - The local database (`%LOCALAPPDATA%\DeveloperIsland\usage.db`) contains token counts, model names, timestamps, session IDs, project folder names, daily totals and focus sessions.
-- `settings.json` holds your settings, including repository paths and calendar links; `tasks.json` holds your tasks. Calendar event titles are kept in memory only.
+- `settings.json` holds your settings, including repository paths, favorites and the auto-hide app list; `tasks.json` holds your tasks; `ui-state.json` remembers the module you opened last. Private calendar links are kept in Windows Credential Manager and appear in settings only as "Google Calendar" or similar. Calendar event titles are kept in memory only.
+- `claude-plan.json` holds the last Claude plan percentages and reset times that Claude Code handed over, nothing else from its status line input (no paths, model, cost or session).
 - Logs (`%LOCALAPPDATA%\DeveloperIsland\logs`) contain app events and error types, never content, repository names, task titles, event titles or calendar links. They are kept for 7 days.
 - The API equivalent uses a static price catalog and exchange rate. You can adjust both in `%LOCALAPPDATA%\DeveloperIsland\pricing.json`, for example:
 
@@ -178,10 +195,13 @@ The scripts find the .NET 10 SDK themselves, even when the `dotnet` on PATH is a
 
 ```powershell
 dotnet build src/DeveloperIsland -c Debug                      # build the app
-dotnet test tests/DeveloperIsland.Tests                         # 241 tests
+dotnet test tests/DeveloperIsland.Tests                         # 294 tests
 src/DeveloperIsland/bin/x64/Debug/net10.0-windows10.0.22621.0/win-x64/DeveloperIsland.exe --demo
 
-# Render every state (compact, peek, each module, notch, empty and error states, Settings)
+# What the System module can read on this device:
+...\DeveloperIsland.exe --system-report
+
+# Render every state (compact, peek, each module, featured modules, notch, empty and error states, Settings)
 # to PNG files offscreen, without touching the desktop:
 ...\DeveloperIsland.exe --demo --snapshot=C:\temp\island-shots
 
@@ -195,7 +215,11 @@ The tests cover:
 - token accounting (fresh versus processed, cache categories, local-day boundaries and daylight saving)
 - usage aggregation, de-duplication, cost calculation and incremental daily totals
 - malformed log records, persisted Codex limits, cursor upgrades and limit expiry
-- the island state machine, hover tracking and the browser-notch policy
+- the island state machine (named inputs, lost pointer events, drags, stale timers), hover tracking, click arming and the per-app auto-hide rules
+- favorites, the module opened last and compact rotation
+- Claude plan usage from the status line input, its store and Claude Code settings changes; Codex weekly windows; measured plan peaks
+- hardware capabilities, the 60-second history and the fan-control safety rules
+- calendar links in Windows Credential Manager and the migration from plain text
 - the focus timer, including restore after restart
 - media session choice and track changes
 - Git status parsing and a real repository end to end; GitHub CLI output; ICS parsing and recurrence; tasks; system alerts
@@ -219,7 +243,8 @@ src/
   DeveloperIsland.Core/     platform-independent logic, covered by unit tests
     Providers/  Usage/      Claude Code and Codex providers, parsers, aggregation, history
     Pricing/  Storage/      API equivalent; SQLite (events, daily totals, focus, cursors)
-    Modules/                module ids, states and order
+    Modules/                module ids, states and order; the featured-module selector
+    Plan/                   Claude plan usage: status line input, store, Claude Code settings
     Git/  GitHub/           git status via the git CLI; read-only GitHub via the gh CLI
     Calendar/  Tasks/       ICS parsing and calendar sources; the task list
     SystemInfo/  Focus/     system alerts and sampling; focus timer, history and restore
@@ -253,4 +278,4 @@ Design principles:
 - [Taste Skill](https://github.com/Leonxlnx/taste-skill)
 - [Vercel Web Interface Guidelines](https://github.com/vercel-labs/web-interface-guidelines)
 
-Icons are Segoe Fluent Icons, plus drawn Git and pull-request marks. Claude and Codex are shown with simple generic marks, not their logos. Built with the Windows App SDK and WinUI 3.
+Icons are Segoe Fluent Icons, plus drawn Git and pull-request marks. Claude and Codex are shown with simple generic marks (an open "C" ring and a hexagon), not their logos. Hardware sensors use [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) (MPL-2.0). Built with the Windows App SDK and WinUI 3.
