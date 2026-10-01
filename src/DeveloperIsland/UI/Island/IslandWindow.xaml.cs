@@ -39,9 +39,6 @@ public sealed partial class IslandWindow : Window
     /// <summary>The notch is drawn 10 DIP tall and cut flat by the screen edge; 5 DIP remain visible.</summary>
     private const double NotchHeight = 10;
 
-    /// <summary>The notch while a camera or microphone is in use: one fixed size, whatever is in use.</summary>
-    private static readonly Size PrivacyNotchSize = new(60, 30);
-
     /// <summary>Window y of the screen edge above a top-anchored island.</summary>
     private static double ScreenEdgeY => EdgeMargin - IslandPlacement.EdgeGap;
     private const double ShadowBleed = 40;
@@ -113,15 +110,7 @@ public sealed partial class IslandWindow : Window
         Compact.SizeChanged += OnViewSizeChanged;
         Activity.SizeChanged += OnViewSizeChanged;
         Expanded.SizeChanged += OnViewSizeChanged;
-        Notch.SizeChanged += OnViewSizeChanged;
         NotchPrivacy.Source = viewModel.Privacy;
-        viewModel.Privacy.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(PrivacyViewModel.IsActive))
-            {
-                SizeNotch();
-            }
-        };
 
         _state.ModeChanged += OnModeChanged;
         _state.PointerProbe = ProbePointer;
@@ -318,14 +307,6 @@ public sealed partial class IslandWindow : Window
         {
             Log.Error("window", "Island state change failed", ex, new { from = oldMode.ToString(), to = newMode.ToString() });
         }
-    }
-
-    /// <summary>The plain notch, or its one privacy size (the size never depends on which device is in use).</summary>
-    private void SizeNotch()
-    {
-        var privacy = _viewModel.Privacy.IsActive;
-        Notch.Width = privacy ? PrivacyNotchSize.Width : 48;
-        Notch.Height = privacy ? PrivacyNotchSize.Height : NotchHeight;
     }
 
     private FrameworkElement ViewFor(IslandMode mode) => mode switch
