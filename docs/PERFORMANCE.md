@@ -45,6 +45,8 @@ Measured with `Get-Process` over the stated window, after the startup scan.
   - One-shot timers handle midnight and the active-flag timeout.
   - The focus timer ticks only while a session runs.
   - The media position ticks only while the expanded Music tab is visible and playing.
+- **Camera and microphone without polling.** One background thread waits on two registry change notifications and reads the consent store only after Windows signals a change.
+- **No re-layout on ticks.** Compact values reserve their widest form, so a ticking timer or CPU figure no longer resizes and re-morphs the capsule.
 - **No rendering loop.** All motion is composition animation (springs, key frames and expressions). Nothing redraws while idle, and there are no perpetual animations.
 - **Incremental work.**
   - File cursors mean only appended bytes are parsed.

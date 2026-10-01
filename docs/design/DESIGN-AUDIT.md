@@ -1,5 +1,22 @@
 # Design audit
 
+## Iteration 4: behavior fixes, privacy marks, levels (2026-10-01)
+
+Checked against [DESIGN-PRINCIPLES.md](DESIGN-PRINCIPLES.md) with offscreen renders (`--demo --snapshot`, 41 renders), before and after.
+
+| Area | Result |
+|---|---|
+| Preservation | Every earlier render still exists; the only intended visual changes are listed here. |
+| Brand marks | Claude Code shows the Claude mark and Codex the OpenAI mark (Simple Icons paths, monochrome, in the island's foreground color); the Usage tab follows the active provider. Nothing Gemini-like remains. |
+| Favorites | The provider star sits on the header line, right after the name ("Claude Code ☆"), with the same 32 DIP hit area as the island header star. |
+| Compact | No money in the capsule ("Claude 1.12M · 72%"); values reserve their widest form, so the capsule does not jitter. |
+| Tooltip | The usage graph's tooltip is a small dark floating capsule with a hairline and a soft shadow, above the cell (never under the pointer), fading in once and following from cell to cell without blinking. |
+| Color | Hardware levels use green, orange and red only on a graph line, a thin bar or a temperature; temperatures stay neutral until their own threshold. Orange microphone and green camera follow the convention people know from phones. |
+| Notch | One fixed size at rest and one fixed, slightly taller size while a camera or microphone is in use, whatever is in use. |
+| Icons | Microphone and camera are Segoe Fluent vector glyphs, no emoji. In the expanded island they sit centered at the top edge, so the header keeps its room. |
+
+Remaining: Narrator pass of the privacy marks and the tooltip, and seeing the marks with a real call.
+
 ## Iteration 3: favorites, plan usage, system history (2026-10-01)
 
 Checked against [DESIGN-PRINCIPLES.md](DESIGN-PRINCIPLES.md) using offscreen renders of every state (`--demo --snapshot`), before and after, side by side.

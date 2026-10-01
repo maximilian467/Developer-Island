@@ -114,13 +114,32 @@ Every module follows **Provider, then State, then ViewModel, then View**, with o
 
 `HardwareCapabilities` is derived from the samples themselves, so a component that does not exist simply never appears. Manual fan control is gated by `FanControlCapability`, which requires a crash-safe fallback to firmware control; no supported interface offers that, so the island monitors only. `DeveloperIsland.exe --system-report` prints what a device exposes.
 
+## State, content and global signals
+
+Four things are kept apart:
+
+| Concern | Owner | Decides |
+|---|---|---|
+| Display state | `IslandStateMachine` | Hidden, Retracted, Compact, Activity, Expanded (plus the dragging flag) |
+| Content | `CompactSelector`, `IslandContent` | Which module the capsule, the peek and the opened island show |
+| Foreground app | `ForegroundWatcher`, `SmartHidePolicy` | The resting mode (Compact, Retracted or Hidden) |
+| Privacy | `PrivacyWatcher`, `PrivacyIndicator` | Whether the camera and microphone marks show |
+
+The display priority is Dragging > Auto-hide or hidden > explicitly expanded > hover peek > compact. An auto-hide app in front retracts the island at once from any state, even when expanded; a drag finishes first. Favorites and the last active module only choose content: `IslandContent.ChoosePeek` and `ChooseTabOnOpen` show the featured module (favorite, else the one opened last) on hover and on open, never a fixed default. The privacy marks are visible in every state except a hide the user asked for (tray, fullscreen); with a device in use, `SmartHidePolicy` turns "hide" into the notch.
+
 ## Compact island and favorites
 
 `CompactSelector` picks the featured module: one favorite is shown, several rotate every 7 s (skipping those with nothing to say), otherwise the module opened last (`ui-state.json`), otherwise the classic summary. The rotation timer runs only while the compact capsule is on screen. Time-critical chips (focus, next event, system alert, failing CI) stay unless the featured module already shows them.
 
+Ticking values sit in a `StableText`: an invisible copy of the widest form (`CompactWidth.Reserve`: "CPU 9%" reserves "CPU 000%", "376k" and "1.12M" reserve "000.00M") holds the slot and tabular figures make every digit equally wide, so the capsule changes width only when its content changes kind.
+
+## Camera and microphone
+
+Windows records each app's device use under `HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\{microphone|webcam}` (packaged apps directly, desktop apps under `NonPackaged`): a `LastUsedTimeStart` without a `LastUsedTimeStop` means in use. `PrivacyWatcher` arms `RegNotifyChangeKeyValue` on both keys (subtree, names and values), reads them once, and waits; a change re-arms and re-reads after 120 ms. One background thread, no polling, no app names kept or logged. `ConsentStore` and `PrivacyIndicator` (Core) hold the testable rules.
+
 ## Plan usage
 
-Claude plan usage comes from Claude Code's documented status line input (`rate_limits.five_hour` and `seven_day`: `used_percentage`, `resets_at`). `ClaudeStatusLineSetup` adds Developer Island as the `statusLine` command in Claude Code's `settings.json` on request (backup first, never replacing a status line the user already has). `DeveloperIsland.exe --claude-statusline` runs before any UI, keeps only those numbers in `claude-plan.json`, prints nothing and always exits 0. `PlanUsageService` follows that file with a watcher. Codex's 5-hour and weekly windows come from its own rollout records. A window that has reset no longer shows its percentage.
+Claude plan usage comes from Claude Code's documented status line input (`rate_limits.five_hour` and `seven_day`: `used_percentage`, `resets_at`). `ClaudeStatusLineSetup` adds Developer Island as the `statusLine` command in Claude Code's `settings.json` on request (backup first, never replacing a status line the user already has). `DeveloperIsland.exe --claude-statusline` runs before any UI, keeps only those numbers in `claude-plan.json`, prints nothing and always exits 0. `PlanUsageService` follows that file with a watcher. Codex's 5-hour and weekly windows come from its own rollout records. A window that has reset no longer shows its percentage. Claude Code runs status lines only in its terminal interface, so `PlanStatus` separates the link (connected or not) from the data (waiting, receiving, stale after an hour), and Settings and the Usage panel say which one applies.
 
 ## Auto-hide in apps
 
