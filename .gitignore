@@ -11,6 +11,26 @@ TestResults/
 .claude/
 skills-lock.json
 
+# Local data that must never be committed (the app keeps its own under %LOCALAPPDATA%)
+*.log
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.env
+.env.*
+*.pfx
+*.p12
+*.pem
+*.key
+*.snk
+
+# Editors and tools
+.vscode/
+.idea/
+__pycache__/
+*.orig
+
 # OS
 Thumbs.db
 Desktop.ini
