@@ -54,6 +54,7 @@ public sealed partial class ExpandedView : UserControl
         set
         {
             _viewModel = value;
+            PrivacyMarks.Source = value.Privacy;
             UsageView.ViewModel = value.Usage;
             MusicView.ViewModel = value.Music;
             FocusView.ViewModel = value.Focus;

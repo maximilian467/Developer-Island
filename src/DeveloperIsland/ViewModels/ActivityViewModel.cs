@@ -15,6 +15,9 @@ public enum ActivityKind
 /// <summary>Content of the medium ("live activity") state.</summary>
 public sealed class ActivityViewModel : ObservableObject
 {
+    /// <summary>The island-wide camera and microphone state (the same instance as the island view model).</summary>
+    public PrivacyViewModel Privacy { get; internal set; } = new();
+
     private ActivityKind _kind = ActivityKind.Info;
     private string _title = string.Empty;
     private string _subtitle = string.Empty;

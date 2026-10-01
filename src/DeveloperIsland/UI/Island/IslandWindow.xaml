@@ -15,8 +15,11 @@
         <!-- Content, clipped to the animated capsule. -->
         <Grid x:Name="ContentHost">
             <!-- Smart Browser Notch: the island retracted into the top screen edge. -->
+            <!-- With a camera or microphone in use it hangs a little lower (one fixed size) to show the marks. -->
             <Grid x:Name="Notch" Width="48" Height="10" Visibility="Collapsed" Background="Transparent"
-                  AutomationProperties.Name="Developer Island, retracted. Click to open." />
+                  AutomationProperties.Name="Developer Island, retracted. Click to open.">
+                <components:PrivacyIndicators x:Name="NotchPrivacy" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+            </Grid>
             <island:CompactView x:Name="Compact" />
             <island:ActivityView x:Name="Activity" Visibility="Collapsed" />
             <expanded:ExpandedView x:Name="Expanded" Visibility="Collapsed" />

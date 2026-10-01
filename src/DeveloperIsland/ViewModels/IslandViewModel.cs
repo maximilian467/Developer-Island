@@ -45,6 +45,7 @@ public sealed class IslandViewModel : ObservableObject
         Tasks = modules.Tasks;
         System = modules.System;
         IsDemo = isDemo;
+        Activity.Privacy = Privacy;
         Usage.PropertyChanged += (_, _) => OnCompactChanged();
         Usage.Claude.PropertyChanged += (_, _) => OnCompactChanged();
         Usage.Codex.PropertyChanged += (_, _) => OnCompactChanged();
@@ -108,6 +109,9 @@ public sealed class IslandViewModel : ObservableObject
     public SystemViewModel System { get; }
 
     public ActivityViewModel Activity { get; } = new();
+
+    /// <summary>Camera and microphone in use: shown in every state, independent of the module shown.</summary>
+    public PrivacyViewModel Privacy { get; } = new();
 
     public bool IsDemo { get; }
 

@@ -72,6 +72,11 @@ internal static class SystemReport
 
         Console.WriteLine("Manual fan control: not offered (no crash-safe fallback to firmware control)");
 
+        // Camera and microphone, as the privacy marks read them (no app names are printed).
+        var privacy = Platform.Privacy.PrivacyWatcher.ReadNow();
+        Console.WriteLine($"Microphone in use: {(privacy.Microphone ? "yes" : "no")}");
+        Console.WriteLine($"Camera in use:     {(privacy.Camera ? "yes" : "no")}");
+
         var duration = args.Select(a => a.StartsWith("--seconds=", StringComparison.Ordinal) && int.TryParse(a["--seconds=".Length..], out var n) ? n : 0).Max();
         if (duration > 0)
         {

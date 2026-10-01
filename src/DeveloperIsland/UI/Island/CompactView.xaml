@@ -76,6 +76,9 @@
                     </Border.Background>
                 </Border>
             </Grid>
+
+            <!-- Camera and microphone in use: always last, whatever the capsule shows. -->
+            <components:PrivacyIndicators Source="{x:Bind ViewModel.Privacy}" VerticalAlignment="Center" />
         </StackPanel>
     </Grid>
 </UserControl>

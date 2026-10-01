@@ -43,8 +43,11 @@
             <TextBlock Text="{x:Bind ViewModel.Subtitle, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" />
         </StackPanel>
 
-        <components:StableText Grid.Column="2" AlignRight="True" VerticalAlignment="Center" Text="{x:Bind ViewModel.Trailing, Mode=OneWay}"
-                               Foreground="{StaticResource TextSecondaryBrush}" MaxWidth="140"
-                               Visibility="{x:Bind ViewModel.HasTrailing, Mode=OneWay}" />
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+            <components:StableText AlignRight="True" VerticalAlignment="Center" Text="{x:Bind ViewModel.Trailing, Mode=OneWay}"
+                                   Foreground="{StaticResource TextSecondaryBrush}" MaxWidth="140"
+                                   Visibility="{x:Bind ViewModel.HasTrailing, Mode=OneWay}" />
+            <components:PrivacyIndicators Source="{x:Bind ViewModel.Privacy}" VerticalAlignment="Center" />
+        </StackPanel>
     </Grid>
 </UserControl>

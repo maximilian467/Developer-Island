@@ -51,6 +51,7 @@ internal sealed class AppHost : IDisposable
     private TrayIcon _tray = null!;
     private FullscreenWatcher? _fullscreen;
     private ForegroundWatcher? _foreground;
+    private Platform.Privacy.PrivacyWatcher? _privacy;
     private GlobalHotKey? _hotkey;
     private SettingsWindow? _settingsWindow;
     private ModuleHost _modules = null!;
@@ -152,6 +153,7 @@ internal sealed class AppHost : IDisposable
             _tray.Add();
             _fullscreen = new FullscreenWatcher(_host, _window.Handle, OnFullscreenChanged);
             _foreground = new ForegroundWatcher(_window.Handle, () => _settings.Current.SmartHideProcesses, _ => ScheduleSmartHide());
+            _privacy = new Platform.Privacy.PrivacyWatcher(state => _dispatcher.TryEnqueue(() => OnPrivacyChanged(state)));
             _hotkey = new GlobalHotKey(_host);
             _hotkey.Pressed += OnShortcut;
             _hotkey.Apply(settings.GlobalShortcutEnabled, ShortcutGesture.FromText(settings.GlobalShortcut));
@@ -266,6 +268,26 @@ internal sealed class AppHost : IDisposable
         _state.SetRest(Core.Island.RestMode.Compact);
         await Task.Delay(600);
 
+        // Camera and microphone marks in every state (set directly: the snapshot never watches devices).
+        _viewModel.Privacy.State = new Core.Privacy.PrivacyState(Microphone: true, Camera: false);
+        await shot("60-privacy-compact-mic");
+        _state.SetRest(Core.Island.RestMode.Retracted);
+        await Task.Delay(600);
+        await shot("61-privacy-notch-mic");
+        _viewModel.Privacy.State = new Core.Privacy.PrivacyState(Microphone: true, Camera: true);
+        await Task.Delay(600);
+        await shot("62-privacy-notch-both");
+        _state.SetRest(Core.Island.RestMode.Compact);
+        await Task.Delay(600);
+        _viewModel.OnAiActivity(new AiActivity(AiProviderKind.Claude, AiActivityKind.SessionStarted, "Claude Code session started", "developer-island"));
+        await shot("63-privacy-activity");
+        _state.Activate();
+        await Task.Delay(600);
+        await shot("64-privacy-expanded");
+        _state.Dismiss();
+        _viewModel.Privacy.State = Core.Privacy.PrivacyState.None;
+        await Task.Delay(600);
+
         // Non-ready module states, as a user without gh, calendars or a readable repository sees them.
         var now = DateTimeOffset.UtcNow;
         _viewModel.GitHub.Update(new Core.Modules.ModuleStatus(Core.Modules.ModuleState.Unavailable, "Install the GitHub CLI and run “gh auth login” to see pull requests, CI and notifications."), null, now);
@@ -315,6 +337,7 @@ internal sealed class AppHost : IDisposable
         _state?.Dispose();
         _fullscreen?.Dispose();
         _foreground?.Dispose();
+        _privacy?.Dispose();
         _hotkey?.Dispose();
         _tray?.Dispose();
         _host?.Dispose();
@@ -725,12 +748,22 @@ internal sealed class AppHost : IDisposable
     {
         var s = _settings.Current;
         var placement = IslandPlacement.Resolve(MonitorService.GetMonitors(), s.MonitorDevice, s.Anchor, s.OffsetX, s.OffsetY);
-        var rest = Core.Island.SmartHidePolicy.Decide(s, placement.Anchor, placement.OffsetY, _foreground?.Current);
+        var rest = Core.Island.SmartHidePolicy.Decide(s, placement.Anchor, placement.OffsetY, _foreground?.Current, _viewModel.Privacy.IsActive);
         if (rest != _state.Rest)
         {
             Log.Info("window", "Smart Auto-Hide", new { rest = rest.ToString(), process = _foreground?.Current?.ProcessName });
             _state.SetRest(rest);
         }
+    }
+
+    /// <summary>
+    /// Camera or microphone started or stopped: the marks update in every state. Hidden by Smart
+    /// Auto-Hide, the island comes back as the notch (never opened) so the marks stay visible.
+    /// </summary>
+    private void OnPrivacyChanged(Core.Privacy.PrivacyState state)
+    {
+        _viewModel.Privacy.State = state;
+        ApplySmartHide();
     }
 
     /// <summary>Ctrl+Alt+Space: open from anywhere (including hidden), close when expanded.</summary>
