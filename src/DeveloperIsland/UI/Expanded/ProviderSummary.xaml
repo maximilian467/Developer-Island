@@ -21,19 +21,18 @@
     </UserControl.Resources>
 
     <StackPanel Spacing="2">
-        <Grid Margin="0,-7,0,-5">
-            <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
-                <components:ProviderMark Kind="{x:Bind ViewModel.ShortName, Mode=OneWay}" Width="12" Height="12" VerticalAlignment="Center" />
-                <TextBlock Text="{x:Bind ViewModel.DisplayName, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />
-                <Ellipse Width="6" Height="6" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center"
-                         Visibility="{x:Bind ViewModel.IsActive, Mode=OneWay}"
-                         AutomationProperties.Name="Session active" />
-            </StackPanel>
-            <Button x:Name="StarButton" Style="{StaticResource IslandStarButtonStyle}" HorizontalAlignment="Right" Margin="0,0,-9,0"
+        <!-- Header line: mark, name, live dot and the star together, like "System ☆" in the island header. -->
+        <StackPanel Orientation="Horizontal" Spacing="7" Height="32" Margin="0,-8,0,-6">
+            <components:ProviderMark Kind="{x:Bind ViewModel.ShortName, Mode=OneWay}" Width="13" Height="13" VerticalAlignment="Center" />
+            <TextBlock Text="{x:Bind ViewModel.DisplayName, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <Ellipse Width="6" Height="6" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center"
+                     Visibility="{x:Bind ViewModel.IsActive, Mode=OneWay}"
+                     AutomationProperties.Name="Session active" />
+            <Button x:Name="StarButton" Style="{StaticResource IslandStarButtonStyle}" Margin="-5,0,0,0" VerticalAlignment="Center"
                     Content="{x:Bind ViewModel.FavoriteGlyph, Mode=OneWay}" Click="OnStar"
                     AutomationProperties.Name="{x:Bind ViewModel.FavoriteLabel, Mode=OneWay}"
                     ToolTipService.ToolTip="{x:Bind ViewModel.FavoriteLabel, Mode=OneWay}" />
-        </Grid>
+        </StackPanel>
 
         <StackPanel Visibility="{x:Bind ViewModel.IsReady, Mode=OneWay}" Spacing="2">
             <!-- Plan usage -->
