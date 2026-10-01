@@ -6,7 +6,7 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <Company>Developer Island</Company>
     <Product>Developer Island</Product>
-    <Version>1.0.0</Version>
-    <Copyright>Copyright © 2026</Copyright>
+    <Version>0.1.0</Version>
+    <Copyright>Copyright © 2026 Maximilian Köhlenbeck</Copyright>
   </PropertyGroup>
 </Project>

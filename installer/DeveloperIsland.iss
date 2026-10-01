@@ -4,7 +4,7 @@
 ; (the app is self-contained, including the Windows App SDK).
 
 #ifndef AppVersion
-  #define AppVersion "1.0.0"
+  #define AppVersion "0.1.0"
 #endif
 #ifndef SourceDir
   #define SourceDir "..\artifacts\publish\win-x64"
@@ -27,7 +27,8 @@ DisableProgramGroupPage=yes
 DisableDirPage=auto
 PrivilegesRequired=lowest
 OutputDir={#OutputDir}
-OutputBaseFilename=DeveloperIsland-Setup
+OutputBaseFilename=DeveloperIsland-Setup-{#AppVersion}
+LicenseFile=..LICENSE
 SetupIconFile=..\src\DeveloperIsland\Assets\DeveloperIsland.ico
 UninstallDisplayIcon={app}\DeveloperIsland.exe
 UninstallDisplayName=Developer Island

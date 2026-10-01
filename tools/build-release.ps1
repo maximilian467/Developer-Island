@@ -1,5 +1,5 @@
 # Builds a Developer Island release: tests, self-contained publish, portable zip and installer.
-#   powershell -ExecutionPolicy Bypass -File tools/build-release.ps1 [-Version 1.0.0] [-Runtime win-x64] [-SkipTests] [-SkipInstaller]
+#   powershell -ExecutionPolicy Bypass -File tools/build-release.ps1 [-Version 0.1.0] [-Runtime win-x64] [-SkipTests] [-SkipInstaller]
 # Requirements: .NET 10 SDK. Installer: Inno Setup 6 (ISCC.exe), e.g. `winget install JRSoftware.InnoSetup`.
 param(
     [string]$Version,
@@ -55,6 +55,10 @@ if ($LASTEXITCODE -ne 0) { throw "Publish failed" }
 # Debug symbols are not needed by users.
 Get-ChildItem $publish -Filter *.pdb -Recurse | Remove-Item -Force
 
+# The license and the third-party notices travel with every copy of the app.
+Copy-Item "$rootLICENSE" (Join-Path $publish "LICENSE.txt")
+Copy-Item "$rootTHIRD_PARTY_NOTICES.md" (Join-Path $publish "THIRD_PARTY_NOTICES.md")
+
 $zip = Join-Path $artifacts "DeveloperIsland-$Version-$Runtime-portable.zip"
 if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip -Force }
 Compress-Archive -Path "$publish\*" -DestinationPath $zip
@@ -71,5 +75,5 @@ if (-not $SkipInstaller) {
     if (-not $iscc) { throw "Inno Setup (ISCC.exe) not found. Install it with: winget install JRSoftware.InnoSetup" }
     & $iscc "/DAppVersion=$Version" "/DSourceDir=$publish" "/DOutputDir=$artifacts" "$root\installer\DeveloperIsland.iss"
     if ($LASTEXITCODE -ne 0) { throw "Installer build failed" }
-    Write-Host "Installer: $(Join-Path $artifacts 'DeveloperIsland-Setup.exe')"
+    Write-Host "Installer: $(Join-Path $artifacts "DeveloperIsland-Setup-$Version.exe")"
 }
