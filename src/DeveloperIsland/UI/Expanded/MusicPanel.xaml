@@ -36,7 +36,7 @@
                                           Progress="{x:Bind ViewModel.Progress, Mode=OneWay}"
                                           CanSeek="{x:Bind ViewModel.CanSeek, Mode=OneWay}" />
                 <Grid Margin="0,2,0,0">
-                    <TextBlock Text="{x:Bind ViewModel.PositionText, Mode=OneWay}" Style="{StaticResource FineTextStyle}" />
+                    <TextBlock Typography.NumeralAlignment="Tabular" Text="{x:Bind ViewModel.PositionText, Mode=OneWay}" Style="{StaticResource FineTextStyle}" />
                     <TextBlock Text="{x:Bind ViewModel.DurationText, Mode=OneWay}" Style="{StaticResource FineTextStyle}" HorizontalAlignment="Right" />
                 </Grid>
             </StackPanel>

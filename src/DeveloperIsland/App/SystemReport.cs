@@ -15,7 +15,8 @@ internal static class SystemReport
 
     public static bool IsRequested(string[] args) => args.Contains(Argument, StringComparer.Ordinal);
 
-    public static int Run()
+    /// <summary>With <c>--seconds=N</c>, keeps sampling once a second like the System module (to measure its cost).</summary>
+    public static int Run(string[] args)
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
         var reader = new SystemMetricsReader();
@@ -70,6 +71,22 @@ internal static class SystemReport
         }
 
         Console.WriteLine("Manual fan control: not offered (no crash-safe fallback to firmware control)");
+
+        var duration = args.Select(a => a.StartsWith("--seconds=", StringComparison.Ordinal) && int.TryParse(a["--seconds=".Length..], out var n) ? n : 0).Max();
+        if (duration > 0)
+        {
+            Console.WriteLine($"Sampling once a second for {duration} s...");
+            var until = DateTime.UtcNow.AddSeconds(duration);
+            while (DateTime.UtcNow < until)
+            {
+                Thread.Sleep(1000);
+                if (reader.Read() is { } basic)
+                {
+                    sensors.Enrich(basic);
+                }
+            }
+        }
+
         return 0;
     }
 }

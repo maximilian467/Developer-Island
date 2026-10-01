@@ -50,7 +50,7 @@
                 <TextBlock Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" />
             </StackPanel>
 
-            <TextBlock x:Name="Countdown" Text="{x:Bind ViewModel.RemainingText, Mode=OneWay}" Style="{StaticResource HeroTextStyle}" Margin="0,4,0,0"
+            <TextBlock Typography.NumeralAlignment="Tabular" x:Name="Countdown" Text="{x:Bind ViewModel.RemainingText, Mode=OneWay}" Style="{StaticResource HeroTextStyle}" Margin="0,4,0,0"
                        AutomationProperties.Name="{x:Bind ViewModel.AccessibleSummary, Mode=OneWay}" />
 
             <Grid Height="3" Margin="0,10,0,0" CornerRadius="1.5" Background="{StaticResource ProgressTrackBrush}">

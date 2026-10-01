@@ -17,7 +17,7 @@ public static class Program
         // Hardware support check: prints what the System module can read, then exits.
         if (SystemReport.IsRequested(args))
         {
-            return SystemReport.Run();
+            return SystemReport.Run(args);
         }
 
         var options = AppOptions.Parse(args);

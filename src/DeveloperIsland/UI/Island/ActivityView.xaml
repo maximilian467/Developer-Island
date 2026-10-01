@@ -39,7 +39,7 @@
             <TextBlock Text="{x:Bind ViewModel.Subtitle, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" />
         </StackPanel>
 
-        <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="{x:Bind ViewModel.Trailing, Mode=OneWay}"
+        <TextBlock Grid.Column="2" Typography.NumeralAlignment="Tabular" VerticalAlignment="Center" Text="{x:Bind ViewModel.Trailing, Mode=OneWay}"
                    Style="{StaticResource LabelTextStyle}" Foreground="{StaticResource TextSecondaryBrush}"
                    Visibility="{x:Bind ViewModel.HasTrailing, Mode=OneWay}" />
     </Grid>

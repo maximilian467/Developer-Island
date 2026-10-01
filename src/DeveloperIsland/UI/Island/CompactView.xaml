@@ -12,7 +12,7 @@
 
             <StackPanel Orientation="Horizontal" Spacing="7" Visibility="{x:Bind ViewModel.CompactShowFocus, Mode=OneWay}">
                 <Ellipse Width="6" Height="6" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" />
-                <TextBlock Text="{x:Bind ViewModel.Focus.RemainingText, Mode=OneWay}" Style="{StaticResource LabelTextStyle}" />
+                <TextBlock Typography.NumeralAlignment="Tabular" Text="{x:Bind ViewModel.Focus.RemainingText, Mode=OneWay}" Style="{StaticResource LabelTextStyle}" />
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" Spacing="6" Visibility="{x:Bind ViewModel.CompactShowCalendar, Mode=OneWay}">
@@ -47,7 +47,7 @@
                 </Grid>
                 <TextBlock Text="{x:Bind ViewModel.CompactPrimaryLabel, Mode=OneWay}" Style="{StaticResource LabelTextStyle}" Foreground="{StaticResource TextSecondaryBrush}"
                            Visibility="{x:Bind ViewModel.HasCompactPrimaryLabel, Mode=OneWay}" VerticalAlignment="Center" />
-                <TextBlock Text="{x:Bind ViewModel.CompactPrimaryValue, Mode=OneWay}" Style="{StaticResource LabelTextStyle}" MaxWidth="160" VerticalAlignment="Center" />
+                <TextBlock Typography.NumeralAlignment="Tabular" Text="{x:Bind ViewModel.CompactPrimaryValue, Mode=OneWay}" Style="{StaticResource LabelTextStyle}" MaxWidth="160" VerticalAlignment="Center" />
                 <TextBlock Text="·" Style="{StaticResource LabelTextStyle}" Foreground="{StaticResource TextTertiaryBrush}"
                            Visibility="{x:Bind ViewModel.HasCompactPrimaryDetail, Mode=OneWay}" VerticalAlignment="Center" />
                 <TextBlock Text="{x:Bind ViewModel.CompactPrimaryDetail, Mode=OneWay}" Style="{StaticResource LabelTextStyle}" Foreground="{StaticResource TextSecondaryBrush}"

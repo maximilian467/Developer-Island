@@ -60,6 +60,15 @@ internal sealed class HardwareSensors : IDisposable
                     computer.IsCpuEnabled = false;
                 }
 
+                // Groups that deliver nothing on this device (no board sensors on most laptops, storage
+                // and battery temperatures without admin rights) are switched off to save work and memory.
+                bool Useful(HardwareType type) => computer.Hardware.Where(h => h.HardwareType == type)
+                    .SelectMany(h => h.Sensors.Concat(h.SubHardware.SelectMany(sub => { sub.Update(); return sub.Sensors; })))
+                    .Any(s => s.SensorType is SensorType.Temperature or SensorType.Fan && s.Value is > 0);
+                if (!Useful(HardwareType.Storage)) computer.IsStorageEnabled = false;
+                if (!Useful(HardwareType.Motherboard)) computer.IsMotherboardEnabled = false;
+                if (!Useful(HardwareType.Battery)) computer.IsBatteryEnabled = false;
+
                 var zones = ThermalZoneCounter.TryCreate();
                 lock (_gate)
                 {
@@ -78,6 +87,8 @@ internal sealed class HardwareSensors : IDisposable
                 {
                     gpus = computer.Hardware.Count(h => h.HardwareType is HardwareType.GpuNvidia or HardwareType.GpuAmd or HardwareType.GpuIntel),
                     cpuTemperatures = cpuTemps,
+                    storage = computer.IsStorageEnabled,
+                    board = computer.IsMotherboardEnabled,
                     thermalZones = zones is not null,
                 });
             }
