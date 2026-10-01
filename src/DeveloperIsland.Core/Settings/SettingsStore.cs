@@ -132,6 +132,12 @@ public sealed class SettingsStore
         s.SmartHideProcesses = s.AutoHideApps.Where(a => a.Enabled).Select(a => a.Process).ToList();
         s.GlobalShortcut = ShortcutGesture.FromText(s.GlobalShortcut).Text;
         s.ModuleOrder = Modules.ModuleCatalog.NormalizeOrder(s.ModuleOrder).Select(m => m.ToString()).ToList();
+        s.FavoriteModules = (s.FavoriteModules ?? [])
+            .Select(f => Enum.TryParse<Modules.ModuleId>(f?.Trim(), ignoreCase: true, out var id) && Enum.IsDefined(id) ? id.ToString() : null)
+            .Where(f => f is not null)
+            .Select(f => f!)
+            .Distinct()
+            .ToList();
         s.GitRepositories = CleanList(s.GitRepositories, 20);
         s.GitRecentRepositories = CleanList(s.GitRecentRepositories, Git.GitService.MaxRecent);
         s.CalendarSources = CleanList(s.CalendarSources, 10);

@@ -58,6 +58,9 @@ public sealed class TasksViewModel : ModuleViewModel
         : OpenCount == 0 ? "All done"
         : DisplayFormat.Count(OpenCount, "open task", "open tasks");
 
+    /// <summary>The featured task list: "3 open" or "All done".</summary>
+    public string CompactText => OpenCount > 0 ? $"{OpenCount} open" : "All done";
+
     public bool HasItems => Items.Count > 0;
 
     public bool HasNoItems => Items.Count == 0;
@@ -126,6 +129,7 @@ public sealed class TasksViewModel : ModuleViewModel
 
         OnPropertyChanged(nameof(OpenCount));
         OnPropertyChanged(nameof(SummaryText));
+        OnPropertyChanged(nameof(CompactText));
         OnPropertyChanged(nameof(HasItems));
         OnPropertyChanged(nameof(HasNoItems));
         OnPropertyChanged(nameof(HasCompleted));

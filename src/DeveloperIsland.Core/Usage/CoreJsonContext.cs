@@ -10,4 +10,5 @@ namespace DeveloperIsland.Core.Usage;
 [JsonSerializable(typeof(DeveloperIsland.Core.Focus.FocusSessionState))]
 [JsonSerializable(typeof(List<DeveloperIsland.Core.Tasks.TaskItem>))]
 [JsonSerializable(typeof(List<string>))]
+[JsonSerializable(typeof(DeveloperIsland.Core.Settings.UiState))]
 internal sealed partial class CoreJsonContext : JsonSerializerContext;

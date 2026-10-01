@@ -50,6 +50,9 @@ public sealed class SystemViewModel : ModuleViewModel
 
     public string CompactGlyph => _alert == SystemAlert.BatteryLow ? "" : "";
 
+    /// <summary>The featured system line: "CPU 23% · RAM 61%".</summary>
+    public string CompactSummary => _sample is null ? string.Empty : $"CPU {CpuFigure} · RAM {MemoryFigure}";
+
     public string AccessibleSummary => _sample is null ? StateTitle
         : $"CPU {CpuFigure}, memory {MemoryFigure}{(HasBattery ? $", battery {BatteryFigure} {BatteryDetail}" : string.Empty)}";
 

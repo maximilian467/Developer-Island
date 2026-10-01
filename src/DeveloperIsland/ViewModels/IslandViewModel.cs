@@ -28,6 +28,11 @@ public sealed class IslandViewModel : ObservableObject
     private ActivityKind? _lastEventKind;
     private IReadOnlyList<ModuleId> _order = ModuleCatalog.DefaultOrder;
     private IslandTab? _pendingTab;
+    private IReadOnlyList<ModuleId> _favorites = [];
+    private ModuleId? _lastActive;
+    private ModuleId? _compactModule;
+    private long _turn;
+    private bool _refreshingCompact;
 
     public IslandViewModel(UsageViewModel usage, MusicViewModel music, FocusViewModel focus, ModuleViewModels modules, bool isDemo)
     {
@@ -65,6 +70,17 @@ public sealed class IslandViewModel : ObservableObject
             }
         };
         Calendar.PropertyChanged += (_, _) => OnCompactChanged();
+        Git.PropertyChanged += (_, _) => OnPrimaryChanged(ModuleId.Git);
+        Tasks.PropertyChanged += (_, _) => OnPrimaryChanged(ModuleId.Tasks);
+        Focus.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(FocusViewModel.RemainingText))
+            {
+                OnPrimaryChanged(ModuleId.Focus);
+            }
+        };
+        Usage.Claude.FavoriteToggleRequested += _ => ToggleFavorite(ModuleId.Claude);
+        Usage.Codex.FavoriteToggleRequested += _ => ToggleFavorite(ModuleId.Codex);
         System.PropertyChanged += (_, _) => OnCompactChanged();
         GitHub.PropertyChanged += (_, _) => OnCompactChanged();
     }
@@ -97,19 +113,179 @@ public sealed class IslandViewModel : ObservableObject
 
     // Compact capsule -----------------------------------------------------------------------
 
-    public bool CompactShowFocus => Focus.IsActive;
+    // Time-critical signals stay in the capsule in both modes, unless the featured module already shows them.
+    public bool CompactShowFocus => Focus.IsActive && CompactModule != ModuleId.Focus;
 
-    public bool CompactShowCalendar => Calendar.HasCompact;
+    public bool CompactShowCalendar => Calendar.HasCompact && CompactModule != ModuleId.Calendar;
 
-    public bool CompactShowSystem => System.HasCompact;
+    public bool CompactShowSystem => System.HasCompact && CompactModule != ModuleId.System;
 
-    public bool CompactShowGitHub => GitHub.HasCompactSignal;
+    public bool CompactShowGitHub => GitHub.HasCompactSignal && CompactModule != ModuleId.GitHub;
 
-    public bool CompactShowMusic => Music.IsEnabled && Music.IsPlaying;
+    // The classic summary (AI usage and music art) is shown when no module is featured.
+    public bool CompactShowMusic => !IsFeaturing && Music.IsEnabled && Music.IsPlaying;
 
-    public bool CompactShowClaude => Usage.ShowClaude && ShowProvider(Usage.Claude, Usage.Codex);
+    public bool CompactShowClaude => !IsFeaturing && Usage.ShowClaude && ShowProvider(Usage.Claude, Usage.Codex);
 
-    public bool CompactShowCodex => Usage.ShowCodex && ShowProvider(Usage.Codex, Usage.Claude);
+    public bool CompactShowCodex => !IsFeaturing && Usage.ShowCodex && ShowProvider(Usage.Codex, Usage.Claude);
+
+    // Featured module (favorites, or the module opened last) ----------------------------------------
+
+    /// <summary>Raised when the user stars or unstars a module (the host persists it).</summary>
+    public event Action<ModuleId, bool>? FavoriteChanged;
+
+    /// <summary>Raised when the user opens a module (the host remembers it).</summary>
+    public event Action<ModuleId>? ModuleOpened;
+
+    /// <summary>The featured module changed (the compact view cross-fades).</summary>
+    public event Action? CompactModuleChanged;
+
+    public IReadOnlyList<ModuleId> Favorites => _favorites;
+
+    public bool IsFavorite(ModuleId module) => _favorites.Contains(module);
+
+    /// <summary>The module the compact island features, or null for the classic summary.</summary>
+    public ModuleId? CompactModule => _compactModule;
+
+    public bool IsFeaturing => _compactModule is not null;
+
+    public bool CompactRotates => CompactSelector.Rotates(_favorites.Where(IsModuleEnabled).ToList());
+
+    public string CompactPrimaryLabel => _compactModule switch
+    {
+        ModuleId.Claude => Usage.Claude.ShortName,
+        ModuleId.Codex => Usage.Codex.ShortName,
+        ModuleId.Focus when !Focus.IsActive => "Focus",
+        _ => string.Empty,
+    };
+
+    public bool HasCompactPrimaryLabel => CompactPrimaryLabel.Length > 0;
+
+    public string CompactPrimaryValue => _compactModule switch
+    {
+        ModuleId.Claude => ProviderValue(Usage.Claude),
+        ModuleId.Codex => ProviderValue(Usage.Codex),
+        ModuleId.Music => Music.HasTrack ? Music.Title : "Nothing playing",
+        ModuleId.Focus => Focus.IsActive ? Focus.RemainingText : "Ready",
+        ModuleId.Calendar => Calendar.CompactNextText,
+        ModuleId.System => System.CompactSummary,
+        ModuleId.Git => Git.CompactText,
+        ModuleId.GitHub => GitHub.CompactSummary,
+        ModuleId.Tasks => Tasks.CompactText,
+        _ => string.Empty,
+    };
+
+    public string CompactPrimaryDetail => _compactModule switch
+    {
+        ModuleId.Claude => Usage.Claude.CompactEuro,
+        ModuleId.Codex => Usage.Codex.CompactEuro,
+        ModuleId.Git => Git.CompactDetail,
+        _ => string.Empty,
+    };
+
+    public bool HasCompactPrimaryDetail => CompactPrimaryDetail.Length > 0;
+
+    /// <summary>The featured music shows its artwork instead of an icon.</summary>
+    public bool CompactPrimaryShowsArt => _compactModule == ModuleId.Music && Music.HasTrack;
+
+    /// <summary>A running focus session shows the accent dot, like the classic capsule.</summary>
+    public bool CompactPrimaryShowsDot => _compactModule == ModuleId.Focus && Focus.IsActive;
+
+    public bool CompactPrimaryShowsIcon => _compactModule is not null && !CompactPrimaryShowsArt && !CompactPrimaryShowsDot;
+
+    public string CompactPrimaryAccessibleName => _compactModule is { } m
+        ? string.Join(" ", new[] { ModuleCatalog.DisplayName(m), CompactPrimaryValue, CompactPrimaryDetail }.Where(t => t.Length > 0))
+        : string.Empty;
+
+    /// <summary>Applies the saved favorites (already filtered to enabled modules, in tab order).</summary>
+    public void SetFavorites(IReadOnlyList<ModuleId> favorites)
+    {
+        _favorites = favorites;
+        Usage.Claude.IsFavorite = favorites.Contains(ModuleId.Claude);
+        Usage.Codex.IsFavorite = favorites.Contains(ModuleId.Codex);
+        OnPropertyChanged(nameof(Favorites));
+        RefreshCompactModule();
+    }
+
+    public void SetLastActive(ModuleId? module)
+    {
+        _lastActive = module;
+        RefreshCompactModule();
+    }
+
+    public void ToggleFavorite(ModuleId module) => FavoriteChanged?.Invoke(module, !IsFavorite(module));
+
+    /// <summary>Next featured favorite (called by the host every rotation interval while compact).</summary>
+    public void AdvanceCompactRotation()
+    {
+        _turn++;
+        RefreshCompactModule();
+    }
+
+    private bool HasCompactContent(ModuleId module) => module switch
+    {
+        ModuleId.Claude => Usage.Claude.IsWorthShowingCompact,
+        ModuleId.Codex => Usage.Codex.IsWorthShowingCompact,
+        ModuleId.Music => Music.IsEnabled && Music.HasTrack,
+        ModuleId.Focus => Focus.IsActive,
+        ModuleId.Calendar => Calendar.IsReady && Calendar.HasNext,
+        ModuleId.System => System.IsReady,
+        ModuleId.Git => Git.IsReady && Git.Active is not null,
+        ModuleId.GitHub => GitHub.IsReady,
+        ModuleId.Tasks => Tasks.IsReady && Tasks.OpenCount > 0,
+        _ => false,
+    };
+
+    private bool IsModuleEnabled(ModuleId module) => module switch
+    {
+        ModuleId.Claude => Usage.Claude.IsEnabled,
+        ModuleId.Codex => Usage.Codex.IsEnabled,
+        ModuleId.Music => Music.IsEnabled,
+        ModuleId.Focus => Focus.IsEnabled,
+        ModuleId.Git => Git.IsEnabled,
+        ModuleId.GitHub => GitHub.IsEnabled,
+        ModuleId.Calendar => Calendar.IsEnabled,
+        ModuleId.Tasks => Tasks.IsEnabled,
+        ModuleId.System => System.IsEnabled,
+        _ => false,
+    };
+
+    private static string ProviderValue(AiProviderViewModel provider) =>
+        provider.CompactPrimaryValue is { Length: > 0 } value ? value : provider.StatusText;
+
+    private void RefreshCompactModule()
+    {
+        var favorites = _favorites.Where(IsModuleEnabled).ToList();
+        var last = _lastActive is { } l && IsModuleEnabled(l) ? l : (ModuleId?)null;
+        var next = CompactSelector.Select(favorites, last, HasCompactContent, _turn);
+        if (next != _compactModule)
+        {
+            _compactModule = next;
+            OnCompactChanged();
+            CompactModuleChanged?.Invoke();
+        }
+        else
+        {
+            OnPrimaryChanged(next);
+        }
+    }
+
+    /// <summary>A module's content changed; refresh the capsule only if it is the featured one.</summary>
+    private void OnPrimaryChanged(ModuleId? module)
+    {
+        if (module is not null && module == _compactModule)
+        {
+            OnPropertyChanged(nameof(CompactPrimaryLabel));
+            OnPropertyChanged(nameof(HasCompactPrimaryLabel));
+            OnPropertyChanged(nameof(CompactPrimaryValue));
+            OnPropertyChanged(nameof(CompactPrimaryDetail));
+            OnPropertyChanged(nameof(HasCompactPrimaryDetail));
+            OnPropertyChanged(nameof(CompactPrimaryShowsArt));
+            OnPropertyChanged(nameof(CompactPrimaryShowsDot));
+            OnPropertyChanged(nameof(CompactPrimaryShowsIcon));
+            OnPropertyChanged(nameof(CompactPrimaryAccessibleName));
+        }
+    }
 
     public bool CompactIsEmpty => !CompactShowFocus && !CompactShowCalendar && !CompactShowSystem && !CompactShowGitHub
         && !CompactShowMusic && !CompactShowClaude && !CompactShowCodex;
@@ -205,6 +381,17 @@ public sealed class IslandViewModel : ObservableObject
         get => _selectedTab;
         set => SetProperty(ref _selectedTab, value);
     }
+
+    /// <summary>The module a tab stands for (Usage: the active provider, else Claude, else Codex).</summary>
+    public ModuleId ModuleForTab(IslandTab tab) => tab switch
+    {
+        IslandTab.Usage when Usage.Codex.IsEnabled && (!Usage.Claude.IsEnabled || (Usage.Codex.IsActive && !Usage.Claude.IsActive)) => ModuleId.Codex,
+        IslandTab.Usage => ModuleId.Claude,
+        _ => TabModule(tab),
+    };
+
+    /// <summary>The user looked at a tab in the expanded island.</summary>
+    public void NoteTabOpened(IslandTab tab) => ModuleOpened?.Invoke(ModuleForTab(tab));
 
     public void SetModuleOrder(IReadOnlyList<ModuleId> order)
     {
@@ -422,6 +609,22 @@ public sealed class IslandViewModel : ObservableObject
 
     private void OnCompactChanged()
     {
+        // A module's state can change which favorite has something to say.
+        if (!_refreshingCompact)
+        {
+            _refreshingCompact = true;
+            try
+            {
+                RefreshCompactModule();
+            }
+            finally
+            {
+                _refreshingCompact = false;
+            }
+        }
+
+        OnPropertyChanged(nameof(IsFeaturing));
+        OnPrimaryChanged(_compactModule);
         OnPropertyChanged(nameof(CompactShowFocus));
         OnPropertyChanged(nameof(CompactShowCalendar));
         OnPropertyChanged(nameof(CompactShowSystem));

@@ -15,6 +15,8 @@ internal static class AppPaths
 
     public static string Tasks => Path.Combine(Root, "tasks.json");
 
+    public static string UiState => Path.Combine(Root, "ui-state.json");
+
     public static string Settings(bool demo) => Path.Combine(Root, demo ? "settings.demo.json" : "settings.json");
 
     public static string Assets => Path.Combine(AppContext.BaseDirectory, "Assets");

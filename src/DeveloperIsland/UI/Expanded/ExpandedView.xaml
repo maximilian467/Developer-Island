@@ -28,8 +28,11 @@
                 <StackPanel x:Name="Tabs" Orientation="Horizontal" Spacing="2" AutomationProperties.Name="Sections" TabFocusNavigation="Once" />
             </Grid>
 
-            <TextBlock x:Name="SectionName" Grid.Column="1" Style="{StaticResource LabelTextStyle}" VerticalAlignment="Center"
-                       AutomationProperties.AccessibilityView="Raw" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                <TextBlock x:Name="SectionName" Style="{StaticResource LabelTextStyle}" VerticalAlignment="Center"
+                           AutomationProperties.AccessibilityView="Raw" />
+                <Button x:Name="StarButton" Style="{StaticResource IslandStarButtonStyle}" Click="OnStar" VerticalAlignment="Center" />
+            </StackPanel>
 
             <Button x:Name="SettingsButton" Grid.Column="2" Style="{StaticResource IslandIconButtonStyle}" Width="32" Height="32" CornerRadius="16" FontSize="14"
                     Content="&#xE713;" HorizontalAlignment="Right" Click="OnSettings"

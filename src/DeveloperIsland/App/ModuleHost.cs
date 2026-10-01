@@ -111,7 +111,7 @@ internal sealed class ModuleHost : IDisposable
         _git.SetVisible(tab == IslandTab.Git);
         _systemVisible = tab == IslandTab.System;
         _system.SetVisible(_systemVisible);
-        if (_systemVisible)
+        if (_systemVisible && !_demo) // demo data is static; the real monitor never runs in demo mode
         {
             UpdateSystem();
         }

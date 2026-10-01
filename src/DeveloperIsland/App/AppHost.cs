@@ -4,6 +4,7 @@ using DeveloperIsland.Core.Diagnostics;
 using DeveloperIsland.Core.Focus;
 using DeveloperIsland.Core.Island;
 using DeveloperIsland.Core.Models;
+using DeveloperIsland.Core.Modules;
 using DeveloperIsland.Core.Placement;
 using DeveloperIsland.Core.Pricing;
 using DeveloperIsland.Core.Providers;
@@ -51,6 +52,8 @@ internal sealed class AppHost : IDisposable
     private GlobalHotKey? _hotkey;
     private SettingsWindow? _settingsWindow;
     private ModuleHost _modules = null!;
+    private UiStateStore _uiState = null!;
+    private DispatcherQueueTimer? _rotation;
     private DispatcherQueueTimer? _historyDebounce;
     private DispatcherQueueTimer? _midnight;
     private DispatcherQueueTimer? _smartHideSettle;
@@ -103,6 +106,9 @@ internal sealed class AppHost : IDisposable
         _modules = new ModuleHost(_dispatcher, modules, _viewModel, _settings, _options.IsDemo) { OpenSettings = OpenSettings };
         ApplyModuleFlags(settings);
         _modules.Apply(settings);
+        _uiState = new UiStateStore(_options.IsDemo ? null : AppPaths.UiState);
+        _viewModel.SetLastActive(_uiState.LastActiveModule);
+        ApplyFavorites(settings);
 
         _state = new IslandStateMachine(TimeProvider.System, action => _dispatcher.TryEnqueue(() => action()));
         _window = new IslandWindow(_viewModel, _state, settings.AlwaysOnTop) { SnapshotMode = IsSnapshot };
@@ -248,6 +254,23 @@ internal sealed class AppHost : IDisposable
 
         _state.Dismiss();
         await Task.Delay(600);
+
+        _modules.Apply(_settings.Current); // back to the demo content after the empty and error states
+
+        // The compact island featuring each module (as a single favorite).
+        foreach (var module in new[] { ModuleId.Claude, ModuleId.Codex, ModuleId.Music, ModuleId.Focus, ModuleId.System, ModuleId.Calendar, ModuleId.Git, ModuleId.GitHub, ModuleId.Tasks })
+        {
+            _viewModel.SetFavorites([module]);
+            await shot("50-compact-" + module.ToString().ToLowerInvariant());
+        }
+
+        _viewModel.SetFavorites([ModuleId.Claude, ModuleId.Music, ModuleId.Calendar]);
+        await shot("51-compact-favorites-turn-0");
+        _viewModel.AdvanceCompactRotation();
+        await shot("51-compact-favorites-turn-1");
+        _viewModel.SetFavorites([]);
+        _viewModel.SetLastActive(null);
+        await Task.Delay(400);
 
         await new SettingsWindow(_settings, _options.IsDemo, () => false).SaveSnapshotsAsync(_options.SnapshotDirectory!);
     }
@@ -408,6 +431,15 @@ internal sealed class AppHost : IDisposable
             Log.Debug("island", "Activity requested", new { kind = _viewModel.Activity.Kind.ToString(), shown });
         };
         _settings.Changed += settings => _dispatcher.TryEnqueue(() => ApplySettings(settings));
+
+        // Favorites (stars) live in settings; the module opened last in the small UI state file.
+        _viewModel.FavoriteChanged += (module, favorite) => _settings.Update(s => s.SetFavorite(module, favorite));
+        _viewModel.ModuleOpened += module =>
+        {
+            _uiState.SetLastActive(module);
+            _viewModel.SetLastActive(module);
+        };
+        _state.ModeChanged += (_, _) => UpdateRotation();
     }
 
     // Settings --------------------------------------------------------------------------------------
@@ -416,6 +448,7 @@ internal sealed class AppHost : IDisposable
     {
         ApplyModuleFlags(settings);
         _modules.Apply(settings);
+        ApplyFavorites(settings);
         _viewModel.EnsureValidTab();
         _window.SetAlwaysOnTop(settings.AlwaysOnTop);
         PlaceIsland();
@@ -432,6 +465,39 @@ internal sealed class AppHost : IDisposable
         if (!_options.IsDemo)
         {
             _ = SyncProvidersAsync(settings);
+        }
+    }
+
+    /// <summary>Enabled favorites, in tab order, feature in the compact island.</summary>
+    private void ApplyFavorites(AppSettings settings)
+    {
+        _viewModel.SetFavorites(CompactSelector.EffectiveFavorites(settings.FavoriteModules, settings.Order, settings.IsEnabled));
+        UpdateRotation();
+    }
+
+    /// <summary>Favorites take turns only while the compact capsule is on screen; otherwise no timer runs.</summary>
+    private void UpdateRotation()
+    {
+        if (_state is null)
+        {
+            return;
+        }
+
+        var needed = _viewModel.CompactRotates && _state.Mode == Core.Island.IslandMode.Compact;
+        if (needed && _rotation is null)
+        {
+            _rotation = _dispatcher.CreateTimer();
+            _rotation.Interval = CompactSelector.RotationInterval;
+            _rotation.Tick += (_, _) => _viewModel.AdvanceCompactRotation();
+        }
+
+        if (needed && _rotation is { IsRunning: false })
+        {
+            _rotation.Start();
+        }
+        else if (!needed && _rotation is { IsRunning: true })
+        {
+            _rotation.Stop();
         }
     }
 

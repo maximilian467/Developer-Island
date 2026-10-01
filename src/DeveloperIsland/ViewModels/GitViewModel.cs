@@ -75,6 +75,13 @@ public sealed class GitViewModel : ModuleViewModel
 
     public string LastCommitAgo => _active?.LastCommitAt is { } at ? DisplayFormat.Ago(_now - at) : string.Empty;
 
+    /// <summary>The featured repository: its branch.</summary>
+    public string CompactText => _active is null ? string.Empty : BranchText;
+
+    /// <summary>"3 changes" or "clean".</summary>
+    public string CompactDetail => _active is null ? string.Empty
+        : _active.IsClean ? "clean" : DisplayFormat.Count(_active.Changed, "change", "changes");
+
     public IReadOnlyList<GitRepoRow> Others => _others;
 
     public bool HasOthers => _others.Count > 0;

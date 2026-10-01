@@ -20,13 +20,19 @@
     </UserControl.Resources>
 
     <StackPanel Spacing="2">
-        <StackPanel Orientation="Horizontal" Spacing="7" Margin="0,0,0,2">
-            <components:ProviderMark Kind="{x:Bind ViewModel.ShortName, Mode=OneWay}" Width="12" Height="12" VerticalAlignment="Center" />
-            <TextBlock Text="{x:Bind ViewModel.DisplayName, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />
-            <Ellipse Width="6" Height="6" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center"
-                     Visibility="{x:Bind ViewModel.IsActive, Mode=OneWay}"
-                     AutomationProperties.Name="Session active" />
-        </StackPanel>
+        <Grid Margin="0,-4,0,-2">
+            <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                <components:ProviderMark Kind="{x:Bind ViewModel.ShortName, Mode=OneWay}" Width="12" Height="12" VerticalAlignment="Center" />
+                <TextBlock Text="{x:Bind ViewModel.DisplayName, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />
+                <Ellipse Width="6" Height="6" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center"
+                         Visibility="{x:Bind ViewModel.IsActive, Mode=OneWay}"
+                         AutomationProperties.Name="Session active" />
+            </StackPanel>
+            <Button x:Name="StarButton" Style="{StaticResource IslandStarButtonStyle}" HorizontalAlignment="Right" Margin="0,0,-6,0"
+                    Content="{x:Bind ViewModel.FavoriteGlyph, Mode=OneWay}" Click="OnStar"
+                    AutomationProperties.Name="{x:Bind ViewModel.FavoriteLabel, Mode=OneWay}"
+                    ToolTipService.ToolTip="{x:Bind ViewModel.FavoriteLabel, Mode=OneWay}" />
+        </Grid>
 
         <StackPanel Visibility="{x:Bind ViewModel.IsReady, Mode=OneWay}" Spacing="2">
             <StackPanel Orientation="Horizontal" Spacing="5">

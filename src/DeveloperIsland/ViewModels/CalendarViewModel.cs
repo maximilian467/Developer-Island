@@ -74,6 +74,11 @@ public sealed class CalendarViewModel : ModuleViewModel
     public string CompactText => _compact is null ? string.Empty
         : $"{DisplayFormat.TimeOfDay(TimeZoneInfo.ConvertTime(_compact.Start, _zone))} · {_compact.Title}";
 
+    /// <summary>The featured calendar: "14:30 Robotics", or what the rest of the day looks like.</summary>
+    public string CompactNextText => _next is null
+        ? "No more events"
+        : _next.Start <= _now ? $"Now {_next.Title}" : $"{DisplayFormat.TimeOfDay(TimeZoneInfo.ConvertTime(_next.Start, _zone))} {_next.Title}";
+
     public string AccessibleSummary => _next is null ? "No more events today" : $"Next: {NextTitle}, {NextWhen}";
 
     private string TomorrowSummary

@@ -65,6 +65,12 @@ public sealed class GitHubViewModel : ModuleViewModel
 
     public string CompactText => "CI failed";
 
+    /// <summary>The featured GitHub line: a failing check first, else notifications.</summary>
+    public string CompactSummary => !IsReady ? string.Empty
+        : CiFailed ? "CI failed"
+        : (_snapshot?.Notifications ?? 0) == 0 ? "No notifications"
+        : $"{NotificationsFigure} {NotificationsCaption}";
+
     public string AccessibleSummary => IsReady
         ? $"GitHub {AccountText}: {NotificationsFigure} {NotificationsCaption}, {PullRequestsFigure} open pull requests, {ReviewsFigure} {ReviewsCaption}{(HasCi ? ", " + CiText : string.Empty)}"
         : StateTitle;

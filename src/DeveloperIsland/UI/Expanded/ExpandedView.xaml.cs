@@ -64,6 +64,11 @@ public sealed partial class ExpandedView : UserControl
             SystemView.ViewModel = value.System;
             value.PropertyChanged += (_, e) =>
             {
+                if (e.PropertyName == nameof(IslandViewModel.Favorites))
+                {
+                    UpdateStar();
+                }
+
                 if (e.PropertyName == nameof(IslandViewModel.SelectedTab))
                 {
                     ShowSelectedPanel(reveal: true);
@@ -182,6 +187,37 @@ public sealed partial class ExpandedView : UserControl
 
     private void OnSettings(object sender, RoutedEventArgs e) => SettingsRequested?.Invoke();
 
+    /// <summary>
+    /// The header star features the selected module in the compact island. The Usage tab holds two
+    /// modules, so Claude and Codex carry their own stars instead.
+    /// </summary>
+    private void UpdateStar()
+    {
+        if (_viewModel is null || !_viewModel.AvailableTabs.Contains(_viewModel.SelectedTab) || _viewModel.SelectedTab == IslandTab.Usage)
+        {
+            StarButton.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var module = IslandViewModel.TabModule(_viewModel.SelectedTab);
+        var favorite = _viewModel.IsFavorite(module);
+        var name = Core.Modules.ModuleCatalog.DisplayName(module);
+        StarButton.Visibility = Visibility.Visible;
+        StarButton.Content = favorite ? "\uE735" : "\uE734";
+        StarButton.Foreground = (Brush)Application.Current.Resources[favorite ? "TextPrimaryBrush" : "TextTertiaryBrush"];
+        var label = favorite ? $"Remove {name} from the compact island" : $"Show {name} in the compact island";
+        AutomationProperties.SetName(StarButton, label);
+        ToolTipService.SetToolTip(StarButton, label);
+    }
+
+    private void OnStar(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.AvailableTabs.Contains(_viewModel.SelectedTab) && _viewModel.SelectedTab != IslandTab.Usage)
+        {
+            _viewModel.ToggleFavorite(IslandViewModel.TabModule(_viewModel.SelectedTab));
+        }
+    }
+
     private void ShowSelectedPanel(bool reveal)
     {
         if (_viewModel is null)
@@ -197,6 +233,11 @@ public sealed partial class ExpandedView : UserControl
         }
 
         SectionName.Text = selected is { } s ? IslandViewModel.TabName(s) : string.Empty;
+        UpdateStar();
+        if (selected is { } opened && _isShown)
+        {
+            _viewModel.NoteTabOpened(opened);
+        }
         UpdateSelectedForeground();
         if (selected is { } shown)
         {

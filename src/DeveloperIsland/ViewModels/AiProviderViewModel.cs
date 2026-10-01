@@ -8,6 +8,7 @@ public sealed class AiProviderViewModel : ObservableObject
 {
     private AiUsageSnapshot _snapshot;
     private bool _isEnabled = true;
+    private bool _isFavorite;
 
     public AiProviderViewModel(AiProviderKind kind)
     {
@@ -34,6 +35,28 @@ public sealed class AiProviderViewModel : ObservableObject
             }
         }
     }
+
+    /// <summary>The star in the expanded view asks for this module to be (un)featured in the compact island.</summary>
+    public event Action<AiProviderViewModel>? FavoriteToggleRequested;
+
+    public bool IsFavorite
+    {
+        get => _isFavorite;
+        set
+        {
+            if (SetProperty(ref _isFavorite, value))
+            {
+                OnPropertyChanged(nameof(FavoriteGlyph));
+                OnPropertyChanged(nameof(FavoriteLabel));
+            }
+        }
+    }
+
+    public string FavoriteGlyph => _isFavorite ? "" : "";
+
+    public string FavoriteLabel => _isFavorite ? $"Remove {ShortName} from the compact island" : $"Show {ShortName} in the compact island";
+
+    public void RequestFavoriteToggle() => FavoriteToggleRequested?.Invoke(this);
 
     public ProviderState State => _isEnabled ? _snapshot.State : ProviderState.Disabled;
 
@@ -63,6 +86,12 @@ public sealed class AiProviderViewModel : ObservableObject
         ProviderState.Error => "Error",
         _ => string.Empty,
     };
+
+    /// <summary>"€8.42": today's estimated API equivalent for the compact island, when there is usage to value.</summary>
+    public string CompactEuro => IsReady && HasUsageToday && _snapshot.ApiValueEur is { } value ? DisplayFormat.Euro(value) : string.Empty;
+
+    /// <summary>The featured value in the compact island: plan usage when known, otherwise today's fresh tokens.</summary>
+    public string CompactPrimaryValue => IsReady ? CompactValue : string.Empty;
 
     public string CompactAccessibleText => State == ProviderState.Ready
         ? _snapshot.LimitPercent is { } p

@@ -279,6 +279,15 @@
         </Setter>
     </Style>
 
+    <!-- Favorite star: small, quiet; it never competes with the content it sits next to. -->
+    <Style x:Key="IslandStarButtonStyle" TargetType="Button" BasedOn="{StaticResource IslandIconButtonStyle}">
+        <Setter Property="Width" Value="26" />
+        <Setter Property="Height" Value="26" />
+        <Setter Property="CornerRadius" Value="13" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{StaticResource TextTertiaryBrush}" />
+    </Style>
+
     <!-- A figure tile in module panels (GitHub counts, System meters). -->
     <Style x:Key="ModuleTileStyle" TargetType="Border">
         <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />

@@ -85,6 +85,9 @@ public sealed class AppSettings
 
     public bool SystemEnabled { get; set; } = true;
 
+    /// <summary>Modules starred in the expanded island; the compact island features them (see CompactSelector).</summary>
+    public List<string> FavoriteModules { get; set; } = [];
+
     /// <summary>Module names in tab order; see <see cref="ModuleCatalog.NormalizeOrder"/>.</summary>
     public List<string> ModuleOrder { get; set; } = ModuleCatalog.DefaultOrder.Select(m => m.ToString()).ToList();
 
@@ -162,12 +165,24 @@ public sealed class AppSettings
         }
     }
 
+    public bool IsFavorite(ModuleId module) => FavoriteModules.Contains(module.ToString());
+
+    public void SetFavorite(ModuleId module, bool favorite)
+    {
+        FavoriteModules.Remove(module.ToString());
+        if (favorite)
+        {
+            FavoriteModules.Add(module.ToString());
+        }
+    }
+
     public AppSettings Clone()
     {
         var copy = (AppSettings)MemberwiseClone();
         copy.SmartHideProcesses = [.. SmartHideProcesses];
         copy.AutoHideApps = AutoHideApps.Select(a => a.Clone()).ToList();
         copy.ModuleOrder = [.. ModuleOrder];
+        copy.FavoriteModules = [.. FavoriteModules];
         copy.GitRepositories = [.. GitRepositories];
         copy.GitRecentRepositories = [.. GitRecentRepositories];
         copy.CalendarSources = [.. CalendarSources];

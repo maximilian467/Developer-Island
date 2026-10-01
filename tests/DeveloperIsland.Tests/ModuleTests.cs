@@ -245,3 +245,86 @@ public class SystemModuleTests
         Assert.Equal(ModuleState.Error, monitor.Status.State);
     }
 }
+
+public class CompactFavoritesTests
+{
+    private static readonly IReadOnlyList<ModuleId> Order = ModuleCatalog.DefaultOrder;
+
+    [Fact]
+    public void One_favorite_is_always_shown()
+    {
+        Assert.Equal(ModuleId.Music, CompactSelector.Select([ModuleId.Music], ModuleId.Claude, _ => true, turn: 5));
+    }
+
+    [Fact]
+    public void Several_favorites_take_turns_and_skip_silent_ones()
+    {
+        IReadOnlyList<ModuleId> favorites = [ModuleId.Claude, ModuleId.Music, ModuleId.Focus];
+        bool Speaks(ModuleId m) => m != ModuleId.Music; // nothing playing
+
+        Assert.Equal(ModuleId.Claude, CompactSelector.Select(favorites, null, Speaks, 0));
+        Assert.Equal(ModuleId.Focus, CompactSelector.Select(favorites, null, Speaks, 1));
+        Assert.Equal(ModuleId.Claude, CompactSelector.Select(favorites, null, Speaks, 2));
+        Assert.True(CompactSelector.Rotates(favorites));
+    }
+
+    [Fact]
+    public void When_no_favorite_speaks_they_still_rotate()
+    {
+        Assert.Equal(ModuleId.Focus, CompactSelector.Select([ModuleId.Music, ModuleId.Focus], null, _ => false, 1));
+    }
+
+    [Fact]
+    public void Without_favorites_the_last_opened_module_is_shown_else_the_classic_summary()
+    {
+        Assert.Equal(ModuleId.Calendar, CompactSelector.Select([], ModuleId.Calendar, _ => true, 3));
+        Assert.Null(CompactSelector.Select([], null, _ => true, 3));
+        Assert.False(CompactSelector.Rotates([ModuleId.Calendar]));
+    }
+
+    [Fact]
+    public void Disabled_modules_are_never_favorites_and_order_follows_the_tabs()
+    {
+        var favorites = CompactSelector.EffectiveFavorites(["System", "Claude", "Nope", "Music"], Order, m => m != ModuleId.Music);
+
+        Assert.Equal([ModuleId.Claude, ModuleId.System], favorites);
+    }
+
+    [Fact]
+    public void Favorites_persist_and_are_sanitised()
+    {
+        var path = Path.Combine(TestData.TempDirectory(), "settings.json");
+        var store = new SettingsStore(path);
+        store.Update(s =>
+        {
+            s.SetFavorite(ModuleId.Calendar, true);
+            s.SetFavorite(ModuleId.Claude, true);
+            s.SetFavorite(ModuleId.Calendar, false);
+            s.FavoriteModules.Add("weather");
+            s.FavoriteModules.Add("claude");
+        });
+
+        var reloaded = new SettingsStore(path).Current;
+        Assert.Equal(["Claude"], reloaded.FavoriteModules);
+        Assert.True(reloaded.IsFavorite(ModuleId.Claude));
+    }
+
+    [Fact]
+    public void Last_active_module_persists_in_its_own_file()
+    {
+        var path = Path.Combine(TestData.TempDirectory(), "ui-state.json");
+        new UiStateStore(path).SetLastActive(ModuleId.Calendar);
+
+        Assert.Equal(ModuleId.Calendar, new UiStateStore(path).LastActiveModule);
+        Assert.Null(new UiStateStore(Path.Combine(TestData.TempDirectory(), "missing.json")).LastActiveModule);
+    }
+
+    [Fact]
+    public void A_corrupt_ui_state_starts_fresh()
+    {
+        var path = Path.Combine(TestData.TempDirectory(), "ui-state.json");
+        File.WriteAllText(path, "{ nope");
+
+        Assert.Null(new UiStateStore(path).LastActiveModule);
+    }
+}

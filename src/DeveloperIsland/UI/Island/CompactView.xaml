@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Compact capsule: 36 DIP tall, width follows content. Focus, time-critical signals (next event, system alert, failing CI), AI usage, then music art. -->
+<!-- Compact capsule: 36 DIP tall, width follows content. Time-critical signals (focus, next event, system alert, failing CI), then the featured module, or the classic summary (AI usage, music art) when nothing is featured. -->
 <UserControl
     x:Class="DeveloperIsland.UI.Island.CompactView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:components="using:DeveloperIsland.UI.Components">
 
     <Grid x:Name="Root" Height="36" MinWidth="112" Padding="16,0" Background="Transparent"
           AutomationProperties.Name="{x:Bind ViewModel.CompactAccessibleName, Mode=OneWay}">
@@ -29,6 +30,31 @@
                 <TextBlock Text="{x:Bind ViewModel.GitHub.CompactText, Mode=OneWay}" Style="{StaticResource LabelTextStyle}" />
             </StackPanel>
 
+            <!-- Featured module (a favorite, or the module opened last). -->
+            <StackPanel x:Name="Featured" Orientation="Horizontal" Spacing="7" Visibility="{x:Bind ViewModel.IsFeaturing, Mode=OneWay}"
+                        AutomationProperties.Name="{x:Bind ViewModel.CompactPrimaryAccessibleName, Mode=OneWay}">
+                <Grid Width="20" Height="20" VerticalAlignment="Center">
+                    <Ellipse Width="6" Height="6" Fill="{StaticResource AccentBrush}" Visibility="{x:Bind ViewModel.CompactPrimaryShowsDot, Mode=OneWay}" />
+                    <Border CornerRadius="6" Visibility="{x:Bind ViewModel.CompactPrimaryShowsArt, Mode=OneWay}">
+                        <Border.Background>
+                            <ImageBrush ImageSource="{x:Bind ViewModel.Music.Art, Mode=OneWay}" Stretch="UniformToFill" />
+                        </Border.Background>
+                    </Border>
+                    <Grid x:Name="FeaturedIcon" Visibility="{x:Bind ViewModel.CompactPrimaryShowsIcon, Mode=OneWay}">
+                        <components:ProviderMark x:Name="FeaturedMark" Width="14" Height="14" Foreground="{StaticResource TextPrimaryBrush}" />
+                        <components:ModuleIcon x:Name="FeaturedModuleIcon" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                </Grid>
+                <TextBlock Text="{x:Bind ViewModel.CompactPrimaryLabel, Mode=OneWay}" Style="{StaticResource LabelTextStyle}" Foreground="{StaticResource TextSecondaryBrush}"
+                           Visibility="{x:Bind ViewModel.HasCompactPrimaryLabel, Mode=OneWay}" VerticalAlignment="Center" />
+                <TextBlock Text="{x:Bind ViewModel.CompactPrimaryValue, Mode=OneWay}" Style="{StaticResource LabelTextStyle}" MaxWidth="160" VerticalAlignment="Center" />
+                <TextBlock Text="·" Style="{StaticResource LabelTextStyle}" Foreground="{StaticResource TextTertiaryBrush}"
+                           Visibility="{x:Bind ViewModel.HasCompactPrimaryDetail, Mode=OneWay}" VerticalAlignment="Center" />
+                <TextBlock Text="{x:Bind ViewModel.CompactPrimaryDetail, Mode=OneWay}" Style="{StaticResource LabelTextStyle}" Foreground="{StaticResource TextSecondaryBrush}"
+                           Visibility="{x:Bind ViewModel.HasCompactPrimaryDetail, Mode=OneWay}" VerticalAlignment="Center" />
+            </StackPanel>
+
+            <!-- Classic summary when nothing is featured. -->
             <StackPanel Orientation="Horizontal" Spacing="5" Visibility="{x:Bind ViewModel.CompactShowClaude, Mode=OneWay}">
                 <TextBlock Text="Claude" Style="{StaticResource LabelTextStyle}" Foreground="{StaticResource TextSecondaryBrush}" />
                 <TextBlock Text="{x:Bind ViewModel.Usage.Claude.CompactValue, Mode=OneWay}" Style="{StaticResource LabelTextStyle}" />
