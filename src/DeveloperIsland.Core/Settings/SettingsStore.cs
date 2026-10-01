@@ -40,7 +40,7 @@ public sealed class SettingsStore
         {
             if (!File.Exists(_path))
             {
-                return new AppSettings();
+                return Sanitize(new AppSettings());
             }
 
             try
@@ -52,7 +52,7 @@ public sealed class SettingsStore
             {
                 Log.Warn("settings", "Settings file is unreadable; defaults are used", ex: ex);
                 TryBackupCorruptFile();
-                return new AppSettings();
+                return Sanitize(new AppSettings());
             }
         }
     }
@@ -128,6 +128,8 @@ public sealed class SettingsStore
             .Where(n => n.Length > 0)
             .Distinct()
             .ToList();
+        s.AutoHideApps = Island.AutoHideRules.Normalize(s.AutoHideApps, s.SmartHideProcesses);
+        s.SmartHideProcesses = s.AutoHideApps.Where(a => a.Enabled).Select(a => a.Process).ToList();
         s.GlobalShortcut = ShortcutGesture.FromText(s.GlobalShortcut).Text;
         s.ModuleOrder = Modules.ModuleCatalog.NormalizeOrder(s.ModuleOrder).Select(m => m.ToString()).ToList();
         s.GitRepositories = CleanList(s.GitRepositories, 20);

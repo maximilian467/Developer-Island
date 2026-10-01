@@ -109,7 +109,15 @@ public sealed partial class SettingsWindow : Window
         {
             Select(name);
             await Task.Delay(500);
+            ContentScroll.ChangeView(null, 0, null, disableAnimation: true);
+            await Task.Delay(150);
             await UI.Components.SnapshotWriter.SaveAsync(Root, Path.Combine(directory, "30-settings-" + name.ToLowerInvariant() + ".png"));
+            if (ContentScroll.ScrollableHeight > 1)
+            {
+                ContentScroll.ChangeView(null, ContentScroll.ScrollableHeight, null, disableAnimation: true);
+                await Task.Delay(300);
+                await UI.Components.SnapshotWriter.SaveAsync(Root, Path.Combine(directory, "30-settings-" + name.ToLowerInvariant() + "-end.png"));
+            }
         }
 
         Close();
@@ -161,17 +169,16 @@ public sealed partial class SettingsWindow : Window
             UpdateShortcutStatus(s);
             SmartHideToggle.IsOn = s.SmartHideEnabled;
             (s.SmartHideBehavior == SmartHideBehavior.Hide ? SmartHideHide : SmartHideRetract).IsChecked = true;
-            BrowserChromeToggle.IsOn = s.SmartHideProcesses.Contains("chrome");
-            BrowserEdgeToggle.IsOn = s.SmartHideProcesses.Contains("msedge");
-            BrowserFirefoxToggle.IsOn = s.SmartHideProcesses.Contains("firefox");
-            foreach (var dependent in new Control[] { SmartHideRetract, SmartHideHide, BrowserChromeToggle, BrowserEdgeToggle, BrowserFirefoxToggle })
+            AutoHideMaximizedToggle.IsOn = s.AutoHideOnlyMaximized;
+            BuildAutoHideRows(s);
+            foreach (var dependent in new Control[] { SmartHideRetract, SmartHideHide, AutoHideMaximizedToggle })
             {
                 dependent.IsEnabled = s.SmartHideEnabled;
             }
 
             SmartHideText.Text = s.Anchor == IslandAnchor.TopCenter
-                ? "While a maximized browser is in front, the island rests as a small notch. Hover or click it to open."
-                : "Only applies at Top Center, where the island covers browser tabs.";
+                ? "While one of the apps below is in front, the island rests as a small notch. Hover or click it to open."
+                : "Only applies at Top Center, where the island covers tabs and title bars.";
             (s.Theme == AppTheme.Dark ? ThemeDark : ThemeSystem).IsChecked = true;
 
             var anchorButton = s.Anchor switch
@@ -262,14 +269,9 @@ public sealed partial class SettingsWindow : Window
                     break;
                 case "Shortcut": s.GlobalShortcutEnabled = on; break;
                 case "SmartHide": s.SmartHideEnabled = on; break;
-                case var browser when browser.StartsWith("Browser:", StringComparison.Ordinal):
-                    var process = browser["Browser:".Length..];
-                    s.SmartHideProcesses.Remove(process);
-                    if (on)
-                    {
-                        s.SmartHideProcesses.Add(process);
-                    }
-
+                case "AutoHideMaximized": s.AutoHideOnlyMaximized = on; break;
+                case var app when app.StartsWith("App:", StringComparison.Ordinal):
+                    SetAppEnabled(s, app["App:".Length..], on);
                     break;
             }
         });

@@ -10,9 +10,9 @@ namespace DeveloperIsland.Core.Island;
 public sealed record ForegroundInfo(string ProcessName, bool IsMaximized, bool IsOnIslandMonitor);
 
 /// <summary>
-/// Smart Auto-Hide: a top-center island covers the tab strip of a maximized browser, so while such a
-/// browser is in front the island rests as a notch in the screen edge (or hides). Anywhere else, or
-/// for any other app, it rests as the compact capsule.
+/// Smart Auto-Hide: a top-center island covers the tab strip of a maximized browser (or the title bar
+/// of any app the user lists), so while such an app is in front the island rests as a notch in the
+/// screen edge (or hides). Anywhere else, or for any other app, it rests as the compact capsule.
 /// </summary>
 public static class SmartHidePolicy
 {
@@ -28,7 +28,7 @@ public static class SmartHidePolicy
             return RestMode.Compact;
         }
 
-        var applies = foreground.IsMaximized
+        var applies = (foreground.IsMaximized || !settings.AutoHideOnlyMaximized)
             && foreground.IsOnIslandMonitor
             && settings.SmartHideProcesses.Contains(NormalizeProcessName(foreground.ProcessName));
         if (!applies)

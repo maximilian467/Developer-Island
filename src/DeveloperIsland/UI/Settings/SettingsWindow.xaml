@@ -65,7 +65,7 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
             <Grid x:Name="DragArea" Background="Transparent" />
-            <ScrollViewer Grid.Row="1" Padding="32,0,36,32" HorizontalScrollMode="Disabled">
+            <ScrollViewer x:Name="ContentScroll" Grid.Row="1" Padding="32,0,36,32" HorizontalScrollMode="Disabled">
                 <Grid MaxWidth="620" HorizontalAlignment="Stretch">
 
                     <!-- General -->
@@ -203,7 +203,7 @@
                             </StackPanel>
                         </Border>
 
-                        <TextBlock Text="Browser notch" Style="{StaticResource SettingsGroupLabelStyle}" Margin="4,20,0,4" />
+                        <TextBlock Text="Auto-hide in apps" Style="{StaticResource SettingsGroupLabelStyle}" Margin="4,20,0,4" />
                         <Border Style="{StaticResource SettingsCardStyle}">
                             <StackPanel>
                                 <Grid Style="{StaticResource SettingsRowStyle}">
@@ -212,11 +212,11 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="Step aside for browser tabs" Style="{StaticResource SettingsRowTitleStyle}" />
-                                        <TextBlock x:Name="SmartHideText" Text="While a maximized browser is in front, the island rests as a small notch. Hover or click it to open." Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                        <TextBlock Text="Step aside for these apps" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock x:Name="SmartHideText" Text="While one of the apps below is in front, the island rests as a small notch. Hover or click it to open." Style="{StaticResource SettingsRowDescriptionStyle}" />
                                     </StackPanel>
                                     <ToggleSwitch x:Name="SmartHideToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
-                                                  AutomationProperties.Name="Step aside for browser tabs" Toggled="OnToggle" Tag="SmartHide" />
+                                                  AutomationProperties.Name="Step aside for these apps" Toggled="OnToggle" Tag="SmartHide" />
                                 </Grid>
                                 <Rectangle Style="{StaticResource SettingsDividerStyle}" />
                                 <Grid Style="{StaticResource SettingsRowStyle}">
@@ -226,10 +226,10 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="Behavior" Style="{StaticResource SettingsRowTitleStyle}" />
-                                        <TextBlock Text="Hide removes the notch too. The keyboard shortcut still opens the island." Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                        <TextBlock Text="Notch keeps a small tab in the screen edge; Hide removes it too. The keyboard shortcut still opens the island." Style="{StaticResource SettingsRowDescriptionStyle}" />
                                     </StackPanel>
                                     <Border Grid.Column="1" VerticalAlignment="Center" CornerRadius="8" Padding="2" Background="{ThemeResource SettingsSegmentBrush}">
-                                        <StackPanel Orientation="Horizontal" AutomationProperties.Name="Browser notch behavior">
+                                        <StackPanel Orientation="Horizontal" AutomationProperties.Name="Auto-hide behavior">
                                             <RadioButton x:Name="SmartHideRetract" GroupName="SmartHideBehavior" Style="{StaticResource SegmentedOptionStyle}" Content="Notch" Tag="Retract" Checked="OnSmartHideBehaviorChecked" />
                                             <RadioButton x:Name="SmartHideHide" GroupName="SmartHideBehavior" Style="{StaticResource SegmentedOptionStyle}" Content="Hide" Tag="Hide" Checked="OnSmartHideBehaviorChecked" />
                                         </StackPanel>
@@ -242,37 +242,27 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="Google Chrome" Style="{StaticResource SettingsRowTitleStyle}" />
-                                        <TextBlock Text="chrome.exe" Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                        <TextBlock Text="Only when maximized" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Text="The island steps aside only while the app fills the screen, where it would cover tabs or the title bar." Style="{StaticResource SettingsRowDescriptionStyle}" />
                                     </StackPanel>
-                                    <ToggleSwitch x:Name="BrowserChromeToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
-                                                  AutomationProperties.Name="Google Chrome" Toggled="OnToggle" Tag="Browser:chrome" />
+                                    <ToggleSwitch x:Name="AutoHideMaximizedToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
+                                                  AutomationProperties.Name="Only when maximized" Toggled="OnToggle" Tag="AutoHideMaximized" />
                                 </Grid>
-                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
-                                <Grid Style="{StaticResource SettingsRowStyle}">
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource SettingsCardStyle}" Margin="0,8,0,0">
+                            <StackPanel>
+                                <StackPanel x:Name="AutoHideRows" AutomationProperties.Name="Apps" />
+                                <Grid Style="{StaticResource SettingsRowStyle}" ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="Microsoft Edge" Style="{StaticResource SettingsRowTitleStyle}" />
-                                        <TextBlock Text="msedge.exe" Style="{StaticResource SettingsRowDescriptionStyle}" />
-                                    </StackPanel>
-                                    <ToggleSwitch x:Name="BrowserEdgeToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
-                                                  AutomationProperties.Name="Microsoft Edge" Toggled="OnToggle" Tag="Browser:msedge" />
-                                </Grid>
-                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
-                                <Grid Style="{StaticResource SettingsRowStyle}">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="Firefox" Style="{StaticResource SettingsRowTitleStyle}" />
-                                        <TextBlock Text="firefox.exe" Style="{StaticResource SettingsRowDescriptionStyle}" />
-                                    </StackPanel>
-                                    <ToggleSwitch x:Name="BrowserFirefoxToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
-                                                  AutomationProperties.Name="Firefox" Toggled="OnToggle" Tag="Browser:firefox" />
+                                    <TextBlock Text="Add an app that is running now, or pick its program file." Style="{StaticResource SettingsRowDescriptionStyle}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <Button x:Name="AddAppButton" Grid.Column="1" Content="Add application…" Click="OnAddApplication" VerticalAlignment="Center" />
+                                    <Button Grid.Column="2" Content="Browse…" Click="OnBrowseApplication" VerticalAlignment="Center"
+                                            AutomationProperties.Name="Browse for an executable" ToolTipService.ToolTip="Browse executable…" />
                                 </Grid>
                             </StackPanel>
                         </Border>

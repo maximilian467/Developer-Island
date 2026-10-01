@@ -20,6 +20,23 @@ public enum SmartHideBehavior
     Hide,
 }
 
+/// <summary>An app that makes the island step aside while it is in front (Settings, Auto-hide in apps).</summary>
+public sealed class AutoHideApp
+{
+    /// <summary>Executable name without extension, lower case ("chrome").</summary>
+    public string Process { get; set; } = string.Empty;
+
+    /// <summary>Display name ("Google Chrome").</summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>Full path of the executable, when known (for its icon).</summary>
+    public string? Path { get; set; }
+
+    public bool Enabled { get; set; } = true;
+
+    public AutoHideApp Clone() => (AutoHideApp)MemberwiseClone();
+}
+
 /// <summary>User settings, persisted as JSON. Every property has a safe default.</summary>
 public sealed class AppSettings
 {
@@ -93,8 +110,17 @@ public sealed class AppSettings
     [JsonConverter(typeof(JsonStringEnumConverter<SmartHideBehavior>))]
     public SmartHideBehavior SmartHideBehavior { get; set; } = SmartHideBehavior.Retract;
 
-    /// <summary>Executable names without extension, lower case (chrome, msedge, firefox, ...).</summary>
+    /// <summary>
+    /// Executable names without extension, lower case (chrome, msedge, firefox, ...): the enabled
+    /// entries of <see cref="AutoHideApps"/>, kept in sync when settings are saved.
+    /// </summary>
     public List<string> SmartHideProcesses { get; set; } = ["chrome", "msedge", "firefox"];
+
+    /// <summary>Every app rule, enabled or not (Settings, Auto-hide in apps).</summary>
+    public List<AutoHideApp> AutoHideApps { get; set; } = [];
+
+    /// <summary>Step aside only while the app's window is maximized (the original browser behavior).</summary>
+    public bool AutoHideOnlyMaximized { get; set; } = true;
 
     // Keyboard
     /// <summary>The global shortcut toggles the island from anywhere.</summary>
@@ -140,6 +166,7 @@ public sealed class AppSettings
     {
         var copy = (AppSettings)MemberwiseClone();
         copy.SmartHideProcesses = [.. SmartHideProcesses];
+        copy.AutoHideApps = AutoHideApps.Select(a => a.Clone()).ToList();
         copy.ModuleOrder = [.. ModuleOrder];
         copy.GitRepositories = [.. GitRepositories];
         copy.GitRecentRepositories = [.. GitRecentRepositories];
