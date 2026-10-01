@@ -161,6 +161,7 @@ public sealed partial class SettingsWindow : Window
             AlwaysOnTopToggle.IsOn = s.AlwaysOnTop;
             LaunchHiddenToggle.IsOn = s.LaunchHidden;
             BuildModuleRows(s);
+            UpdatePlanConnection();
             BuildRepositoryRows(s);
             BuildCalendarRows(s);
             ShortcutToggle.IsOn = s.GlobalShortcutEnabled;

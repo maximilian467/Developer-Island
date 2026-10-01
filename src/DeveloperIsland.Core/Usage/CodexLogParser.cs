@@ -14,6 +14,9 @@ public sealed record CodexFileState
 
     public CodexRateLimit? LastRateLimit { get; init; }
 
+    /// <summary>The secondary (usually weekly) window, when Codex records one.</summary>
+    public CodexRateLimit? LastWeeklyRateLimit { get; init; }
+
     public string? SessionId { get; init; }
 
     public string? Model { get; init; }
@@ -42,6 +45,8 @@ public sealed class CodexLogParser
 
     /// <summary>Most recent rate limit seen by this parser instance.</summary>
     public CodexRateLimit? LastRateLimit => State.LastRateLimit;
+
+    public CodexRateLimit? LastWeeklyRateLimit => State.LastWeeklyRateLimit;
 
     public bool TryParse(string line, out UsageEvent usageEvent)
     {
@@ -221,6 +226,39 @@ public sealed class CodexLogParser
         {
             State = State with { LastRateLimit = new CodexRateLimit(percent, window, resetsAt, observedAt) };
         }
+
+        // The secondary window (weekly) uses the same shape; it is optional.
+        if (limits.TryGetProperty("secondary", out var secondary) && TryReadWindow(secondary, observedAt) is { } weekly
+            && (LastWeeklyRateLimit is null || observedAt >= LastWeeklyRateLimit.ObservedAt))
+        {
+            State = State with { LastWeeklyRateLimit = weekly };
+        }
+    }
+
+    private static CodexRateLimit? TryReadWindow(JsonElement window, DateTimeOffset observedAt)
+    {
+        if (window.ValueKind != JsonValueKind.Object
+            || !window.TryGetProperty("used_percent", out var used) || used.ValueKind != JsonValueKind.Number
+            || !used.TryGetDouble(out var percent) || !double.IsFinite(percent) || percent < 0 || percent > 100
+            || !window.TryGetProperty("window_minutes", out var w) || w.ValueKind != JsonValueKind.Number
+            || !w.TryGetInt32(out var minutes) || minutes <= 0)
+        {
+            return null;
+        }
+
+        DateTimeOffset? resetsAt = null;
+        if (window.TryGetProperty("resets_at", out var resets) && resets.ValueKind != JsonValueKind.Null)
+        {
+            if (resets.ValueKind != JsonValueKind.Number || !resets.TryGetInt64(out var unix)
+                || unix < DateTimeOffset.MinValue.ToUnixTimeSeconds() || unix > DateTimeOffset.MaxValue.ToUnixTimeSeconds())
+            {
+                return null;
+            }
+
+            resetsAt = DateTimeOffset.FromUnixTimeSeconds(unix);
+        }
+
+        return new CodexRateLimit(percent, minutes, resetsAt, observedAt);
     }
 
     private UsageEvent CreateEvent(string key, DateTimeOffset ts, TokenCounts tokens) => new(

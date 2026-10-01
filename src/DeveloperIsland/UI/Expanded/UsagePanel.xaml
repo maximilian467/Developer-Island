@@ -19,7 +19,7 @@
         <components:UsageHeatmap x:Name="Heatmap" Margin="0,22,0,0" HorizontalAlignment="Left" />
 
         <!-- Readout: summary and legend at rest, the inspected day on hover or keyboard focus. -->
-        <Grid Height="36" Margin="0,10,0,0">
+        <Grid Height="{x:Bind ViewModel.ReadoutHeight, Mode=OneWay}" Margin="0,10,0,0">
             <Grid Visibility="{x:Bind ViewModel.IsNotInspecting, Mode=OneWay}" Height="18" VerticalAlignment="Top">
                 <TextBlock Text="{x:Bind ViewModel.HistorySummary, Mode=OneWay}" Style="{StaticResource FineTextStyle}" VerticalAlignment="Center" />
                 <StackPanel Orientation="Horizontal" Spacing="3" HorizontalAlignment="Right" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw">
@@ -34,6 +34,7 @@
             </Grid>
             <Grid Visibility="{x:Bind ViewModel.IsInspecting, Mode=OneWay}" ColumnSpacing="16" RowSpacing="2">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
@@ -54,6 +55,8 @@
                     <Run Text="{x:Bind ViewModel.InspectedValue, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" /><Run Text=" API" />
                 </TextBlock>
                 <TextBlock Grid.Row="1" Grid.ColumnSpan="4" Text="{x:Bind ViewModel.InspectedDetail, Mode=OneWay}" Style="{StaticResource FineTextStyle}" />
+                <TextBlock Grid.Row="2" Grid.ColumnSpan="4" Text="{x:Bind ViewModel.InspectedPlan, Mode=OneWay}" Style="{StaticResource FineTextStyle}"
+                           Visibility="{x:Bind ViewModel.HasInspectedPlan, Mode=OneWay}" />
             </Grid>
         </Grid>
 

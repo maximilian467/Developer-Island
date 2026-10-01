@@ -17,6 +17,9 @@ internal static class AppPaths
 
     public static string UiState => Path.Combine(Root, "ui-state.json");
 
+    /// <summary>Plan usage handed over by Claude Code's status line (numbers only).</summary>
+    public static string ClaudePlan => Path.Combine(Root, "claude-plan.json");
+
     public static string Settings(bool demo) => Path.Combine(Root, demo ? "settings.demo.json" : "settings.json");
 
     public static string Assets => Path.Combine(AppContext.BaseDirectory, "Assets");

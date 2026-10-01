@@ -11,6 +11,12 @@ namespace DeveloperIsland.Core.Demo;
 /// </summary>
 public static class DemoData
 {
+    /// <summary>Demo plan usage: 68% of the current window (as the demo snapshot reports), 41% of the week.</summary>
+    public static Plan.PlanUsage ClaudePlan(DateTimeOffset now) => new(
+        new Plan.PlanWindow(68, now.AddHours(2).AddMinutes(14)),
+        new Plan.PlanWindow(41, now.AddDays(4).AddHours(3)),
+        now);
+
     public const string ClaudeModel = "claude-opus-5-5";
     public const string CodexModel = "gpt-5-codex";
 
@@ -64,6 +70,9 @@ public static class DemoData
     {
         LimitPercent = 31,
         LimitWindowMinutes = 300,
+        LimitResetsAt = DateTimeOffset.UtcNow.AddHours(3).AddMinutes(40),
+        WeeklyLimitPercent = 12,
+        WeeklyLimitResetsAt = DateTimeOffset.UtcNow.AddDays(5),
         CurrentProject = "api-gateway",
     };
 

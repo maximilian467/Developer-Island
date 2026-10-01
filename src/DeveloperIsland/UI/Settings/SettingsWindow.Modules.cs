@@ -2,6 +2,7 @@ using DeveloperIsland.Core.Calendar;
 using DeveloperIsland.Core.Diagnostics;
 using DeveloperIsland.Core.Git;
 using DeveloperIsland.Core.Modules;
+using DeveloperIsland.Core.Plan;
 using DeveloperIsland.Core.Settings;
 using DeveloperIsland.UI.Components;
 using Microsoft.UI.Xaml;
@@ -109,6 +110,60 @@ public sealed partial class SettingsWindow
             Log.Info("settings", "Module moved", new { module = module.ToString(), delta });
         };
         return button;
+    }
+
+    // Claude plan usage --------------------------------------------------------------------------------
+
+    /// <summary>Shows whether Claude Code hands plan usage to Developer Island (its status line).</summary>
+    private void UpdatePlanConnection()
+    {
+        var state = _isDemo ? PlanConnection.NotConnected : ClaudeStatusLineSetup.Inspect(ClaudeStatusLineSetup.SettingsPath());
+        (PlanStatusTitle.Text, PlanStatusText.Text) = (_isDemo, state) switch
+        {
+            (true, _) => ("Not available in demo mode", "Demo mode never changes Claude Code's settings."),
+            (_, PlanConnection.Connected) => ("Connected", "Plan usage updates with every Claude Code reply. Shown for Claude subscriptions only; API keys have no plan usage."),
+            (_, PlanConnection.OtherStatusLine) => ("Your own status line is in use", "Claude Code already runs a status line, which Developer Island leaves alone. To combine both, pipe its input to: " + ClaudeStatusLineSetup.CommandFor(Environment.ProcessPath ?? "DeveloperIsland.exe")),
+            (_, PlanConnection.Unreadable) => ("Claude Code settings unreadable", "Its settings.json could not be read, so nothing was changed."),
+            _ => ("Not connected", "Shows your current and weekly Claude plan usage. Developer Island becomes Claude Code's status line, which Claude Code uses to hand over these two percentages. Nothing else is read or sent."),
+        };
+        PlanConnectButton.Visibility = state == PlanConnection.Connected ? Visibility.Collapsed : Visibility.Visible;
+        PlanConnectButton.IsEnabled = !_isDemo && state == PlanConnection.NotConnected && Environment.ProcessPath is not null;
+        PlanDisconnectButton.Visibility = state == PlanConnection.Connected ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void OnConnectPlan(object sender, RoutedEventArgs e)
+    {
+        if (_isDemo || Environment.ProcessPath is not { } exe)
+        {
+            return;
+        }
+
+        try
+        {
+            var result = ClaudeStatusLineSetup.Connect(ClaudeStatusLineSetup.SettingsPath(), exe);
+            Log.Info("settings", "Claude plan usage connect", new { result = result.ToString() });
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("settings", "Claude plan usage could not be connected", new { error = ex.GetType().Name });
+        }
+
+        UpdatePlanConnection();
+    }
+
+    private void OnDisconnectPlan(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var result = ClaudeStatusLineSetup.Disconnect(ClaudeStatusLineSetup.SettingsPath());
+            Log.Info("settings", "Claude plan usage disconnect", new { result = result.ToString() });
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("settings", "Claude plan usage could not be disconnected", new { error = ex.GetType().Name });
+        }
+
+        UpdatePlanConnection();
     }
 
     // Git repositories -------------------------------------------------------------------------------

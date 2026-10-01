@@ -99,4 +99,38 @@ public class CodexRecoveryTests
         Assert.True(parser.TryParse(line, out _));
         Assert.Null(parser.LastRateLimit);
     }
+
+    [Fact]
+    public void The_weekly_secondary_window_is_read_next_to_the_primary_one()
+    {
+        var line = """
+            {"type":"event_msg","timestamp":"2026-09-28T10:00:00Z","payload":{"type":"token_count",
+            "info":{"total_token_usage":{"total_tokens":10},"last_token_usage":{"input_tokens":10}},
+            "rate_limits":{"limit_id":"codex","primary":{"used_percent":31,"window_minutes":300,"resets_at":1900000000},
+            "secondary":{"used_percent":12.5,"window_minutes":10080,"resets_at":1900400000}}}}
+            """;
+        var parser = new CodexLogParser();
+        Assert.True(parser.TryParse(line, out _));
+
+        Assert.Equal(31, parser.LastRateLimit!.UsedPercent);
+        Assert.Equal(12.5, parser.LastWeeklyRateLimit!.UsedPercent);
+        Assert.Equal(10080, parser.LastWeeklyRateLimit.WindowMinutes);
+        Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(1900400000), parser.LastWeeklyRateLimit.ResetsAt);
+    }
+
+    [Fact]
+    public void A_missing_or_invalid_secondary_window_leaves_the_primary_intact()
+    {
+        var line = """
+            {"type":"event_msg","timestamp":"2026-09-28T10:00:00Z","payload":{"type":"token_count",
+            "info":{"total_token_usage":{"total_tokens":10},"last_token_usage":{"input_tokens":10}},
+            "rate_limits":{"limit_id":"codex","primary":{"used_percent":31,"window_minutes":300,"resets_at":1900000000},
+            "secondary":{"used_percent":"lots"}}}}
+            """;
+        var parser = new CodexLogParser();
+        Assert.True(parser.TryParse(line, out _));
+
+        Assert.Equal(31, parser.LastRateLimit!.UsedPercent);
+        Assert.Null(parser.LastWeeklyRateLimit);
+    }
 }

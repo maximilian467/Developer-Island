@@ -39,7 +39,10 @@
                     AutomationProperties.Name="Open Settings" />
         </Grid>
 
-        <Grid x:Name="PanelHost" Grid.Row="1" Padding="4,0">
+        <!-- Panels scroll instead of being clipped if one ever outgrows the island (max 700 DIP minus the header). -->
+        <ScrollViewer x:Name="PanelScroll" Grid.Row="1" MaxHeight="620" VerticalScrollBarVisibility="Auto" HorizontalScrollMode="Disabled"
+                      VerticalScrollMode="Auto" IsTabStop="False">
+        <Grid x:Name="PanelHost" Padding="4,0">
             <local:UsagePanel x:Name="UsageView" Visibility="Collapsed" />
             <local:MusicPanel x:Name="MusicView" Visibility="Collapsed" />
             <local:GitPanel x:Name="GitView" Visibility="Collapsed" />
@@ -51,5 +54,6 @@
             <TextBlock x:Name="NoTabsText" Text="All modules are turned off. Turn one on in Settings." Style="{StaticResource CaptionTextStyle}"
                        Visibility="Collapsed" />
         </Grid>
+        </ScrollViewer>
     </Grid>
 </UserControl>

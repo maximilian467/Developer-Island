@@ -6,6 +6,7 @@ using DeveloperIsland.Core.Island;
 using DeveloperIsland.Core.Models;
 using DeveloperIsland.Core.Modules;
 using DeveloperIsland.Core.Placement;
+using DeveloperIsland.Core.Plan;
 using DeveloperIsland.Core.Pricing;
 using DeveloperIsland.Core.Providers;
 using DeveloperIsland.Core.Providers.Claude;
@@ -54,6 +55,8 @@ internal sealed class AppHost : IDisposable
     private ModuleHost _modules = null!;
     private UiStateStore _uiState = null!;
     private DispatcherQueueTimer? _rotation;
+    private PlanUsageService? _plan;
+    private DispatcherQueueTimer? _planReset;
     private DispatcherQueueTimer? _historyDebounce;
     private DispatcherQueueTimer? _midnight;
     private DispatcherQueueTimer? _smartHideSettle;
@@ -107,6 +110,16 @@ internal sealed class AppHost : IDisposable
         ApplyModuleFlags(settings);
         _modules.Apply(settings);
         _uiState = new UiStateStore(_options.IsDemo ? null : AppPaths.UiState);
+        if (_options.IsDemo)
+        {
+            _viewModel.Usage.Claude.SetPlan(DemoData.ClaudePlan(DateTimeOffset.UtcNow), PlanConnection.Connected);
+        }
+        else
+        {
+            _plan = new PlanUsageService(new PlanUsageStore(AppPaths.ClaudePlan));
+            _plan.Changed += usage => _dispatcher.TryEnqueue(() => OnPlanUsage(usage));
+            _plan.Configure(settings.ClaudeEnabled);
+        }
         _viewModel.SetLastActive(_uiState.LastActiveModule);
         ApplyFavorites(settings);
 
@@ -284,6 +297,7 @@ internal sealed class AppHost : IDisposable
         _providers.Dispose();
         _focusTimer?.Dispose();
         _modules?.Dispose();
+        _plan?.Dispose();
         _media?.Dispose();
         _state?.Dispose();
         _fullscreen?.Dispose();
@@ -434,6 +448,16 @@ internal sealed class AppHost : IDisposable
 
         // Favorites (stars) live in settings; the module opened last in the small UI state file.
         _viewModel.FavoriteChanged += (module, favorite) => _settings.Update(s => s.SetFavorite(module, favorite));
+        _viewModel.Usage.Claude.ConnectPlanRequested += () => OpenSettings("Modules");
+        _state.ModeChanged += (_, mode) =>
+        {
+            if (mode == Core.Island.IslandMode.Expanded)
+            {
+                // Reset countdowns are minute-precise; refresh them whenever the island opens.
+                _viewModel.Usage.Claude.RefreshPlanClock();
+                _viewModel.Usage.Codex.RefreshPlanClock();
+            }
+        };
         _viewModel.ModuleOpened += module =>
         {
             _uiState.SetLastActive(module);
@@ -449,6 +473,7 @@ internal sealed class AppHost : IDisposable
         ApplyModuleFlags(settings);
         _modules.Apply(settings);
         ApplyFavorites(settings);
+        _plan?.Configure(settings.ClaudeEnabled);
         _viewModel.EnsureValidTab();
         _window.SetAlwaysOnTop(settings.AlwaysOnTop);
         PlaceIsland();
@@ -467,6 +492,47 @@ internal sealed class AppHost : IDisposable
             _ = SyncProvidersAsync(settings);
         }
     }
+
+    /// <summary>
+    /// New plan usage from Claude Code: show it, keep the day's measured peak for the history, and
+    /// clear the percentage when its window resets.
+    /// </summary>
+    private void OnPlanUsage(PlanUsage? usage)
+    {
+        var connection = ClaudeStatusLineSetup.Inspect(ClaudeStatusLineSetup.SettingsPath());
+        _viewModel.Usage.Claude.SetPlan(usage, connection);
+        if (usage is null)
+        {
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        var day = DateOnly.FromDateTime(usage.MeasuredAt.ToLocalTime().DateTime);
+        try
+        {
+            if (usage.CurrentAt(now) is { } current) _database.RecordPlanPeak(day, AiProviderKind.Claude, "five_hour", current.UsedPercent, usage.MeasuredAt);
+            if (usage.WeeklyAt(now) is { } weekly) _database.RecordPlanPeak(day, AiProviderKind.Claude, "seven_day", weekly.UsedPercent, usage.MeasuredAt);
+        }
+        catch (Exception ex)
+        {
+            Log.Debug("plan", "Plan peak not recorded", new { error = ex.GetType().Name });
+        }
+
+        RequestHistoryReload();
+        var next = new[] { usage.CurrentAt(now)?.ResetsAt, usage.WeeklyAt(now)?.ResetsAt }.Where(r => r is not null).Min();
+        _planReset?.Stop();
+        if (next is { } reset && reset - now < TimeSpan.FromDays(8))
+        {
+            _planReset ??= _dispatcher.CreateTimer();
+            _planReset.IsRepeating = false;
+            _planReset.Interval = reset - now + TimeSpan.FromSeconds(1);
+            _planReset.Tick -= OnPlanReset;
+            _planReset.Tick += OnPlanReset;
+            _planReset.Start();
+        }
+    }
+
+    private void OnPlanReset(DispatcherQueueTimer sender, object args) => _viewModel.Usage.Claude.RefreshPlanClock();
 
     /// <summary>Enabled favorites, in tab order, feature in the compact island.</summary>
     private void ApplyFavorites(AppSettings settings)
@@ -763,6 +829,11 @@ internal sealed class AppHost : IDisposable
             var days = UsageViewModel.HistoryWeeks * 7 + todayRow + 1;
             var history = await Task.Run(() => _history.GetHistory(days));
             _viewModel.Usage.SetHistory(history);
+            if (history.Count > 0)
+            {
+                var peaks = await Task.Run(() => _database.GetPlanPeaks(AiProviderKind.Claude, history[0].Day, history[^1].Day));
+                _viewModel.Usage.SetPlanPeaks(peaks);
+            }
         }
         catch (Exception ex)
         {

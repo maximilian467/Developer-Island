@@ -276,6 +276,25 @@
                             <StackPanel x:Name="ModuleRows" AutomationProperties.Name="Modules" />
                         </Border>
 
+                        <TextBlock Text="Claude plan usage" Style="{StaticResource SettingsGroupLabelStyle}" Margin="4,20,0,4" />
+                        <Border Style="{StaticResource SettingsCardStyle}">
+                            <Grid Style="{StaticResource SettingsRowStyle}" ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="PlanStatusTitle" Text="Not connected" Style="{StaticResource SettingsRowTitleStyle}" />
+                                    <TextBlock x:Name="PlanStatusText" Style="{StaticResource SettingsRowDescriptionStyle}"
+                                               Text="Shows your current and weekly Claude plan usage. Developer Island becomes Claude Code's status line, which Claude Code uses to hand over these two percentages. Nothing else is read or sent." />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <Button x:Name="PlanConnectButton" Content="Connect" Click="OnConnectPlan" />
+                                    <Button x:Name="PlanDisconnectButton" Content="Disconnect" Click="OnDisconnectPlan" Visibility="Collapsed" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
                         <TextBlock Text="Git repositories" Style="{StaticResource SettingsGroupLabelStyle}" Margin="4,20,0,4" />
                         <Border Style="{StaticResource SettingsCardStyle}">
                             <StackPanel>

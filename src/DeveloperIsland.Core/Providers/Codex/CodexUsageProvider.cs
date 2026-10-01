@@ -14,6 +14,7 @@ public sealed class CodexUsageProvider : LogFileUsageProvider
     private static readonly double[] Thresholds = [50, 75, 90];
     private readonly object _limitGate = new();
     private CodexRateLimit? _limit;
+    private CodexRateLimit? _weekly;
     private double _lastAnnounced = -1;
     private bool _scanCompleted;
     private ITimer? _resetTimer;
@@ -70,6 +71,11 @@ public sealed class CodexUsageProvider : LogFileUsageProvider
             UpdateLimit(limit);
         }
 
+        if (parser.LastWeeklyRateLimit is { } weekly)
+        {
+            UpdateWeekly(weekly);
+        }
+
         return new ParseResult(newOffset, JsonSerializer.Serialize(parser.State, CoreJsonContext.Default.CodexFileState));
     }
 
@@ -80,6 +86,7 @@ public sealed class CodexUsageProvider : LogFileUsageProvider
             var state = cursor.State is null ? null : JsonSerializer.Deserialize(cursor.State, CoreJsonContext.Default.CodexFileState);
             if (state is not { Version: 1 }) return false;
             if (state.LastRateLimit is { } limit) UpdateLimit(limit);
+            if (state.LastWeeklyRateLimit is { } weekly) UpdateWeekly(weekly);
             return true;
         }
         catch (JsonException)
@@ -109,9 +116,11 @@ public sealed class CodexUsageProvider : LogFileUsageProvider
     protected override AiUsageSnapshot Enrich(AiUsageSnapshot snapshot)
     {
         CodexRateLimit? limit;
+        CodexRateLimit? weeklyLimit;
         lock (_limitGate)
         {
             limit = _limit;
+            weeklyLimit = _weekly;
             var now = Time.GetUtcNow();
             _resetTimer?.Dispose();
             _resetTimer = null;
@@ -122,6 +131,16 @@ public sealed class CodexUsageProvider : LogFileUsageProvider
                 due = due > TimeSpan.FromDays(30) ? TimeSpan.FromDays(30) : due;
                 _resetTimer = Time.CreateTimer(_ => RefreshSnapshot(), null, due, Timeout.InfiniteTimeSpan);
             }
+        }
+
+        // The weekly window, like the primary one, only while it has not reset.
+        if (weeklyLimit is not null && (weeklyLimit.ResetsAt is not { } weeklyReset || weeklyReset > Time.GetUtcNow()))
+        {
+            snapshot = snapshot with
+            {
+                WeeklyLimitPercent = weeklyLimit.UsedPercent,
+                WeeklyLimitResetsAt = weeklyLimit.ResetsAt,
+            };
         }
 
         // A reading from a window that has already reset says nothing about the current window.
@@ -136,6 +155,17 @@ public sealed class CodexUsageProvider : LogFileUsageProvider
             LimitWindowMinutes = limit.WindowMinutes,
             LimitResetsAt = limit.ResetsAt,
         };
+    }
+
+    private void UpdateWeekly(CodexRateLimit weekly)
+    {
+        lock (_limitGate)
+        {
+            if (_weekly is null || weekly.ObservedAt >= _weekly.ObservedAt)
+            {
+                _weekly = weekly;
+            }
+        }
     }
 
     private void UpdateLimit(CodexRateLimit limit)

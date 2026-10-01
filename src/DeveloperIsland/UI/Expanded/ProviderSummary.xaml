@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Today's usage of one AI tool. No card: grouping comes from spacing (Taste 4.4).
-    Headline = fresh tokens; the breakdown names every recorded category (see TokenCounts).
+    Plan usage first (Claude: reported by Claude Code; Codex: its local limit records), then today's
+    local usage: headline = fresh tokens; the breakdown names every recorded category (see TokenCounts).
 -->
 <UserControl
     x:Class="DeveloperIsland.UI.Expanded.ProviderSummary"
@@ -35,7 +36,48 @@
         </Grid>
 
         <StackPanel Visibility="{x:Bind ViewModel.IsReady, Mode=OneWay}" Spacing="2">
-            <StackPanel Orientation="Horizontal" Spacing="5">
+            <!-- Plan usage -->
+            <Grid Margin="0,6,0,0" MinHeight="22">
+                <TextBlock Text="Plan usage" Style="{StaticResource FineTextStyle}" VerticalAlignment="Center" />
+                <Border HorizontalAlignment="Right" CornerRadius="10" Padding="2" Background="{StaticResource SurfaceRaisedBrush}"
+                        Visibility="{x:Bind ViewModel.HasBothPlanWindows, Mode=OneWay}">
+                    <StackPanel Orientation="Horizontal" AutomationProperties.Name="Plan window">
+                        <Button x:Name="CurrentButton" Style="{StaticResource IslandSegmentButtonStyle}" Content="Current" Click="OnShowCurrent" />
+                        <Button x:Name="WeeklyButton" Style="{StaticResource IslandSegmentButtonStyle}" Content="Weekly" Click="OnShowWeekly" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+            <StackPanel Visibility="{x:Bind ViewModel.HasPlan, Mode=OneWay}" Spacing="2">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                    <TextBlock Text="{x:Bind ViewModel.PlanPercentText, Mode=OneWay}" Style="{StaticResource FigureTextStyle}" />
+                    <TextBlock Text="{x:Bind ViewModel.PlanWindowName, Mode=OneWay}" Style="{StaticResource BodyTextStyle}" VerticalAlignment="Bottom" Margin="0,0,0,5" />
+                </StackPanel>
+                <Grid Height="3" Margin="0,2,0,0" CornerRadius="1.5" Background="{StaticResource ProgressTrackBrush}">
+                    <Rectangle Fill="{StaticResource AccentBrush}" RadiusX="1.5" RadiusY="1.5" RenderTransformOrigin="0,0.5">
+                        <Rectangle.RenderTransform>
+                            <ScaleTransform ScaleX="{x:Bind ViewModel.PlanFraction, Mode=OneWay}" />
+                        </Rectangle.RenderTransform>
+                    </Rectangle>
+                </Grid>
+                <TextBlock Text="{x:Bind ViewModel.PlanResetText, Mode=OneWay}" Style="{StaticResource FineTextStyle}" Margin="0,2,0,0" />
+            </StackPanel>
+            <StackPanel Visibility="{x:Bind ViewModel.HasNoPlan, Mode=OneWay}" Spacing="2">
+                <TextBlock Text="Unavailable" Style="{StaticResource LabelTextStyle}" Foreground="{StaticResource TextSecondaryBrush}" />
+                <TextBlock Text="{x:Bind ViewModel.PlanUnavailableReason, Mode=OneWay}" Style="{StaticResource FineTextStyle}"
+                           TextWrapping="Wrap" TextTrimming="None" MaxLines="2" MaxWidth="180" HorizontalAlignment="Left" />
+                <Button Style="{StaticResource IslandPillButtonStyle}" Height="26" MinWidth="0" Padding="12,0" FontSize="12" Margin="0,4,0,0"
+                        Content="Connect…" Click="OnConnectPlan" Visibility="{x:Bind ViewModel.CanConnectPlan, Mode=OneWay}"
+                        AutomationProperties.Name="Connect Claude plan usage in Settings" />
+            </StackPanel>
+
+            <!-- Local usage today -->
+            <TextBlock Text="Today on this PC" Style="{StaticResource FineTextStyle}" Margin="0,12,0,0" />
+            <StackPanel Orientation="Horizontal" Spacing="5" Background="Transparent" ToolTipService.Placement="Bottom">
+                <ToolTipService.ToolTip>
+                    <ToolTip>
+                        <TextBlock Text="{x:Bind ViewModel.DetailSummary, Mode=OneWay}" FontFamily="{StaticResource TextFont}" FontSize="12" TextWrapping="Wrap" />
+                    </ToolTip>
+                </ToolTipService.ToolTip>
                 <TextBlock Text="{x:Bind ViewModel.TokensText, Mode=OneWay}" Style="{StaticResource FigureTextStyle}" />
                 <TextBlock Text="{x:Bind ViewModel.TokensUnit, Mode=OneWay}" Style="{StaticResource BodyTextStyle}" VerticalAlignment="Bottom" Margin="0,0,0,5" />
             </StackPanel>

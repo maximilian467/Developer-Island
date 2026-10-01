@@ -8,6 +8,12 @@ public static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        // Claude Code status line bridge: no UI, no single-instance check, done in milliseconds.
+        if (StatusLineBridge.IsRequested(args))
+        {
+            return StatusLineBridge.Run();
+        }
+
         var options = AppOptions.Parse(args);
 
         // One island per user session. A second launch (Start menu, installer "Launch") shows the

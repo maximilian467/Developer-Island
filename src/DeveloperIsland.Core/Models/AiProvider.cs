@@ -73,6 +73,11 @@ public sealed record AiUsageSnapshot
 
     public DateTimeOffset? LimitResetsAt { get; init; }
 
+    /// <summary>The weekly window (Codex records it locally; Claude's comes through PlanUsage).</summary>
+    public double? WeeklyLimitPercent { get; init; }
+
+    public DateTimeOffset? WeeklyLimitResetsAt { get; init; }
+
     public string? ErrorMessage { get; init; }
 
     public static AiUsageSnapshot Initial(AiProviderKind provider) => new() { Provider = provider };

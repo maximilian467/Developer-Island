@@ -83,6 +83,18 @@ public sealed class UsageDatabase : IDisposable
         );
         CREATE INDEX ix_focus_sessions_day ON focus_sessions (day);
         """,
+
+        // 2: the highest plan usage actually reported per day and window (never computed or backfilled).
+        """
+        CREATE TABLE plan_usage_peaks (
+            day          TEXT    NOT NULL,
+            provider     INTEGER NOT NULL,
+            window       TEXT    NOT NULL,
+            peak_percent REAL    NOT NULL,
+            measured_ms  INTEGER NOT NULL,
+            PRIMARY KEY (day, provider, window)
+        ) WITHOUT ROWID;
+        """,
     ];
 
     private readonly SqliteConnection _connection;
@@ -287,6 +299,55 @@ public sealed class UsageDatabase : IDisposable
             }
 
             return list;
+        }
+    }
+
+    /// <summary>Keeps the highest reported plan usage of a day and window ("five_hour", "seven_day").</summary>
+    public void RecordPlanPeak(DateOnly day, AiProviderKind provider, string window, double percent, DateTimeOffset measuredAt)
+    {
+        lock (_gate)
+        {
+            using var cmd = _connection.CreateCommand();
+            cmd.CommandText = """
+                INSERT INTO plan_usage_peaks (day, provider, window, peak_percent, measured_ms)
+                VALUES ($day, $provider, $window, $percent, $ms)
+                ON CONFLICT (day, provider, window) DO UPDATE SET
+                    peak_percent = MAX(peak_percent, excluded.peak_percent),
+                    measured_ms = excluded.measured_ms;
+                """;
+            cmd.Parameters.AddWithValue("$day", FormatDay(day));
+            cmd.Parameters.AddWithValue("$provider", (int)provider);
+            cmd.Parameters.AddWithValue("$window", window);
+            cmd.Parameters.AddWithValue("$percent", percent);
+            cmd.Parameters.AddWithValue("$ms", measuredAt.ToUnixTimeMilliseconds());
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    /// <summary>Recorded plan peaks per day for one provider: day to (window to percent).</summary>
+    public IReadOnlyDictionary<DateOnly, IReadOnlyDictionary<string, double>> GetPlanPeaks(AiProviderKind provider, DateOnly from, DateOnly to)
+    {
+        lock (_gate)
+        {
+            using var cmd = _connection.CreateCommand();
+            cmd.CommandText = "SELECT day, window, peak_percent FROM plan_usage_peaks WHERE provider = $provider AND day >= $from AND day <= $to;";
+            cmd.Parameters.AddWithValue("$provider", (int)provider);
+            cmd.Parameters.AddWithValue("$from", FormatDay(from));
+            cmd.Parameters.AddWithValue("$to", FormatDay(to));
+            using var reader = cmd.ExecuteReader();
+            var result = new Dictionary<DateOnly, Dictionary<string, double>>();
+            while (reader.Read())
+            {
+                var day = ParseDay(reader.GetString(0));
+                if (!result.TryGetValue(day, out var windows))
+                {
+                    result[day] = windows = new Dictionary<string, double>(StringComparer.Ordinal);
+                }
+
+                windows[reader.GetString(1)] = reader.GetDouble(2);
+            }
+
+            return result.ToDictionary(kv => kv.Key, kv => (IReadOnlyDictionary<string, double>)kv.Value);
         }
     }
 

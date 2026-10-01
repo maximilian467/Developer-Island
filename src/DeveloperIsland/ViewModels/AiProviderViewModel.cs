@@ -1,5 +1,7 @@
+using System.Globalization;
 using DeveloperIsland.Core.Formatting;
 using DeveloperIsland.Core.Models;
+using DeveloperIsland.Core.Plan;
 
 namespace DeveloperIsland.ViewModels;
 
@@ -9,6 +11,9 @@ public sealed class AiProviderViewModel : ObservableObject
     private AiUsageSnapshot _snapshot;
     private bool _isEnabled = true;
     private bool _isFavorite;
+    private PlanUsage? _plan;
+    private PlanConnection _planConnection = PlanConnection.NotConnected;
+    private bool _showWeekly;
 
     public AiProviderViewModel(AiProviderKind kind)
     {
@@ -58,6 +63,11 @@ public sealed class AiProviderViewModel : ObservableObject
 
     public void RequestFavoriteToggle() => FavoriteToggleRequested?.Invoke(this);
 
+    /// <summary>"Connect…" under an unavailable plan: open the place in Settings that connects it.</summary>
+    public event Action? ConnectPlanRequested;
+
+    public void RequestConnectPlan() => ConnectPlanRequested?.Invoke();
+
     public ProviderState State => _isEnabled ? _snapshot.State : ProviderState.Disabled;
 
     public bool IsReady => State == ProviderState.Ready;
@@ -78,9 +88,14 @@ public sealed class AiProviderViewModel : ObservableObject
     /// <summary>Whether the provider earns a place in the compact capsule.</summary>
     public bool IsWorthShowingCompact => IsReady && (_snapshot.Today.Processed > 0 || HasLimit || _snapshot.IsActive);
 
-    /// <summary>"68%" when the tool reports its limit locally, otherwise today's fresh tokens (see TokenCounts).</summary>
+    /// <summary>
+    /// "72%" when the plan's current window is known (Claude: reported by Claude Code; Codex: its
+    /// local rate-limit record), otherwise today's fresh tokens (see TokenCounts). Never a percentage
+    /// derived from token counts.
+    /// </summary>
     public string CompactValue => State switch
     {
+        ProviderState.Ready when CurrentWindow is { } w => $"{Math.Round(w.UsedPercent):0}%",
         ProviderState.Ready when _snapshot.LimitPercent is { } p => $"{Math.Round(p):0}%",
         ProviderState.Ready => DisplayFormat.Tokens(_snapshot.Today.Fresh),
         ProviderState.Error => "Error",
@@ -119,7 +134,168 @@ public sealed class AiProviderViewModel : ObservableObject
 
     public string ValueText => _snapshot.ApiValueEur is { } value ? DisplayFormat.Euro(value) : "Unavailable";
 
-    public string ValueCaption => _snapshot.ApiValuePartial ? "estimated API equivalent, partly priced" : "estimated API equivalent";
+    public string ValueCaption => _snapshot.ApiValuePartial ? "estimated API equivalent today, partly priced" : "estimated API equivalent today";
+
+    // Plan usage --------------------------------------------------------------------------------------
+    // Claude: the 5-hour and 7-day windows Claude Code reports to its status line. Codex: the windows
+    // recorded in its own logs. Shown only when measured; otherwise "Unavailable".
+
+    /// <summary>The current (5-hour) window, while it has not reset.</summary>
+    public PlanWindow? CurrentWindow => Kind == AiProviderKind.Claude
+        ? _plan?.CurrentAt(DateTimeOffset.UtcNow)
+        : _snapshot.LimitPercent is { } p && (_snapshot.LimitResetsAt is not { } r || r > DateTimeOffset.UtcNow)
+            ? new PlanWindow(p, _snapshot.LimitResetsAt ?? DateTimeOffset.MaxValue)
+            : null;
+
+    /// <summary>The weekly (7-day) window, while it has not reset.</summary>
+    public PlanWindow? WeeklyWindow => Kind == AiProviderKind.Claude
+        ? _plan?.WeeklyAt(DateTimeOffset.UtcNow)
+        : _snapshot.WeeklyLimitPercent is { } p && (_snapshot.WeeklyLimitResetsAt is not { } r || r > DateTimeOffset.UtcNow)
+            ? new PlanWindow(p, _snapshot.WeeklyLimitResetsAt ?? DateTimeOffset.MaxValue)
+            : null;
+
+    public bool HasPlan => IsReady && (CurrentWindow is not null || WeeklyWindow is not null);
+
+    public bool HasNoPlan => IsReady && !HasPlan;
+
+    /// <summary>Both windows are known: offer the Current / Weekly switch.</summary>
+    public bool HasBothPlanWindows => IsReady && CurrentWindow is not null && WeeklyWindow is not null;
+
+    public bool ShowWeekly
+    {
+        get => _showWeekly && WeeklyWindow is not null || CurrentWindow is null && WeeklyWindow is not null;
+        set
+        {
+            if (_showWeekly != value)
+            {
+                _showWeekly = value;
+                OnPlanChanged();
+            }
+        }
+    }
+
+    public bool ShowCurrent => !ShowWeekly;
+
+    private PlanWindow? ShownWindow => ShowWeekly ? WeeklyWindow : CurrentWindow;
+
+    public string PlanPercentText => ShownWindow is { } w ? $"{Math.Round(w.UsedPercent):0}%" : "Unavailable";
+
+    public double PlanFraction => ShownWindow is { } w ? Math.Clamp(w.UsedPercent / 100, 0, 1) : 0;
+
+    public string PlanWindowName => ShowWeekly ? "Weekly" : "Current";
+
+    public string PlanResetText => ShownWindow is { } w && w.ResetsAt != DateTimeOffset.MaxValue ? ResetText(w.ResetsAt, DateTimeOffset.UtcNow) : string.Empty;
+
+    /// <summary>Why plan usage is missing, in one short line.</summary>
+    public string PlanUnavailableReason => Kind == AiProviderKind.Claude
+        ? _planConnection switch
+        {
+            PlanConnection.Connected when _plan is not null => "Window reset; updates with your next Claude Code reply.",
+            PlanConnection.Connected => "Appears after your next Claude Code reply (subscribers only).",
+            PlanConnection.OtherStatusLine => "Claude Code already runs another status line.",
+            _ => "Connect Claude Code in Settings, Modules.",
+        }
+        : "Codex has not recorded a limit yet.";
+
+    public bool CanConnectPlan => Kind == AiProviderKind.Claude && HasNoPlan && _planConnection == PlanConnection.NotConnected;
+
+    /// <summary>"Reset in 2 h 14 min" within a day, else the weekday ("Resets Monday").</summary>
+    public static string ResetText(DateTimeOffset resetsAt, DateTimeOffset now)
+    {
+        var left = resetsAt - now;
+        if (left <= TimeSpan.Zero)
+        {
+            return "Reset";
+        }
+
+        if (left < TimeSpan.FromHours(24))
+        {
+            var hours = (int)left.TotalHours;
+            var minutes = Math.Max(1, (int)Math.Ceiling(left.TotalMinutes - hours * 60));
+            if (minutes == 60)
+            {
+                hours++;
+                minutes = 0;
+            }
+
+            return hours == 0 ? $"Resets in {minutes}{DisplayFormat.Nbsp}min"
+                : minutes == 0 ? $"Resets in {hours}{DisplayFormat.Nbsp}h"
+                : $"Resets in {hours}{DisplayFormat.Nbsp}h {minutes}{DisplayFormat.Nbsp}min";
+        }
+
+        var local = resetsAt.ToLocalTime();
+        return $"Resets {local.ToString("dddd", CultureInfo.CurrentCulture)}";
+    }
+
+    /// <summary>New plan usage from Claude Code (Claude only).</summary>
+    public void SetPlan(PlanUsage? plan, PlanConnection connection)
+    {
+        _plan = plan;
+        _planConnection = connection;
+        OnPlanChanged();
+    }
+
+    /// <summary>Re-evaluates reset countdowns and expired windows (time passed).</summary>
+    public void RefreshPlanClock() => OnPlanChanged();
+
+    private void OnPlanChanged()
+    {
+        foreach (var name in new[]
+        {
+            nameof(CurrentWindow), nameof(WeeklyWindow), nameof(HasPlan), nameof(HasNoPlan), nameof(HasBothPlanWindows),
+            nameof(ShowWeekly), nameof(ShowCurrent), nameof(PlanPercentText), nameof(PlanFraction), nameof(PlanWindowName),
+            nameof(PlanResetText), nameof(PlanUnavailableReason), nameof(CanConnectPlan), nameof(CompactValue),
+            nameof(CompactPrimaryValue), nameof(CompactAccessibleText), nameof(DetailSummary),
+        })
+        {
+            OnPropertyChanged(name);
+        }
+    }
+
+    // Exact detail (tooltip on the headline) ------------------------------------------------------------
+
+    /// <summary>Every recorded figure of today with exact counts, for the hover detail.</summary>
+    public string DetailSummary
+    {
+        get
+        {
+            if (!IsReady)
+            {
+                return StatusText;
+            }
+
+            var t = _snapshot.Today;
+            string N(long v) => v.ToString("N0", CultureInfo.CurrentCulture);
+            var lines = new List<string>
+            {
+                $"Today: {N(t.Fresh)} fresh tokens",
+            };
+            if (CurrentWindow is { } current)
+            {
+                lines.Add($"Plan, current: {Math.Round(current.UsedPercent):0}%{(PlanResetLine(current))}");
+            }
+
+            if (WeeklyWindow is { } weekly)
+            {
+                lines.Add($"Plan, weekly: {Math.Round(weekly.UsedPercent):0}%{(PlanResetLine(weekly))}");
+            }
+
+            lines.Add(string.Empty);
+            lines.Add($"Input            {N(t.Input)}");
+            lines.Add($"Cache write   {N(t.CacheWrite)}");
+            lines.Add($"Output          {N(t.Output)}");
+            lines.Add($"Cache read    {N(t.CacheRead)}");
+            lines.Add($"Processed     {N(t.Processed)}");
+            lines.Add($"Sessions       {_snapshot.SessionsToday.ToString(CultureInfo.CurrentCulture)}");
+            lines.Add(string.Empty);
+            lines.Add($"Estimated API equivalent today: {ValueText}{(_snapshot.ApiValuePartial ? " (partly priced)" : string.Empty)}");
+            lines.Add("An estimate at list prices, not what you pay.");
+            return string.Join(Environment.NewLine, lines);
+        }
+    }
+
+    private static string PlanResetLine(PlanWindow window) =>
+        window.ResetsAt == DateTimeOffset.MaxValue ? string.Empty : $", {ResetText(window.ResetsAt, DateTimeOffset.UtcNow).ToLowerInvariant()}";
 
     /// <summary>Limit usage when known, otherwise sessions.</summary>
     public string DetailText
@@ -178,4 +354,7 @@ public sealed class AiProviderViewModel : ObservableObject
         _snapshot = snapshot;
         OnAllPropertiesChanged();
     }
+
+    /// <summary>The plan windows for the usage history readout (Codex plan data comes with the snapshot).</summary>
+    public PlanUsage? Plan => _plan;
 }

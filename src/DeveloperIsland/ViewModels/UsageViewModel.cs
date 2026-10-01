@@ -7,6 +7,7 @@ namespace DeveloperIsland.ViewModels;
 /// <summary>AI usage for today plus the contribution-style history graph.</summary>
 public sealed class UsageViewModel : ObservableObject
 {
+    private IReadOnlyDictionary<DateOnly, IReadOnlyDictionary<string, double>> _planPeaks = new Dictionary<DateOnly, IReadOnlyDictionary<string, double>>();
     public const int HistoryWeeks = 26;
 
     private IReadOnlyList<UsageDay> _days = [];
@@ -70,13 +71,35 @@ public sealed class UsageViewModel : ObservableObject
         }
     }
 
+    /// <summary>"Claude plan peak 72% (5 h), 41% (week)" for days on which Claude Code reported plan usage.</summary>
+    public string InspectedPlan
+    {
+        get
+        {
+            if (!IsInspecting || !_planPeaks.TryGetValue(_days[_inspectedIndex].Day, out var windows))
+            {
+                return string.Empty;
+            }
+
+            var parts = new List<string>();
+            if (windows.TryGetValue("five_hour", out var current)) parts.Add($"{Math.Round(current):0}% (5 h)");
+            if (windows.TryGetValue("seven_day", out var weekly)) parts.Add($"{Math.Round(weekly):0}% (week)");
+            return parts.Count == 0 ? string.Empty : "Claude plan peak " + string.Join(", ", parts);
+        }
+    }
+
+    public bool HasInspectedPlan => InspectedPlan.Length > 0;
+
+    /// <summary>The readout grows by one line once plan usage has ever been measured (no jump per day).</summary>
+    public double ReadoutHeight => _planPeaks.Count > 0 ? 52 : 36;
+
     public string InspectedValue => !IsInspecting ? string.Empty
         : _days[_inspectedIndex].ApiValuePartial ? "Unavailable"
         : DisplayFormat.Euro(_days[_inspectedIndex].TotalApiValueEur);
 
     /// <summary>Spoken description of the inspected day.</summary>
     public string InspectedAccessibleText => IsInspecting
-        ? $"{InspectedDate}: Claude {InspectedClaude} fresh tokens, Codex {InspectedCodex} fresh tokens, estimated API equivalent {InspectedValue}. {InspectedDetail}"
+        ? $"{InspectedDate}: Claude {InspectedClaude} fresh tokens, Codex {InspectedCodex} fresh tokens, estimated API equivalent {InspectedValue}. {InspectedDetail}{(HasInspectedPlan ? ". " + InspectedPlan : string.Empty)}"
         : "Usage history, last 26 weeks. Use the arrow keys to inspect a day.";
 
     public string HistorySummary
@@ -128,6 +151,15 @@ public sealed class UsageViewModel : ObservableObject
 
             return any ? $"{DisplayFormat.Euro(total)} estimated API equivalent today" : "Claude Code and Codex usage appears here";
         }
+    }
+
+    /// <summary>Plan usage peaks that were actually measured, per day (never backfilled).</summary>
+    public void SetPlanPeaks(IReadOnlyDictionary<DateOnly, IReadOnlyDictionary<string, double>> peaks)
+    {
+        _planPeaks = peaks;
+        OnPropertyChanged(nameof(ReadoutHeight));
+        OnPropertyChanged(nameof(InspectedPlan));
+        OnPropertyChanged(nameof(HasInspectedPlan));
     }
 
     public void SetHistory(IReadOnlyList<UsageDay> days)
