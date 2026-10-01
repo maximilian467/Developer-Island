@@ -142,7 +142,12 @@ public sealed class IslandStateMachine : IDisposable
         }
     }
 
-    /// <summary>ActiveAppChanged: a resting island moves at once; an open one keeps what the user is looking at.</summary>
+    /// <summary>
+    /// ActiveAppChanged. Priority (highest first): Dragging, auto-hide, Expanded, Medium (hover or
+    /// event), Compact. Retracting or hiding therefore closes an open activity or expanded island at
+    /// once, whatever module it shows; returning to Compact moves only a resting island (an open one
+    /// keeps what the user is looking at). During a drag the change waits for the drag to end.
+    /// </summary>
     public void SetRest(RestMode rest)
     {
         if (_rest == rest)
@@ -150,9 +155,15 @@ public sealed class IslandStateMachine : IDisposable
             return;
         }
 
-        var wasResting = Mode is IslandMode.Compact or IslandMode.Retracted or IslandMode.Hidden && !_forcedHidden;
         _rest = rest;
-        if (wasResting && !IsDragging)
+        if (IsDragging || _forcedHidden)
+        {
+            return;
+        }
+
+        var resting = Mode is IslandMode.Compact or IslandMode.Retracted or IslandMode.Hidden;
+        var stepsAside = rest is RestMode.Retracted or RestMode.Hidden;
+        if (resting || (stepsAside && Mode is IslandMode.Activity or IslandMode.Expanded))
         {
             CancelTimer();
             SetMode(RestingMode, ActivitySource.None);
@@ -273,7 +284,12 @@ public sealed class IslandStateMachine : IDisposable
         }
 
         IsDragging = false;
-        if (Mode == IslandMode.Activity)
+        if (Mode is IslandMode.Compact or IslandMode.Retracted or IslandMode.Hidden && !_forcedHidden && Mode != RestingMode)
+        {
+            // The foreground app changed during the drag.
+            SetMode(RestingMode, ActivitySource.None);
+        }
+        else if (Mode == IslandMode.Activity)
         {
             Schedule(MinimumAfterHover, CollapseIfIdle);
         }

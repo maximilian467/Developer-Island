@@ -21,7 +21,8 @@ public static class SmartHidePolicy
     /// <summary>A custom position this far below the top edge no longer covers tabs.</summary>
     public const double MaxTopOffset = 24;
 
-    public static RestMode Decide(AppSettings settings, IslandAnchor anchor, double offsetY, ForegroundInfo? foreground)
+    /// <param name="privacyActive">Camera or microphone in use: a full hide becomes the notch, so the indicator stays visible.</param>
+    public static RestMode Decide(AppSettings settings, IslandAnchor anchor, double offsetY, ForegroundInfo? foreground, bool privacyActive = false)
     {
         if (!settings.SmartHideEnabled || anchor != IslandAnchor.TopCenter || offsetY > MaxTopOffset || foreground is null)
         {
@@ -36,7 +37,7 @@ public static class SmartHidePolicy
             return RestMode.Compact;
         }
 
-        return settings.SmartHideBehavior == SmartHideBehavior.Hide ? RestMode.Hidden : RestMode.Retracted;
+        return settings.SmartHideBehavior == SmartHideBehavior.Hide && !privacyActive ? RestMode.Hidden : RestMode.Retracted;
     }
 
     /// <summary>"C:\...\Chrome.EXE" or "chrome.exe" becomes "chrome".</summary>

@@ -146,16 +146,27 @@ public class IslandRestModeTests
     }
 
     [Fact]
-    public void An_open_island_is_not_yanked_away_when_rest_changes()
+    public void An_auto_hide_app_in_front_retracts_even_an_expanded_island()
     {
+        // Priority: auto-hide outranks Expanded and Medium.
         var island = Create();
         island.Activate();
         island.SetRest(RestMode.Retracted);
 
-        Assert.Equal(IslandMode.Expanded, island.Mode);
-
-        island.Dismiss();
         Assert.Equal(IslandMode.Retracted, island.Mode);
+    }
+
+    [Fact]
+    public void Returning_to_a_normal_app_keeps_an_open_island_open()
+    {
+        var island = Create();
+        island.SetRest(RestMode.Retracted);
+        island.Activate();               // opened from the notch
+        island.SetRest(RestMode.Compact); // the auto-hide app went away
+
+        Assert.Equal(IslandMode.Expanded, island.Mode);
+        island.Dismiss();
+        Assert.Equal(IslandMode.Compact, island.Mode);
     }
 
     [Fact]
