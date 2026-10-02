@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using DeveloperIsland.Core.Diagnostics;
+using DeveloperIsland.Core.Island;
 using DeveloperIsland.Platform.Tray;
 using static DeveloperIsland.Platform.Native.NativeMethods;
 
@@ -9,7 +10,9 @@ namespace DeveloperIsland.Platform.Windowing;
 /// <summary>
 /// Reports whether a fullscreen app (video, game, slideshow) covers the island's monitor, so the
 /// island can step aside. Event-driven: a foreground-change WinEvent hook plus the shell's
-/// ABN_FULLSCREENAPP appbar notification. Nothing polls.
+/// ABN_FULLSCREENAPP appbar notification. Nothing polls. Which windows count is decided by
+/// <see cref="FullscreenPolicy"/>: the shell's Alt+Tab switcher and Task View cover the monitor
+/// too, and must not hide the island on every app switch.
 /// </summary>
 internal sealed partial class FullscreenWatcher : IDisposable
 {
@@ -65,17 +68,20 @@ internal sealed partial class FullscreenWatcher : IDisposable
     {
         if (msg == CallbackMessage && wParam.ToInt64() == ABN_FULLSCREENAPP)
         {
-            Evaluate();
+            Evaluate(IntPtr.Zero);
         }
     }
 
-    private void OnWinEvent(IntPtr hook, uint evt, IntPtr hwnd, int idObject, int idChild, uint thread, uint time) => Evaluate();
+    private void OnWinEvent(IntPtr hook, uint evt, IntPtr hwnd, int idObject, int idChild, uint thread, uint time) => Evaluate(hwnd);
 
-    private void Evaluate()
+    /// <param name="eventWindow">The window the event names: used when Windows reports no foreground
+    /// window for a moment (during a switch), so that moment cannot freeze the last verdict.</param>
+    private void Evaluate(IntPtr eventWindow)
     {
         try
         {
-            var fullscreen = IsFullscreenOnIslandMonitor();
+            var foreground = GetForegroundWindow();
+            var fullscreen = IsFullscreenOnIslandMonitor(foreground != IntPtr.Zero ? foreground : eventWindow);
             if (_last is null && !fullscreen)
             {
                 // First look: nothing to step aside for, and nothing "closed".
@@ -93,57 +99,54 @@ internal sealed partial class FullscreenWatcher : IDisposable
         }
     }
 
-    private bool IsFullscreenOnIslandMonitor()
+    private bool IsFullscreenOnIslandMonitor(IntPtr foreground)
     {
-        var foreground = GetForegroundWindow();
-        if (foreground == IntPtr.Zero || foreground == _island || foreground == _host.Handle)
+        if (foreground == IntPtr.Zero || foreground == _host.Handle)
         {
             return _last ?? false;
         }
 
-        // Our own windows (Settings) never count.
         GetWindowThreadProcessId(foreground, out var pid);
-        if (pid == (uint)Environment.ProcessId)
-        {
-            return _last ?? false;
-        }
-
-        // A maximized window or one with a caption is a normal window, even if the taskbar auto-hides.
-        const long WS_CAPTION = 0x00C00000L;
-        if (IsZoomed(foreground) || (GetWindowLongPtr(foreground, GWL_STYLE).ToInt64() & WS_CAPTION) == WS_CAPTION)
-        {
-            return false;
-        }
-
+        GetWindowThreadProcessId(GetShellWindow(), out var shellPid);
         var className = new StringBuilder(64);
         GetClassName(foreground, className, className.Capacity);
-        var cls = className.ToString();
-        if (cls is "Progman" or "WorkerW" or "Shell_TrayWnd" or "Shell_SecondaryTrayWnd")
-        {
-            return false;
-        }
-
         var monitor = MonitorFromWindow(foreground, MONITOR_DEFAULTTONEAREST);
-        if (monitor != MonitorFromWindow(_island, MONITOR_DEFAULTTONEAREST))
+
+        const long WS_CAPTION = 0x00C00000L;
+        var window = new FrontWindow(
+            className.ToString(),
+            IsOwnProcess: pid == (uint)Environment.ProcessId,
+            IsShellProcess: shellPid != 0 && pid == shellPid,
+            IsVisible: IsWindowVisible(foreground) && !IsCloaked(foreground),
+            IsMaximized: IsZoomed(foreground),
+            HasCaption: (GetWindowLongPtr(foreground, GWL_STYLE).ToInt64() & WS_CAPTION) == WS_CAPTION,
+            IsOnIslandMonitor: monitor == MonitorFromWindow(_island, MONITOR_DEFAULTTONEAREST),
+            CoversMonitor: CoversMonitor(foreground, monitor));
+
+        var fullscreen = FullscreenPolicy.IsFullscreenApp(window);
+        if (fullscreen)
         {
-            return false;
+            Log.Debug("window", "Fullscreen window detected", new { cls = window.ClassName });
         }
 
+        return fullscreen;
+    }
+
+    private static bool CoversMonitor(IntPtr hwnd, IntPtr monitor)
+    {
         var info = new MONITORINFOEX { cbSize = Marshal.SizeOf<MONITORINFOEX>() };
-        if (!GetMonitorInfo(monitor, ref info) || !GetWindowRect(foreground, out var rect))
+        if (!GetMonitorInfo(monitor, ref info) || !GetWindowRect(hwnd, out var rect))
         {
             return false;
         }
 
         var m = info.rcMonitor;
-        var covers = rect.Left <= m.Left && rect.Top <= m.Top && rect.Right >= m.Right && rect.Bottom >= m.Bottom;
-        if (covers)
-        {
-            Log.Debug("window", "Fullscreen window detected", new { cls });
-        }
-
-        return covers;
+        return rect.Left <= m.Left && rect.Top <= m.Top && rect.Right >= m.Right && rect.Bottom >= m.Bottom;
     }
+
+    /// <summary>Cloaked windows are not drawn (another virtual desktop, a suspended app's frame).</summary>
+    private static bool IsCloaked(IntPtr hwnd) =>
+        DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, out var cloaked, sizeof(int)) == 0 && cloaked != 0;
 
     private delegate void WinEventProc(IntPtr hook, uint evt, IntPtr hwnd, int idObject, int idChild, uint thread, uint time);
 
@@ -177,4 +180,16 @@ internal sealed partial class FullscreenWatcher : IDisposable
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetShellWindow();
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowVisible(IntPtr hWnd);
+
+    private const int DWMWA_CLOAKED = 14;
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmGetWindowAttribute(IntPtr hwnd, int attribute, out int value, int size);
 }
