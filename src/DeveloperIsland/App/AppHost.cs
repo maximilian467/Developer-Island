@@ -884,6 +884,7 @@ internal sealed class AppHost : IDisposable
         {
             _settingsWindow = new SettingsWindow(_settings, _options.IsDemo, () => _hotkey?.IsInUse ?? false, _secrets);
             _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+            _settingsWindow.QuitRequested += OnQuitFromSettings;
         }
 
         if (section is not null)
@@ -892,6 +893,16 @@ internal sealed class AppHost : IDisposable
         }
 
         _settingsWindow.ShowAndFocus();
+    }
+
+    /// <summary>
+    /// Settings: Quit Developer Island. Ends the whole app like the tray's Quit (closing Settings or
+    /// hiding the island keep it running). Posted, so the click handler returns before windows close.
+    /// </summary>
+    private void OnQuitFromSettings()
+    {
+        Log.Info("startup", "Quit requested from Settings");
+        _dispatcher.TryEnqueue(() => QuitRequested?.Invoke());
     }
 
     /// <summary>

@@ -130,6 +130,50 @@
                                 </Grid>
                             </StackPanel>
                         </Border>
+
+                        <!-- Quit the whole app. Two steps (button, then Quit in the flyout), so it never happens by accident. -->
+                        <Border Style="{StaticResource SettingsCardStyle}" Margin="0,12,0,0">
+                            <Grid Style="{StaticResource SettingsRowStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                    <TextBlock Text="Quit Developer Island" Style="{StaticResource SettingsRowTitleStyle}" />
+                                    <TextBlock Text="Ends the island, its notification-area icon and all background work. Closing this window or hiding the island keeps it running."
+                                               Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                </StackPanel>
+                                <Button x:Name="QuitButton" Grid.Column="1" Content="Quit…" VerticalAlignment="Center"
+                                        AutomationProperties.Name="Quit Developer Island">
+                                    <Button.Flyout>
+                                        <Flyout x:Name="QuitFlyout" Placement="BottomEdgeAlignedRight">
+                                            <StackPanel Spacing="12" MaxWidth="280">
+                                                <StackPanel Spacing="4">
+                                                    <TextBlock Text="Quit Developer Island?" Style="{StaticResource SettingsRowTitleStyle}" FontWeight="SemiBold" />
+                                                    <TextBlock Text="The island and its tray icon close until you start Developer Island again."
+                                                               Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                                </StackPanel>
+                                                <Button x:Name="ConfirmQuitButton" Content="Quit" HorizontalAlignment="Right" MinWidth="88" Click="OnConfirmQuit"
+                                                        AutomationProperties.Name="Quit Developer Island now">
+                                                    <!-- Destructive action: the system's critical red in both themes. -->
+                                                    <Button.Resources>
+                                                        <SolidColorBrush x:Key="ButtonBackground" Color="#FFC42B1C" />
+                                                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#FFB02719" />
+                                                        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#FF9C2216" />
+                                                        <SolidColorBrush x:Key="ButtonForeground" Color="#FFFFFFFF" />
+                                                        <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#FFFFFFFF" />
+                                                        <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#E6FFFFFF" />
+                                                        <SolidColorBrush x:Key="ButtonBorderBrush" Color="Transparent" />
+                                                        <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="Transparent" />
+                                                        <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="Transparent" />
+                                                    </Button.Resources>
+                                                </Button>
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </Grid>
+                        </Border>
                     </StackPanel>
 
                     <!-- Position -->

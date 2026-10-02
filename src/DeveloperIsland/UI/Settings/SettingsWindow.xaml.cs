@@ -70,6 +70,7 @@ public sealed partial class SettingsWindow : Window
         Root.ActualThemeChanged += (_, _) =>
         {
             ApplyCaptionColors();
+            ApplyFlyoutTheme();
             Select(_selected);
         };
 
@@ -78,6 +79,9 @@ public sealed partial class SettingsWindow : Window
         Select("General");
         SizeAndCenter();
     }
+
+    /// <summary>The user confirmed Quit Developer Island: the host ends the whole app.</summary>
+    public event Action? QuitRequested;
 
     public void ShowAndFocus()
     {
@@ -129,6 +133,19 @@ public sealed partial class SettingsWindow : Window
     {
         Root.RequestedTheme = theme == AppTheme.Dark ? ElementTheme.Dark : ElementTheme.Default;
         ApplyCaptionColors();
+        ApplyFlyoutTheme();
+    }
+
+    /// <summary>A flyout opens in the window's popup layer, outside Root: give it this window's theme.</summary>
+    private void ApplyFlyoutTheme() => QuitFlyout.FlyoutPresenterStyle = new Style(typeof(FlyoutPresenter))
+    {
+        Setters = { new Setter(FrameworkElement.RequestedThemeProperty, Root.ActualTheme) },
+    };
+
+    private void OnConfirmQuit(object sender, RoutedEventArgs e)
+    {
+        QuitFlyout.Hide();
+        QuitRequested?.Invoke();
     }
 
     private void SizeAndCenter()

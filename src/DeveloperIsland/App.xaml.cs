@@ -47,10 +47,25 @@ public partial class App : Application
         _host.Start();
     }
 
+    /// <summary>
+    /// Quit (tray or Settings): stop every service, then end the app. Exit runs even if a service
+    /// fails to stop, so Quit always ends the process; helper tools end with it (HelperProcessJob).
+    /// </summary>
     private void Quit()
     {
-        _host?.Dispose();
-        _host = null;
-        Exit();
+        try
+        {
+            _host?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            Log.Error("app", "Shutdown did not finish cleanly", ex);
+            Log.Flush();
+        }
+        finally
+        {
+            _host = null;
+            Exit();
+        }
     }
 }

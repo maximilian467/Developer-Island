@@ -43,6 +43,7 @@ public static class ProcessRunner
 
         using var process = new Process { StartInfo = info };
         process.Start();
+        HelperProcessJob.Adopt(process); // ends with the app, even if the app quits mid-run
         using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutSource.CancelAfter(timeout ?? TimeSpan.FromSeconds(15));
         try
