@@ -15,8 +15,11 @@ namespace DeveloperIsland.UI.Components;
 
 /// <summary>
 /// Contribution-style usage graph: one column per week, one row per weekday, intensity by quartile.
-/// Pointer hover and arrow keys inspect a day; the readout lives in the panel below the graph,
-/// so nothing pops up outside the island.
+/// Pointer hover, a click or tap, and arrow keys inspect a day; the readout lives in the panel below
+/// the graph, so nothing pops up outside the island.
+/// <para>The cells are not hit-testable; the canvas is, through its transparent background. A
+/// UserControl has no template, so a background set on the control itself is never drawn and
+/// gives no hit-test area: pointer input would go to the scroll viewer behind the graph instead.</para>
 /// </summary>
 public sealed class UsageHeatmap : UserControl
 {
@@ -34,7 +37,7 @@ public sealed class UsageHeatmap : UserControl
         new(Accent),
     ];
 
-    private readonly Canvas _canvas = new();
+    private readonly Canvas _canvas = new() { Background = new SolidColorBrush(Colors.Transparent) };
     private readonly Rectangle _ring;
     private readonly List<Rectangle> _cells = [];
     private readonly List<(int Column, int Row)> _positions = [];
@@ -53,7 +56,6 @@ public sealed class UsageHeatmap : UserControl
         IsTabStop = true;
         UseSystemFocusVisuals = true;
         FocusVisualMargin = new Thickness(-4);
-        Background = new SolidColorBrush(Colors.Transparent);
         _ring = new Rectangle
         {
             Width = CellSize + 4,
@@ -93,9 +95,11 @@ public sealed class UsageHeatmap : UserControl
         AutomationProperties.SetAccessibilityView(_tip, Microsoft.UI.Xaml.Automation.Peers.AccessibilityView.Raw);
 
         PointerMoved += (_, e) => InspectAt(e.GetCurrentPoint(_canvas).Position);
+        PointerPressed += OnPointerPressed;
         PointerExited += (_, _) =>
         {
-            if (FocusState == FocusState.Unfocused)
+            // Arrow-key navigation keeps its day; a day inspected by the pointer ends with it.
+            if (FocusState != FocusState.Keyboard)
             {
                 _viewModel?.Inspect(-1);
             }
@@ -227,6 +231,27 @@ public sealed class UsageHeatmap : UserControl
         Width = _columns * Pitch - Gap;
         Height = 7 * Pitch - Gap;
         UpdateRing();
+    }
+
+    /// <summary>
+    /// A click or tap inspects the day under it (touch and pen have no hover) and takes keyboard
+    /// focus, so the arrow keys continue from that day.
+    /// </summary>
+    private void OnPointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        var point = e.GetCurrentPoint(_canvas);
+        if (_viewModel is null || (point.PointerDeviceType == Microsoft.UI.Input.PointerDeviceType.Mouse && !point.Properties.IsLeftButtonPressed))
+        {
+            return;
+        }
+
+        InspectAt(point.Position);
+        if (_viewModel.IsInspecting)
+        {
+            Focus(FocusState.Pointer);
+        }
+
+        e.Handled = true;
     }
 
     private void InspectAt(Windows.Foundation.Point point)
