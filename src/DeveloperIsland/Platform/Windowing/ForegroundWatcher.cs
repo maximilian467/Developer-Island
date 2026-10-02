@@ -61,6 +61,12 @@ internal sealed class ForegroundWatcher : IDisposable
 
     public ForegroundInfo? Current => _current;
 
+    /// <summary>
+    /// Another app's window came to the front (switch, restore from minimized), whether or not the
+    /// auto-hide decision changes. The island uses it to stay on top of other always-on-top windows.
+    /// </summary>
+    public event Action? Switched;
+
     /// <summary>Re-evaluates now (settings or island monitor changed, or the reconciliation check).</summary>
     public void Refresh() => Evaluate(GetForegroundWindow(), foregroundChanged: true);
 
@@ -101,6 +107,8 @@ internal sealed class ForegroundWatcher : IDisposable
         {
             if (evt is EVENT_SYSTEM_FOREGROUND or EVENT_SYSTEM_MINIMIZEEND)
             {
+                Switched?.Invoke();
+
                 // Events arrive queued: judge the window that is in front now, not the one the event
                 // names, so a late event from a fast switch cannot win over the newest one.
                 var current = GetForegroundWindow();

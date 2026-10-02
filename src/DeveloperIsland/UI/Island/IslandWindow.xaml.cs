@@ -56,6 +56,7 @@ public sealed partial class IslandWindow : Window
     private bool _alwaysOnTop = true;
     private bool _visible;
     private bool _loaded;
+    private bool _exiting;
     private IntPtr _previousForeground;
     private readonly HoverTracker _hover = new();
     private bool _restoreFocusOnCollapse;
@@ -106,6 +107,7 @@ public sealed partial class IslandWindow : Window
         Root.PointerCaptureLost += (_, _) => EndDrag(commit: _dragging);
         Root.KeyDown += OnKeyDown;
         Activated += OnWindowActivated;
+        AppWindow.Closing += OnClosing;
 
         Compact.SizeChanged += OnViewSizeChanged;
         Activity.SizeChanged += OnViewSizeChanged;
@@ -172,6 +174,27 @@ public sealed partial class IslandWindow : Window
     {
         _alwaysOnTop = value;
         IslandWindowChrome.SetAlwaysOnTop(_hwnd, AppWindow, value);
+    }
+
+    /// <summary>
+    /// Another app came to the front: take the top of the always-on-top band back, so an always-on-top
+    /// window of that app (a terminal, a picture-in-picture player) cannot cover the island. Never
+    /// activates the island.
+    /// </summary>
+    public void KeepOnTop()
+    {
+        if (_visible && _alwaysOnTop && !SnapshotMode && !_exiting)
+        {
+            IslandWindowChrome.RaiseAboveTopmost(_hwnd);
+        }
+    }
+
+    /// <summary>The app is quitting: let the window close and release the input hook.</summary>
+    public void PrepareForExit()
+    {
+        _exiting = true;
+        _outsideClicks.Stop();
+        _mediaTicker.Stop();
     }
 
     public void ShowIsland()
@@ -721,6 +744,27 @@ public sealed partial class IslandWindow : Window
         if (args.WindowActivationState == WindowActivationState.Deactivated && _state.Mode == IslandMode.Expanded)
         {
             _restoreFocusOnCollapse = false;
+            _state.Dismiss();
+        }
+    }
+
+    /// <summary>
+    /// The island lives as long as the app. Alt+F4 while it is open (it has keyboard focus then) would
+    /// otherwise destroy the window and leave only the tray icon: it closes the island like Esc instead.
+    /// Quitting goes through <see cref="PrepareForExit"/>.
+    /// </summary>
+    private void OnClosing(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowClosingEventArgs args)
+    {
+        if (_exiting)
+        {
+            return;
+        }
+
+        args.Cancel = true;
+        Log.Debug("island", "Close request kept the island");
+        if (_state.Mode == IslandMode.Expanded)
+        {
+            _restoreFocusOnCollapse = true;
             _state.Dismiss();
         }
     }

@@ -161,6 +161,7 @@ internal sealed class AppHost : IDisposable
             _tray.Add();
             _fullscreen = new FullscreenWatcher(_host, _window.Handle, OnFullscreenChanged);
             _foreground = new ForegroundWatcher(_window.Handle, () => _settings.Current.SmartHideProcesses, info => _autoHide?.ForegroundChanged(info));
+            _foreground.Switched += _window.KeepOnTop;
             _privacy = new Platform.Privacy.PrivacyWatcher(state => _dispatcher.TryEnqueue(() => OnPrivacyChanged(state)));
             _hotkey = new GlobalHotKey(_host);
             _hotkey.Pressed += OnShortcut;
@@ -336,6 +337,7 @@ internal sealed class AppHost : IDisposable
 
     public void Dispose()
     {
+        _window?.PrepareForExit();
         _shutdown.Cancel();
         _providers.Dispose();
         _focusTimer?.Dispose();

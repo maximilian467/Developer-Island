@@ -78,6 +78,14 @@ internal static class IslandWindowChrome
     }
 
     /// <summary>
+    /// Moves an always-on-top window back to the top of the always-on-top band, without activating it.
+    /// Windows orders that band by recency: another app's always-on-top window that comes to the front
+    /// later is drawn above, and stays there until this window claims the top again.
+    /// </summary>
+    public static void RaiseAboveTopmost(IntPtr hwnd) =>
+        SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+
+    /// <summary>
     /// Restricts hit-testing (and drawing) to the given rectangle in window pixels. Everything outside
     /// passes clicks through to the windows below, so the transparent parts never get in the way.
     /// </summary>
