@@ -6,7 +6,7 @@ Developer Island is two projects plus tests:
 |---|---|---|
 | `DeveloperIsland.Core` | `net10.0` | Everything that does not need Windows UI: models, parsers, providers, pricing, SQLite storage, settings, placement math, focus timer, island state machine, module logic (Git, GitHub, calendar, tasks, system, plan usage, favorites), demo data. Fully unit-tested. |
 | `DeveloperIsland` | `net10.0-windows10.0.22621.0`, WinUI 3 | The app: composition root, view models, views, motion, and platform integration (windowing, tray, autostart, media sessions, monitors, hardware sensors, hotkey). |
-| `DeveloperIsland.Tests` | `net10.0`, xUnit v3 | 368 tests against Core, including a real `git` repository and a Windows Credential Manager round trip. |
+| `DeveloperIsland.Tests` | `net10.0`, xUnit v3 | 382 tests against Core, including a real `git` repository and a Windows Credential Manager round trip. |
 
 ## Data flow
 
@@ -82,8 +82,10 @@ The hard parts of a Dynamic-Island-style window on Windows, and how they are sol
 | Windows 11 border lines | The region stays 4 DIP inside the window edge. The active-window border is also suppressed on every activation. |
 | Shadow | `LayerVisual`/`DropShadow` renders opaque on a transparent window, so a pre-rendered nine-grid texture (`Assets/island-shadow.png`) is stretched instead. It needs no offscreen pass per frame. |
 | Focus stealing | `WS_EX_NOACTIVATE` means hover, click and drag never take focus. Expanding activates the window explicitly, and Esc returns focus to the previous window. |
+| Staying on top | The window is always-on-top, but Windows orders that band by recency: another app's always-on-top window that comes to the front later covers it. On every foreground switch (`ForegroundWatcher.Switched`) the island takes the top of the band again with `SetWindowPos(HWND_TOPMOST, SWP_NOACTIVATE)`, which never activates it. |
+| Closing | The island lives as long as the app: a close request (Alt+F4 while it is open) is cancelled and closes the island like Esc. Only Quit (tray or Settings) ends the app; `git` and `gh` run in a kill-on-close job object (`HelperProcessJob`), so a call still running ends with the app. |
 | DPI and multi-monitor | Placement math is pure (`IslandPlacement`) and works in physical pixels per monitor scale. After load and after any DPI change the window is placed again, because Windows rescales windows that move between monitors. |
-| Fullscreen apps | `FullscreenWatcher` combines a foreground WinEvent hook with the shell's `ABN_FULLSCREENAPP` notification. It ignores maximized windows, captioned windows and our own windows. |
+| Fullscreen apps | `FullscreenWatcher` combines a foreground WinEvent hook with the shell's `ABN_FULLSCREENAPP` notification. `FullscreenPolicy` (Core, tested) decides: maximized windows, captioned windows, our own windows and the shell's own surfaces never count. The Alt+Tab switcher and Task View cover the monitor without a caption; counted as fullscreen apps, they hid the island on every app switch. |
 
 `IslandStateMachine` (Core, tested) decides the mode. Its inputs are named (`IslandInput`: PointerEntered, PointerExited, HoverDelayElapsed, Clicked, ClickedOutside, ActiveAppChanged, ModuleEvent, DragStarted, DragEnded) and documented in a transition table in the source.
 

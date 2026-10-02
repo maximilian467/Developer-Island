@@ -6,7 +6,7 @@ What was verified, how, and what is still open. Updated 2026-10-01.
 
 | Area | How |
 |---|---|
-| Unit and integration tests | 368 tests pass (`dotnet test`), including a real `git` repository, a Windows Credential Manager round trip, ICS recurrence across daylight saving and the island state machine's transitions. |
+| Unit and integration tests | 382 tests pass (`dotnet test`), including a real `git` repository, a Windows Credential Manager round trip, ICS recurrence across daylight saving and the island state machine's transitions. |
 | Release build | `tools/build-release.ps1` builds tests, publish, portable zip and installer in a shell whose PATH has no .NET 10 SDK (the script finds it). |
 | Every island state | Rendered offscreen with `--demo --snapshot` (41 renders) and compared with the previous build: compact, peek, activities, notch, each expanded module, the usage-graph tooltip, empty and error states, each featured module, favorite rotation, camera and microphone marks in compact, notch, activity and expanded, every Settings page. |
 | Camera and microphone | `--system-report` reads the consent store on this machine (both "not in use" at the time). The in-use rule and the island behavior (marks in every state, dots in the notch, notch instead of hide, never opening) are covered by tests. |

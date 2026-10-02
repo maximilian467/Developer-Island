@@ -4,6 +4,19 @@ All notable changes to Developer Island are documented here. The format follows 
 
 ## [Unreleased]
 
+### Added
+
+- **Quit Developer Island** in Settings, General: ends the whole app (island, tray icon, background work) after a confirmation. Closing Settings or hiding the island keeps it running.
+
+### Fixed
+
+- The island no longer disappears while switching apps: the Alt+Tab switcher and Task View were taken for fullscreen apps and hid it on every switch.
+- The island stays above other apps' always-on-top windows: it takes the top again whenever another app comes to the front, without taking focus.
+- Alt+F4 on the open island closes it like Esc instead of removing it until the next start.
+- The usage graph reacts to hover, click and tap again; pointer input went to the scroll area behind it.
+- The favorite star sits in the same place on every tab, Usage (Claude Code) included, and is no longer pushed aside or cut off by long names. On Usage it stands for the enabled providers.
+- Git and GitHub CLI calls still running when the app quits end with it.
+
 ## [0.1.0] - 2026-10-01
 
 First public version.
