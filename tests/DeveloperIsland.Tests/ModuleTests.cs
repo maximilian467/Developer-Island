@@ -316,6 +316,41 @@ public class CompactFavoritesTests
     }
 
     [Fact]
+    public void A_single_module_tab_star_toggles_that_module()
+    {
+        Assert.False(TabFavorite.IsFavorite([ModuleId.System], [ModuleId.Music]));
+        AssertToggle(TabFavorite.Toggle([ModuleId.System], [ModuleId.Music]), true, ModuleId.System);
+        AssertToggle(TabFavorite.Toggle([ModuleId.System], [ModuleId.System, ModuleId.Music]), false, ModuleId.System);
+    }
+
+    [Fact]
+    public void The_usage_star_with_one_provider_is_that_providers_star()
+    {
+        // Claude Code only (Codex off): the star features Claude, like any other tab.
+        AssertToggle(TabFavorite.Toggle([ModuleId.Claude], []), true, ModuleId.Claude);
+        Assert.True(TabFavorite.IsFavorite([ModuleId.Claude], [ModuleId.Claude]));
+    }
+
+    [Fact]
+    public void The_usage_star_with_both_providers_features_and_clears_both()
+    {
+        IReadOnlyList<ModuleId> usage = [ModuleId.Claude, ModuleId.Codex];
+
+        AssertToggle(TabFavorite.Toggle(usage, [ModuleId.Music]), true, ModuleId.Claude, ModuleId.Codex);
+        AssertToggle(TabFavorite.Toggle(usage, [ModuleId.Claude, ModuleId.Codex]), false, ModuleId.Claude, ModuleId.Codex);
+
+        // A star saved by an earlier version for one provider only: the tab shows filled, and a click clears it.
+        Assert.True(TabFavorite.IsFavorite(usage, [ModuleId.Codex]));
+        AssertToggle(TabFavorite.Toggle(usage, [ModuleId.Codex]), false, ModuleId.Claude, ModuleId.Codex);
+    }
+
+    private static void AssertToggle((IReadOnlyList<ModuleId> Modules, bool Favorite) toggle, bool favorite, params ModuleId[] modules)
+    {
+        Assert.Equal(favorite, toggle.Favorite);
+        Assert.Equal(modules, toggle.Modules);
+    }
+
+    [Fact]
     public void Last_active_module_persists_in_its_own_file()
     {
         var path = Path.Combine(TestData.TempDirectory(), "ui-state.json");

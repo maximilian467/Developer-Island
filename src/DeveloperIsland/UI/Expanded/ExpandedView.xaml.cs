@@ -192,20 +192,20 @@ public sealed partial class ExpandedView : UserControl
     private void OnSettings(object sender, RoutedEventArgs e) => SettingsRequested?.Invoke();
 
     /// <summary>
-    /// The header star features the selected module in the compact island. The Usage tab holds two
-    /// modules, so Claude and Codex carry their own stars instead.
+    /// The header star features the selected tab in the compact island. Every tab has the same star
+    /// in the same place; on Usage it stands for the enabled providers (see <see cref="Core.Modules.TabFavorite"/>).
     /// </summary>
     private void UpdateStar()
     {
-        if (_viewModel is null || !_viewModel.AvailableTabs.Contains(_viewModel.SelectedTab) || _viewModel.SelectedTab == IslandTab.Usage)
+        var tab = _viewModel?.SelectedTab;
+        if (_viewModel is null || tab is not { } selected || !_viewModel.AvailableTabs.Contains(selected))
         {
             StarButton.Visibility = Visibility.Collapsed;
             return;
         }
 
-        var module = IslandViewModel.TabModule(_viewModel.SelectedTab);
-        var favorite = _viewModel.IsFavorite(module);
-        var name = Core.Modules.ModuleCatalog.DisplayName(module);
+        var favorite = _viewModel.IsTabFavorite(selected);
+        var name = string.Join(" and ", _viewModel.FavoriteModulesOf(selected).Select(Core.Modules.ModuleCatalog.DisplayName));
         StarButton.Visibility = Visibility.Visible;
         StarButton.Content = favorite ? "\uE735" : "\uE734";
         StarButton.Foreground = (Brush)Application.Current.Resources[favorite ? "TextPrimaryBrush" : "TextTertiaryBrush"];
@@ -216,9 +216,9 @@ public sealed partial class ExpandedView : UserControl
 
     private void OnStar(object sender, RoutedEventArgs e)
     {
-        if (_viewModel.AvailableTabs.Contains(_viewModel.SelectedTab) && _viewModel.SelectedTab != IslandTab.Usage)
+        if (_viewModel.AvailableTabs.Contains(_viewModel.SelectedTab))
         {
-            _viewModel.ToggleFavorite(IslandViewModel.TabModule(_viewModel.SelectedTab));
+            _viewModel.ToggleTabFavorite(_viewModel.SelectedTab);
         }
     }
 

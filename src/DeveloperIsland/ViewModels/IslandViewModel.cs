@@ -80,8 +80,6 @@ public sealed class IslandViewModel : ObservableObject
                 OnPrimaryChanged(ModuleId.Focus);
             }
         };
-        Usage.Claude.FavoriteToggleRequested += _ => ToggleFavorite(ModuleId.Claude);
-        Usage.Codex.FavoriteToggleRequested += _ => ToggleFavorite(ModuleId.Codex);
         System.PropertyChanged += (_, _) => OnCompactChanged();
         GitHub.PropertyChanged += (_, _) => OnCompactChanged();
     }
@@ -135,8 +133,8 @@ public sealed class IslandViewModel : ObservableObject
 
     // Featured module (favorites, or the module opened last) ----------------------------------------
 
-    /// <summary>Raised when the user stars or unstars a module (the host persists it).</summary>
-    public event Action<ModuleId, bool>? FavoriteChanged;
+    /// <summary>Raised when the user stars or unstars a tab: its modules and their new state (the host persists it).</summary>
+    public event Action<IReadOnlyList<ModuleId>, bool>? FavoriteChanged;
 
     /// <summary>Raised when the user opens a module (the host remembers it).</summary>
     public event Action<ModuleId>? ModuleOpened;
@@ -145,8 +143,6 @@ public sealed class IslandViewModel : ObservableObject
     public event Action? CompactModuleChanged;
 
     public IReadOnlyList<ModuleId> Favorites => _favorites;
-
-    public bool IsFavorite(ModuleId module) => _favorites.Contains(module);
 
     /// <summary>The module the compact island features, or null for the classic summary.</summary>
     public ModuleId? CompactModule => _compactModule;
@@ -204,8 +200,6 @@ public sealed class IslandViewModel : ObservableObject
     public void SetFavorites(IReadOnlyList<ModuleId> favorites)
     {
         _favorites = favorites;
-        Usage.Claude.IsFavorite = favorites.Contains(ModuleId.Claude);
-        Usage.Codex.IsFavorite = favorites.Contains(ModuleId.Codex);
         OnPropertyChanged(nameof(Favorites));
         RefreshCompactModule();
     }
@@ -216,7 +210,22 @@ public sealed class IslandViewModel : ObservableObject
         RefreshCompactModule();
     }
 
-    public void ToggleFavorite(ModuleId module) => FavoriteChanged?.Invoke(module, !IsFavorite(module));
+    /// <summary>The enabled modules a tab shows, which its star stands for (Usage: Claude and Codex).</summary>
+    public IReadOnlyList<ModuleId> FavoriteModulesOf(IslandTab tab) => tab == IslandTab.Usage
+        ? new[] { ModuleId.Claude, ModuleId.Codex }.Where(IsModuleEnabled).ToList()
+        : [TabModule(tab)];
+
+    public bool IsTabFavorite(IslandTab tab) => TabFavorite.IsFavorite(FavoriteModulesOf(tab), _favorites);
+
+    /// <summary>Stars or unstars a tab (see <see cref="TabFavorite"/>).</summary>
+    public void ToggleTabFavorite(IslandTab tab)
+    {
+        var (modules, favorite) = TabFavorite.Toggle(FavoriteModulesOf(tab), _favorites);
+        if (modules.Count > 0)
+        {
+            FavoriteChanged?.Invoke(modules, favorite);
+        }
+    }
 
     /// <summary>Next featured favorite (called by the host every rotation interval while compact).</summary>
     public void AdvanceCompactRotation()

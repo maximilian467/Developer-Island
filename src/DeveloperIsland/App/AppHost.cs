@@ -495,7 +495,13 @@ internal sealed class AppHost : IDisposable
         _settings.Changed += settings => _dispatcher.TryEnqueue(() => ApplySettings(settings));
 
         // Favorites (stars) live in settings; the module opened last in the small UI state file.
-        _viewModel.FavoriteChanged += (module, favorite) => _settings.Update(s => s.SetFavorite(module, favorite));
+        _viewModel.FavoriteChanged += (modules, favorite) => _settings.Update(s =>
+        {
+            foreach (var module in modules)
+            {
+                s.SetFavorite(module, favorite);
+            }
+        });
         _viewModel.Usage.Claude.ConnectPlanRequested += () => OpenSettings("Modules");
         _state.ModeChanged += (_, mode) =>
         {

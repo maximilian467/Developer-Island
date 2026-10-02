@@ -22,17 +22,11 @@ public sealed partial class ProviderSummary : UserControl
             _viewModel = value;
             value.PropertyChanged += (_, e) =>
             {
-                if (e.PropertyName is nameof(AiProviderViewModel.IsFavorite) or "" or null)
-                {
-                    ApplyStar();
-                }
-
                 if (e.PropertyName is nameof(AiProviderViewModel.ShowWeekly) or "" or null)
                 {
                     ApplySegments();
                 }
             };
-            ApplyStar();
             ApplySegments();
         }
     }
@@ -55,10 +49,4 @@ public sealed partial class ProviderSummary : UserControl
     private void OnShowWeekly(object sender, RoutedEventArgs e) => _viewModel.ShowWeekly = true;
 
     private void OnConnectPlan(object sender, RoutedEventArgs e) => _viewModel.RequestConnectPlan();
-
-    /// <summary>A filled star in the primary color; an outline in the tertiary color.</summary>
-    private void ApplyStar() =>
-        StarButton.Foreground = (Brush)Application.Current.Resources[_viewModel.IsFavorite ? "TextPrimaryBrush" : "TextTertiaryBrush"];
-
-    private void OnStar(object sender, RoutedEventArgs e) => ViewModel.RequestFavoriteToggle();
 }

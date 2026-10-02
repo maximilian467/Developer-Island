@@ -10,7 +10,6 @@ public sealed class AiProviderViewModel : ObservableObject
 {
     private AiUsageSnapshot _snapshot;
     private bool _isEnabled = true;
-    private bool _isFavorite;
     private PlanUsage? _plan;
     private PlanConnection _planConnection = PlanConnection.NotConnected;
     private bool _showWeekly;
@@ -40,28 +39,6 @@ public sealed class AiProviderViewModel : ObservableObject
             }
         }
     }
-
-    /// <summary>The star in the expanded view asks for this module to be (un)featured in the compact island.</summary>
-    public event Action<AiProviderViewModel>? FavoriteToggleRequested;
-
-    public bool IsFavorite
-    {
-        get => _isFavorite;
-        set
-        {
-            if (SetProperty(ref _isFavorite, value))
-            {
-                OnPropertyChanged(nameof(FavoriteGlyph));
-                OnPropertyChanged(nameof(FavoriteLabel));
-            }
-        }
-    }
-
-    public string FavoriteGlyph => _isFavorite ? "" : "";
-
-    public string FavoriteLabel => _isFavorite ? $"Remove {ShortName} from the compact island" : $"Show {ShortName} in the compact island";
-
-    public void RequestFavoriteToggle() => FavoriteToggleRequested?.Invoke(this);
 
     /// <summary>"Connect…" under an unavailable plan: open the place in Settings that connects it.</summary>
     public event Action? ConnectPlanRequested;
