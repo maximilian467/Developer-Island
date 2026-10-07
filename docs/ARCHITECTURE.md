@@ -87,12 +87,13 @@ The hard parts of a Dynamic-Island-style window on Windows, and how they are sol
 | DPI and multi-monitor | Placement math is pure (`IslandPlacement`) and works in physical pixels per monitor scale. After load and after any DPI change the window is placed again, because Windows rescales windows that move between monitors. |
 | Fullscreen apps | `FullscreenWatcher` combines a foreground WinEvent hook with the shell's `ABN_FULLSCREENAPP` notification. `FullscreenPolicy` (Core, tested) decides: maximized windows, captioned windows, our own windows and the shell's own surfaces never count. The Alt+Tab switcher and Task View cover the monitor without a caption; counted as fullscreen apps, they hid the island on every app switch. |
 
-`IslandStateMachine` (Core, tested) decides the mode. Its inputs are named (`IslandInput`: PointerEntered, PointerExited, HoverDelayElapsed, Clicked, ClickedOutside, ActiveAppChanged, ModuleEvent, DragStarted, DragEnded) and documented in a transition table in the source.
+`IslandStateMachine` (Core, tested) decides the mode. Its inputs are named (`IslandInput`: PointerEntered, PointerExited, HoverDelayElapsed, Clicked, ClickedOutside, ActiveAppChanged, ModuleEvent, DragStarted, DragEnded, FileDropCompleted, DropSucceeded, DropFailed) and documented in a transition table in the source.
 
 - **Compact** at rest, or **Retracted** (the notch) or **Hidden** while an auto-hide app is in front.
 - **Activity** (medium) on hover after a 280 ms dwell (450 ms on the notch), or for an event (default 4.5 s).
 - **Expanded** on click or the global shortcut.
 - **Hidden** from the tray or for a fullscreen app.
+- **Drop** (Home Cloud) with `DropPhase` Hover, Uploading, Succeeded, Failed. It is reachable from every mode (`SetDropEnabled` gates it) and returns to the resting mode, also Hidden. Inputs: `FileDropCompleted`, `DropSucceeded`, `DropFailed`. A running upload holds Drop; success lingers 1.5 s, failure 4 s. While in Drop, hover, clicks, module events and island drags do nothing. A `DropProbe` re-checks every 400 ms that the drag is still over the zone.
 - **Dragging** is a flag of the machine: timers, events, hover and clicks wait until the drag ends.
 
 Race safety:
@@ -101,6 +102,12 @@ Race safety:
 - When a timer fires, `PointerProbe` reports where the pointer really is, so a lost pointer-exit cannot keep an activity or peek open (an open peek re-checks every second).
 - `HoverTracker` judges hover against the visible capsule and only counts movement as entering. A click counts only after the pointer moved onto the capsule, so a capsule that grows under a resting mouse cannot turn the next click into an expansion.
 - While expanded, `OutsideClickWatcher` (a low-level mouse hook installed only in that state) closes the island on any press outside it, even if Windows refused it focus.
+
+## Home Cloud drop zone
+
+`HomeCloudUploader` and `HomeCloudReachability` (Core, tested) copy through a `.part` file with an atomic rename and a sequential queue; `HomeCloudDropPolicy`, `HomeCloudFeedback` and `DragArmDetector` hold the testable rules. In the app, `IslandWindow.Drop` and `DropView` handle `DragEnter`/`Drop` (`AllowDrop` and handlers exist only while Home Cloud is on) and run the upload on `Task.Run`.
+
+**DragArming.** A retracted or hidden island cannot be hit by a drag, so `DragArming` (Platform/Windowing) installs a `WH_MOUSE_LL` hook on its own thread with its own message loop, so the hook never waits on the UI thread. It is installed only in Retracted or Hidden, only for an island on the top edge, and removed otherwise. The arm zone is 300 DIP wide around the drop zone's centre and 60 DIP from the monitor's top edge, converted per monitor DPI. `DragArmDetector` arms when the button is down, the cursor moved past `SM_CXDRAG`/`SM_CYDRAG` and it is inside the zone; a press made inside the zone never arms it, and neither does a hidden cursor (game protection). Armed, a hidden island is shown without activation and fully transparent, and only the window region grows to the zone. Release or leaving restores window, region and mode. The hook reads only button state and position.
 
 ## Modules
 
