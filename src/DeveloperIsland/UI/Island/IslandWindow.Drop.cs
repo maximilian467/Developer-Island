@@ -1,6 +1,8 @@
 using DeveloperIsland.Core.Diagnostics;
 using DeveloperIsland.Core.HomeCloud;
 using DeveloperIsland.Core.Island;
+using DeveloperIsland.Core.Placement;
+using DeveloperIsland.Platform.Windowing;
 using DeveloperIsland.ViewModels;
 using Microsoft.UI.Xaml;
 using Windows.ApplicationModel.DataTransfer;
@@ -31,6 +33,166 @@ public sealed partial class IslandWindow
     {
         DropZone.ViewModel = DropFeedback;
         _state.DropPhaseChanged += OnDropPhaseChanged;
+
+        // After OnModeChanged: a mode change first settles the view, then the hook follows.
+        _state.ModeChanged += (_, _) => UpdateDropArming();
+    }
+
+    // Arming (notch and hidden) -----------------------------------------------------------------------
+    //
+    // A notch or a hidden island has no drop target on screen. While Home Cloud is on, a mouse hook
+    // (DragArming) watches for a drag that heads for the top edge above the island; then the window
+    // region (and, when hidden, the window, without activation and fully transparent) covers the arm
+    // zone, so Windows delivers DragEnter and the island opens as a drop zone. Releasing the button
+    // or leaving the zone puts region and visibility back.
+
+    private DragArming? _arming;
+    private bool _armed;
+
+    /// <summary>The arm zone in window DIPs (empty when it does not apply), kept current with placement.</summary>
+    private Rect _armRegion = Rect.Empty;
+
+    /// <summary>Installs or removes the hook to match the mode, settings and placement.</summary>
+    private void UpdateDropArming()
+    {
+        var topAnchored = _anchor.Vertical() == VerticalEdge.Top;
+        var zone = _homeCloudEnabled && topAnchored ? ArmZoneOnScreen() : null;
+        _armRegion = zone is { } z ? ToWindowRegion(z) : Rect.Empty;
+        var wanted = !_exiting && zone is not null && !_armRegion.IsEmpty
+            && HomeCloudDropPolicy.ShouldArm(_homeCloudEnabled, _state.Mode, topAnchored);
+
+        if (wanted)
+        {
+            if (_arming is null)
+            {
+                _arming = new DragArming(zone!.Value, armed => DispatcherQueue.TryEnqueue(() => OnArmChanged(armed)));
+                Log.Info("homecloud", "Drag arming hook installed", new { mode = _state.Mode.ToString(), hooked = _arming.IsInstalled });
+            }
+            else
+            {
+                _arming.SetZone(zone!.Value);
+            }
+
+            if (_armed)
+            {
+                // Notch to hidden (or back) in the middle of an armed drag.
+                ShowArmed();
+            }
+
+            return;
+        }
+
+        if (_arming is not null)
+        {
+            _arming.Dispose();
+            _arming = null;
+            Log.Info("homecloud", "Drag arming hook removed", new { mode = _state.Mode.ToString() });
+        }
+
+        Disarm();
+    }
+
+    /// <summary>On the UI thread, posted by the hook thread once per change.</summary>
+    private void OnArmChanged(bool armed)
+    {
+        if (_arming is null || armed == _armed || (armed && _state.Mode is not (IslandMode.Retracted or IslandMode.Hidden)))
+        {
+            return;
+        }
+
+        if (!armed)
+        {
+            Disarm();
+            return;
+        }
+
+        _armed = true;
+        Log.Debug("homecloud", "Drop target armed", new { mode = _state.Mode.ToString() });
+        ShowArmed();
+    }
+
+    private void ShowArmed()
+    {
+        if (_state.Mode == IslandMode.Hidden && !_visible)
+        {
+            // Nothing may show while only armed: the window is there for Windows' drop routing alone.
+            Root.Opacity = 0;
+            AppWindow.Show(activateWindow: false);
+            if (_alwaysOnTop)
+            {
+                IslandWindowChrome.RaiseAboveTopmost(_hwnd);
+            }
+        }
+        else
+        {
+            Root.Opacity = 1;
+        }
+
+        ApplyWindowRegion(EffectiveRegion(), force: false);
+    }
+
+    private void Disarm()
+    {
+        if (!_armed)
+        {
+            return;
+        }
+
+        _armed = false;
+        Log.Debug("homecloud", "Drop target disarmed", new { mode = _state.Mode.ToString() });
+        Root.Opacity = 1;
+        if (_state.Mode == IslandMode.Hidden && !_visible)
+        {
+            AppWindow.Hide();
+        }
+
+        ApplyWindowRegion(EffectiveRegion(), force: true);
+    }
+
+    /// <summary>The region Windows hit-tests: the view's, plus the arm zone while armed.</summary>
+    private Rect EffectiveRegion()
+    {
+        if (!_armed || _armRegion.IsEmpty)
+        {
+            return _regionRect;
+        }
+
+        return _state.Mode == IslandMode.Hidden ? _armRegion : Union(_regionRect, _armRegion);
+    }
+
+    /// <summary>The arm zone on the island's monitor, centered over where the drop zone opens.</summary>
+    private PixelRect? ArmZoneOnScreen()
+    {
+        if (!GetWindowRect(_hwnd, out var window))
+        {
+            return null;
+        }
+
+        var monitor = MonitorFromWindow(_hwnd, MONITOR_DEFAULTTONEAREST);
+        var info = new MONITORINFOEX { cbSize = System.Runtime.InteropServices.Marshal.SizeOf<MONITORINFOEX>() };
+        if (monitor == IntPtr.Zero || !GetMonitorInfo(monitor, ref info))
+        {
+            return null;
+        }
+
+        var centerX = _anchor.Horizontal() switch
+        {
+            HorizontalEdge.Left => EdgeMargin + DropView.ZoneWidth / 2,
+            HorizontalEdge.Right => WindowWidth - EdgeMargin - DropView.ZoneWidth / 2,
+            _ => WindowWidth / 2,
+        };
+        return HomeCloudArmZone.OnScreen(window.Left + centerX * _scale, info.rcMonitor.Top, _scale);
+    }
+
+    private Rect ToWindowRegion(PixelRect zone)
+    {
+        if (!GetWindowRect(_hwnd, out var window))
+        {
+            return Rect.Empty;
+        }
+
+        var r = Clamp(new Rect((zone.X - window.Left) / _scale, (zone.Y - window.Top) / _scale, zone.Width / _scale, zone.Height / _scale));
+        return r.Width < 1 || r.Height < 1 ? Rect.Empty : r;
     }
 
     /// <summary>
@@ -119,6 +281,7 @@ public sealed partial class IslandWindow
         }
 
         Log.Info("homecloud", enabled ? "Drop target enabled" : "Drop target disabled");
+        UpdateDropArming();
     }
 
     /// <summary>

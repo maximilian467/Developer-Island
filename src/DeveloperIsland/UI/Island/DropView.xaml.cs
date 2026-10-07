@@ -11,6 +11,9 @@ namespace DeveloperIsland.UI.Island;
 /// <summary>The island as a Home Cloud drop zone: the cloud zone on the configured side, text beside it.</summary>
 public sealed partial class DropView : UserControl
 {
+    /// <summary>The pill's width (see DropView.xaml); the arm zone above it is narrower.</summary>
+    public const double ZoneWidth = 340;
+
     private const string CloudGlyph = "";
     private const string UploadGlyph = "";
     private const string CheckGlyph = "";
