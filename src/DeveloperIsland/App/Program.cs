@@ -32,12 +32,20 @@ public static class Program
         }
 
         // One island per user session. A second launch (Start menu, installer "Launch") shows the
-        // running island instead. Demo mode uses its own instance name so it can run side by side.
-        var name = options.SnapshotDirectory is not null ? "DeveloperIsland.Snapshot" : options.IsDemo ? "DeveloperIsland.Demo" : "DeveloperIsland";
+        // running island instead. Demo mode uses its own instance name so it can run side by side, and
+        // so does the Home Cloud upload debug run, next to the island the user has running.
+        var name = options.HomeCloudUploadPath is not null ? (options.IsDemo ? "DeveloperIsland.HomeCloudUpload.Demo" : "DeveloperIsland.HomeCloudUpload")
+            : options.SnapshotDirectory is not null ? "DeveloperIsland.Snapshot"
+            : options.IsDemo ? "DeveloperIsland.Demo" : "DeveloperIsland";
         using var mutex = new Mutex(true, $@"Local\{name}.Instance", out var isFirst);
         using var showSignal = new EventWaitHandle(false, EventResetMode.AutoReset, $@"Local\{name}.Show");
         if (!isFirst)
         {
+            if (options.HomeCloudUploadPath is not null)
+            {
+                return 3; // another upload debug run is still going
+            }
+
             showSignal.Set();
             return 0;
         }
@@ -52,6 +60,9 @@ public static class Program
         });
 
         GC.KeepAlive(mutex);
-        return 0;
+        return ExitCode;
     }
+
+    /// <summary>The process exit code; only the Home Cloud upload debug run sets it.</summary>
+    internal static int ExitCode { get; set; }
 }
