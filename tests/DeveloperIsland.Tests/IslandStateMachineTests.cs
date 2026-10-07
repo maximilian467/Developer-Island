@@ -389,3 +389,244 @@ public class IslandInputTests
         Assert.Equal(IslandMode.Compact, island.Mode);
     }
 }
+
+/// <summary>Home Cloud drop zone: reachable from every mode, holds while uploading, returns to rest.</summary>
+public class IslandDropModeTests
+{
+    private readonly FakeTimeProvider _time = new();
+
+    public enum Start
+    {
+        Compact,
+        Retracted,
+        RestHidden,
+        ForcedHidden,
+        HoverPeek,
+        Event,
+        Expanded,
+    }
+
+    private IslandStateMachine Create(Start start, bool dropEnabled = true)
+    {
+        var island = new IslandStateMachine(_time) { PointerProbe = () => true };
+        island.SetDropEnabled(dropEnabled);
+        switch (start)
+        {
+            case Start.Retracted: island.SetRest(RestMode.Retracted); break;
+            case Start.RestHidden: island.SetRest(RestMode.Hidden); break;
+            case Start.ForcedHidden: island.Hide(); break;
+            case Start.HoverPeek:
+                island.PointerEntered();
+                _time.Advance(IslandStateMachine.HoverDwell + TimeSpan.FromMilliseconds(10));
+                break;
+            case Start.Event: island.ShowEvent(TimeSpan.FromSeconds(30)); break;
+            case Start.Expanded: island.Activate(); break;
+        }
+
+        return island;
+    }
+
+    [Theory]
+    [InlineData(Start.Compact)]
+    [InlineData(Start.Retracted)]
+    [InlineData(Start.RestHidden)]
+    [InlineData(Start.ForcedHidden)]
+    [InlineData(Start.HoverPeek)]
+    [InlineData(Start.Event)]
+    [InlineData(Start.Expanded)]
+    public void A_file_drag_opens_the_drop_zone_from_every_mode(Start start)
+    {
+        var island = Create(start);
+
+        Assert.True(island.FileDragEntered());
+        Assert.Equal(IslandMode.Drop, island.Mode);
+        Assert.Equal(DropPhase.Hover, island.DropPhase);
+    }
+
+    [Theory]
+    [InlineData(Start.Compact, IslandMode.Compact)]
+    [InlineData(Start.Retracted, IslandMode.Retracted)]
+    [InlineData(Start.RestHidden, IslandMode.Hidden)]
+    [InlineData(Start.ForcedHidden, IslandMode.Hidden)]
+    [InlineData(Start.HoverPeek, IslandMode.Compact)]
+    [InlineData(Start.Event, IslandMode.Compact)]
+    [InlineData(Start.Expanded, IslandMode.Compact)]
+    public void Leaving_without_a_drop_returns_to_rest(Start start, IslandMode expected)
+    {
+        var island = Create(start);
+        island.FileDragEntered();
+
+        island.Handle(IslandInput.FileDragLeft);
+
+        Assert.Equal(expected, island.Mode);
+        Assert.Equal(DropPhase.None, island.DropPhase);
+        Assert.Equal(start == Start.ForcedHidden, island.IsForcedHidden);
+    }
+
+    [Fact]
+    public void A_running_upload_holds_the_drop_zone()
+    {
+        var island = Create(Start.Retracted);
+        island.FileDragEntered();
+        Assert.True(island.BeginDropUpload());
+
+        island.FileDragLeft();
+        Assert.False(island.ShowEvent());
+        island.Activate();
+        island.Dismiss();
+        _time.Advance(TimeSpan.FromMinutes(5));
+
+        Assert.Equal(IslandMode.Drop, island.Mode);
+        Assert.Equal(DropPhase.Uploading, island.DropPhase);
+        Assert.False(island.FileDragEntered()); // a second drag waits for the upload
+    }
+
+    [Fact]
+    public void Success_shows_the_check_mark_briefly_then_rests()
+    {
+        var island = Create(Start.Retracted);
+        island.FileDragEntered();
+        island.Handle(IslandInput.FileDropCompleted);
+        island.Handle(IslandInput.DropSucceeded);
+        Assert.Equal(DropPhase.Succeeded, island.DropPhase);
+
+        _time.Advance(IslandStateMachine.DropSuccessLinger - TimeSpan.FromMilliseconds(100));
+        Assert.Equal(IslandMode.Drop, island.Mode);
+
+        _time.Advance(TimeSpan.FromMilliseconds(200));
+        Assert.Equal(IslandMode.Retracted, island.Mode);
+    }
+
+    [Fact]
+    public void A_failure_stays_longer_than_a_success()
+    {
+        var island = Create(Start.Compact);
+        island.FileDragEntered();
+        island.BeginDropUpload();
+        island.Handle(IslandInput.DropFailed);
+        Assert.Equal(DropPhase.Failed, island.DropPhase);
+        Assert.True(IslandStateMachine.DropFailureLinger > IslandStateMachine.DropSuccessLinger);
+
+        _time.Advance(IslandStateMachine.DropFailureLinger - TimeSpan.FromMilliseconds(100));
+        Assert.Equal(IslandMode.Drop, island.Mode);
+
+        _time.Advance(TimeSpan.FromMilliseconds(200));
+        Assert.Equal(IslandMode.Compact, island.Mode);
+    }
+
+    [Fact]
+    public void A_forced_hide_ends_hidden_again_after_the_upload()
+    {
+        var island = Create(Start.ForcedHidden);
+        island.FileDragEntered();
+        island.BeginDropUpload();
+        island.FinishDrop(succeeded: true);
+        _time.Advance(IslandStateMachine.DropSuccessLinger + TimeSpan.FromMilliseconds(10));
+
+        Assert.Equal(IslandMode.Hidden, island.Mode);
+        Assert.True(island.IsForcedHidden);
+        island.Show();
+        Assert.Equal(IslandMode.Compact, island.Mode);
+    }
+
+    [Fact]
+    public void A_rest_change_during_the_drop_applies_afterwards()
+    {
+        var island = Create(Start.Compact);
+        island.FileDragEntered();
+        island.SetRest(RestMode.Retracted);
+        Assert.Equal(IslandMode.Drop, island.Mode);
+
+        island.FileDragLeft();
+        Assert.Equal(IslandMode.Retracted, island.Mode);
+    }
+
+    [Fact]
+    public void A_new_drag_over_the_result_starts_over()
+    {
+        var island = Create(Start.Compact);
+        island.FileDragEntered();
+        island.BeginDropUpload();
+        island.FinishDrop(succeeded: false);
+
+        Assert.True(island.FileDragEntered());
+        Assert.Equal(DropPhase.Hover, island.DropPhase);
+        _time.Advance(IslandStateMachine.DropFailureLinger + TimeSpan.FromSeconds(1));
+        Assert.Equal(IslandMode.Drop, island.Mode); // the result timer no longer applies
+    }
+
+    [Fact]
+    public void A_lost_drag_leave_closes_the_zone_at_the_next_check()
+    {
+        var dragOver = true;
+        var island = Create(Start.Retracted);
+        island.DropProbe = () => dragOver;
+        island.FileDragEntered();
+
+        _time.Advance(IslandStateMachine.DropRecheck * 3);
+        Assert.Equal(IslandMode.Drop, island.Mode);
+
+        dragOver = false;
+        _time.Advance(IslandStateMachine.DropRecheck + TimeSpan.FromMilliseconds(10));
+        Assert.Equal(IslandMode.Retracted, island.Mode);
+    }
+
+    [Fact]
+    public void Phase_and_mode_changes_are_reported()
+    {
+        var island = Create(Start.Compact);
+        var events = new List<string>();
+        island.ModeChanged += (from, to) => events.Add($"{from}->{to}");
+        island.DropPhaseChanged += phase => events.Add(phase.ToString());
+
+        island.FileDragEntered();
+        island.BeginDropUpload();
+        island.FinishDrop(succeeded: true);
+        _time.Advance(IslandStateMachine.DropSuccessLinger + TimeSpan.FromMilliseconds(10));
+
+        Assert.Equal(["Hover", "Compact->Drop", "Uploading", "Succeeded", "Drop->Compact", "None"], events);
+    }
+
+    [Theory]
+    [InlineData(Start.Compact)]
+    [InlineData(Start.Retracted)]
+    [InlineData(Start.ForcedHidden)]
+    [InlineData(Start.Expanded)]
+    public void With_home_cloud_off_drop_inputs_do_nothing(Start start)
+    {
+        var island = Create(start, dropEnabled: false);
+        var mode = island.Mode;
+
+        Assert.False(island.FileDragEntered());
+        Assert.False(island.BeginDropUpload());
+        island.Handle(IslandInput.FileDragLeft);
+        island.Handle(IslandInput.DropSucceeded);
+
+        Assert.Equal(mode, island.Mode);
+        Assert.Equal(DropPhase.None, island.DropPhase);
+    }
+
+    [Fact]
+    public void Drop_inputs_are_off_until_enabled()
+    {
+        var island = new IslandStateMachine(_time);
+        Assert.False(island.IsDropEnabled);
+        Assert.False(island.FileDragEntered());
+        Assert.Equal(IslandMode.Compact, island.Mode);
+    }
+
+    [Fact]
+    public void Switching_home_cloud_off_closes_an_open_drop_zone()
+    {
+        var island = Create(Start.Retracted);
+        island.FileDragEntered();
+        island.BeginDropUpload();
+
+        island.SetDropEnabled(false);
+
+        Assert.Equal(IslandMode.Retracted, island.Mode);
+        Assert.Equal(DropPhase.None, island.DropPhase);
+        island.FinishDrop(succeeded: true); // the upload ending later changes nothing
+        Assert.Equal(IslandMode.Retracted, island.Mode);
+    }
+}

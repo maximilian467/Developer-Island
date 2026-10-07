@@ -43,6 +43,12 @@
                         <TextBlock Text="Modules" />
                     </StackPanel>
                 </Button>
+                <Button x:Name="NavHomeCloud" AutomationProperties.Name="Home Cloud" Style="{StaticResource SettingsNavButtonStyle}" Tag="HomeCloud" Click="OnNav">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <FontIcon Glyph="&#xE753;" FontSize="14" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" />
+                        <TextBlock Text="Home Cloud" />
+                    </StackPanel>
+                </Button>
                 <Button x:Name="NavAppearance" AutomationProperties.Name="Appearance" Style="{StaticResource SettingsNavButtonStyle}" Tag="Appearance" Click="OnNav">
                     <StackPanel Orientation="Horizontal" Spacing="12">
                         <FontIcon Glyph="&#xE790;" FontSize="14" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" />
@@ -312,6 +318,69 @@
                         </Border>
                     </StackPanel>
 
+                    <!-- Home Cloud -->
+                    <StackPanel x:Name="HomeCloudSection" Spacing="8" Visibility="Collapsed">
+                        <TextBlock Text="Home Cloud" Style="{StaticResource SettingsTitleStyle}" Margin="0,0,0,4" />
+                        <TextBlock Text="Drop files or folders onto the island to copy them to your home server." Style="{StaticResource SettingsRowDescriptionStyle}" Margin="0,0,0,16" />
+                        <Border Style="{StaticResource SettingsCardStyle}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Enable drop zone" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Text="Shows a drop zone next to the island while you drag files." Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="HomeCloudToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
+                                                  AutomationProperties.Name="Enable drop zone" Toggled="OnHomeCloudToggled" />
+                                </Grid>
+                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
+                                <Grid Style="{StaticResource SettingsRowStyle}" ColumnSpacing="16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Target folder" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Text="Network path or local folder." Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <TextBox x:Name="HomeCloudPathBox" Grid.Column="1" MinWidth="240" VerticalAlignment="Center"
+                                             AutomationProperties.Name="Home Cloud target folder" LostFocus="OnHomeCloudPathLostFocus" KeyDown="OnHomeCloudPathKeyDown" />
+                                </Grid>
+                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Drop zone side" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Text="Which side of the island the drop zone appears on." Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" VerticalAlignment="Center" CornerRadius="8" Padding="2" Background="{ThemeResource SettingsSegmentBrush}">
+                                        <StackPanel Orientation="Horizontal" AutomationProperties.Name="Drop zone side">
+                                            <RadioButton x:Name="HomeCloudSideLeft" GroupName="HomeCloudSide" Style="{StaticResource SegmentedOptionStyle}" Content="Left" Tag="Left" Checked="OnHomeCloudSideChecked" />
+                                            <RadioButton x:Name="HomeCloudSideRight" GroupName="HomeCloudSide" Style="{StaticResource SegmentedOptionStyle}" Content="Right" Tag="Right" Checked="OnHomeCloudSideChecked" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
+                                <Grid Style="{StaticResource SettingsRowStyle}" ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="HomeCloudStatus" Text="Check that the target folder can be reached." Style="{StaticResource SettingsRowDescriptionStyle}"
+                                               VerticalAlignment="Center" Margin="0,0,8,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+                                    <Button x:Name="HomeCloudTestButton" Grid.Column="1" Content="Test connection" Click="OnHomeCloudTest" VerticalAlignment="Center" />
+                                    <Button x:Name="HomeCloudOpenButton" Grid.Column="2" Content="Open folder" Click="OnHomeCloudOpen" VerticalAlignment="Center" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
                     <!-- Modules -->
                     <StackPanel x:Name="ModulesSection" Spacing="8" Visibility="Collapsed">
                         <TextBlock Text="Modules" Style="{StaticResource SettingsTitleStyle}" Margin="0,0,0,4" />

@@ -45,6 +45,10 @@ AI coding tools spend tokens and plan limits where you can't see them, and the r
 - CPU, memory, GPU and battery with **60-second graphs** that turn orange or red under sustained load.
 - **Temperatures and fan speeds** where the hardware exposes them (via LibreHardwareMonitor), each with its own thresholds. Nothing is estimated: a sensor that isn't there is not shown.
 
+### Home Cloud
+
+- **Drop files onto the island** to copy them to your own server (a folder on a network share such as `\\buntu-1\homecloud\Notch-Inbox`, set in Settings, Home Cloud). It works from every state, also while the island is retracted into the notch or hidden: dragging a file toward the top edge arms a small drop zone. Uploads run in a queue with progress; names are never logged, and nothing goes to a cloud service. A switch in Settings turns the feature off completely.
+
 ### Smart island
 
 - **Compact, live activity and expanded** states with interruptible spring animations.
@@ -73,7 +77,7 @@ Developer Island is **local-first**. It has no account, no telemetry and no clou
 - **Read locally:** Claude Code transcripts (`~/.claude/projects`) and Codex rollout files (`~/.codex/sessions`). Only usage metadata is extracted (token counts, model, timestamps, session IDs, working directory); prompt, message and code content is never stored, displayed or logged.
 - **Stored locally** in `%LOCALAPPDATA%\DeveloperIsland`: a SQLite database with token counts and daily totals, settings, tasks, focus history and the last Claude plan percentages. Logs contain events and error types, never content, and are kept for 7 days.
 - **Credentials:** private calendar links are kept in Windows Credential Manager. GitHub access goes through the GitHub CLI's own sign-in; Developer Island never sees a token.
-- **Network:** only the calendar links you add, and the GitHub CLI's read-only requests while the GitHub module is on.
+- **Network:** only the calendar links you add, the GitHub CLI's read-only requests while the GitHub module is on, and, if you drop files onto the island, the copy to the folder you configured under Home Cloud (your own server).
 - **Camera and microphone:** only "in use or not" is read from Windows' own consent store; app names are never stored or shown.
 
 Full details: [docs/PRIVACY.md](docs/PRIVACY.md) and [SECURITY.md](SECURITY.md).

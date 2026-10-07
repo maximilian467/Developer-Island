@@ -47,6 +47,7 @@ public sealed partial class SettingsWindow : Window
             ["General"] = (NavGeneral, GeneralSection),
             ["Position"] = (NavPosition, PositionSection),
             ["Modules"] = (NavModules, ModulesSection),
+            ["HomeCloud"] = (NavHomeCloud, HomeCloudSection),
             ["Appearance"] = (NavAppearance, AppearanceSection),
             ["About"] = (NavAbout, AboutSection),
         };
@@ -191,6 +192,7 @@ public sealed partial class SettingsWindow : Window
             (s.SmartHideBehavior == SmartHideBehavior.Hide ? SmartHideHide : SmartHideRetract).IsChecked = true;
             AutoHideMaximizedToggle.IsOn = s.AutoHideOnlyMaximized;
             BuildAutoHideRows(s);
+            LoadHomeCloud(s);
             foreach (var dependent in new Control[] { SmartHideRetract, SmartHideHide, AutoHideMaximizedToggle })
             {
                 dependent.IsEnabled = s.SmartHideEnabled;

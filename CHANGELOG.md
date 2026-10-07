@@ -6,6 +6,8 @@ All notable changes to Developer Island are documented here. The format follows 
 
 ### Added
 
+- **Home Cloud drop zone:** drop files or folders onto the island to copy them to your own server (default `\\buntu-1\homecloud\Notch-Inbox`). It works in every state, also while the island is a notch or hidden: dragging toward the top edge arms the zone. Progress, success and error feedback; uploads go through a `.part` file and a rename. File names and paths are never logged. Settings, Home Cloud sets the target and the side, and turns it all off.
+- `--homecloud-upload=<path>` sends a file through the Home Cloud pipeline for testing.
 - **Quit Developer Island** in Settings, General: ends the whole app (island, tray icon, background work) after a confirmation. Closing Settings or hiding the island keeps it running.
 
 ### Fixed

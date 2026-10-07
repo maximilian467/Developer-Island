@@ -11,6 +11,19 @@ public enum IslandMode
     /// <summary>The "medium" state: a transient live activity or a hover peek.</summary>
     Activity,
     Expanded,
+
+    /// <summary>Files are dragged over the island (Home Cloud): drop zone, upload progress, then the result.</summary>
+    Drop,
+}
+
+/// <summary>What the drop zone shows while the island is in <see cref="IslandMode.Drop"/>.</summary>
+public enum DropPhase
+{
+    None,
+    Hover,
+    Uploading,
+    Succeeded,
+    Failed,
 }
 
 public enum ActivitySource
@@ -40,14 +53,21 @@ public enum IslandInput
     ModuleEvent,
     DragStarted,
     DragEnded,
+    FileDragEntered,
+    FileDragLeft,
+
+    /// <summary>The files were dropped: the upload starts.</summary>
+    FileDropCompleted,
+    DropSucceeded,
+    DropFailed,
 }
 
 /// <summary>
 /// Decides which state the island is in. Pure logic with injectable time; every timer callback is
 /// posted through <c>post</c> so the UI keeps everything on one thread, and carries a generation
 /// number so a timer that was overtaken by a newer input can never act.
-/// <para>States: Hidden, Retracted (notch), Compact, Activity (medium), Expanded; Dragging is an
-/// orthogonal flag that freezes the current state while the user moves the island.</para>
+/// <para>States: Hidden, Retracted (notch), Compact, Activity (medium), Expanded, Drop (Home Cloud);
+/// Dragging is an orthogonal flag that freezes the current state while the user moves the island.</para>
 /// <code>
 /// input               Compact/Retracted        Activity (hover)        Activity (event)        Expanded
 /// PointerEntered      start hover delay        keep open               keep open (pause end)   -
@@ -58,7 +78,19 @@ public enum IslandInput
 /// ModuleEvent         open event activity      open event activity     restart event           ignored
 /// ActiveAppChanged    move to new rest         (kept, rests after)     (kept, rests after)     (kept)
 /// DragStarted/Ended   freeze timers / resume   freeze / resume         freeze / resume         -
+/// FileDragEntered     drop (hover) **          drop (hover)            drop (hover)            drop (hover)
 /// * only if the pointer is still over the capsule (re-checked through <see cref="PointerProbe"/>).
+/// ** also from Hidden, including a forced hide; every drop input is ignored while Home Cloud is off.
+///
+/// input               Drop (hover)             Drop (uploading)        Drop (succeeded/failed)
+/// FileDragEntered     -                        -                       back to hover
+/// FileDragLeft        rest ***                 -                       -
+/// FileDropCompleted   uploading                -                       uploading
+/// DropSucceeded       -                        check mark, rest later  -
+/// DropFailed          -                        error, rest later       -
+/// ModuleEvent, Clicked, ClickedOutside, hover and island drags do nothing in Drop.
+/// *** also when <see cref="DropProbe"/> reports the drag gone. Rest is the mode the island rests in
+/// now: hidden again after Hidden, forced hidden again after a forced hide.
 /// </code>
 /// Timers never trust a remembered pointer flag alone: when one fires, <see cref="PointerProbe"/> is
 /// asked where the pointer really is, so a missed pointer-exit can no longer keep the island open.
@@ -75,6 +107,15 @@ public sealed class IslandStateMachine : IDisposable
 
     /// <summary>How often an open hover peek re-checks that the pointer is still there.</summary>
     public static readonly TimeSpan HoverRecheck = TimeSpan.FromSeconds(1);
+
+    /// <summary>How long a finished upload shows its check mark.</summary>
+    public static readonly TimeSpan DropSuccessLinger = TimeSpan.FromSeconds(1.5);
+
+    /// <summary>How long a failed upload shows its error.</summary>
+    public static readonly TimeSpan DropFailureLinger = TimeSpan.FromSeconds(4);
+
+    /// <summary>How often the drop zone re-checks that a drag is still over it (a lost leave must not keep it open).</summary>
+    public static readonly TimeSpan DropRecheck = TimeSpan.FromMilliseconds(400);
 
     private readonly TimeProvider _time;
     private readonly Action<Action> _post;
@@ -93,6 +134,9 @@ public sealed class IslandStateMachine : IDisposable
     /// <summary>Old mode, new mode.</summary>
     public event Action<IslandMode, IslandMode>? ModeChanged;
 
+    /// <summary>The drop zone's phase changed (raised before <see cref="ModeChanged"/> on entry, after it on exit).</summary>
+    public event Action<DropPhase>? DropPhaseChanged;
+
     public IslandMode Mode { get; private set; } = IslandMode.Compact;
 
     public ActivitySource ActivitySource { get; private set; }
@@ -108,6 +152,17 @@ public sealed class IslandStateMachine : IDisposable
     /// elsewhere, null when unknown (then the last reported state is used).
     /// </summary>
     public Func<bool?>? PointerProbe { get; set; }
+
+    /// <summary>
+    /// Whether a file drag is still over the drop zone when its re-check fires: false leaves Drop,
+    /// true or null (unknown) keeps it.
+    /// </summary>
+    public Func<bool?>? DropProbe { get; set; }
+
+    /// <summary>Home Cloud is on: only then do the drop inputs do anything.</summary>
+    public bool IsDropEnabled { get; private set; }
+
+    public DropPhase DropPhase { get; private set; }
 
     public RestMode Rest => _rest;
 
@@ -139,6 +194,11 @@ public sealed class IslandStateMachine : IDisposable
             case IslandInput.DragEnded: EndDrag(); break;
             case IslandInput.HoverDelayElapsed: OnHoverDelayElapsed(Mode); break;
             case IslandInput.ActiveAppChanged: break; // carries a rest mode: use SetRest
+            case IslandInput.FileDragEntered: FileDragEntered(); break;
+            case IslandInput.FileDragLeft: FileDragLeft(); break;
+            case IslandInput.FileDropCompleted: BeginDropUpload(); break;
+            case IslandInput.DropSucceeded: FinishDrop(succeeded: true); break;
+            case IslandInput.DropFailed: FinishDrop(succeeded: false); break;
         }
     }
 
@@ -251,10 +311,10 @@ public sealed class IslandStateMachine : IDisposable
         SetMode(IslandMode.Expanded, ActivitySource.None);
     }
 
-    /// <summary>ModuleEvent: opens a transient activity unless the island is expanded, retracted, hidden or being dragged.</summary>
+    /// <summary>ModuleEvent: opens a transient activity unless the island is expanded, retracted, hidden, a drop zone or being dragged.</summary>
     public bool ShowEvent(TimeSpan? duration = null)
     {
-        if (IsDragging || Mode is IslandMode.Expanded or IslandMode.Hidden or IslandMode.Retracted)
+        if (IsDragging || Mode is IslandMode.Expanded or IslandMode.Hidden or IslandMode.Retracted or IslandMode.Drop)
         {
             return false;
         }
@@ -318,7 +378,109 @@ public sealed class IslandStateMachine : IDisposable
         }
     }
 
+    /// <summary>Home Cloud switched on or off. Switching off closes an open drop zone at once.</summary>
+    public void SetDropEnabled(bool enabled)
+    {
+        IsDropEnabled = enabled;
+        if (!enabled && Mode == IslandMode.Drop)
+        {
+            LeaveDrop();
+        }
+    }
+
+    /// <summary>FileDragEntered: files are dragged over the island. Works from every mode, hidden included.</summary>
+    public bool FileDragEntered()
+    {
+        if (!IsDropEnabled || (Mode == IslandMode.Drop && DropPhase == DropPhase.Uploading))
+        {
+            return false;
+        }
+
+        if (Mode == IslandMode.Drop && DropPhase == DropPhase.Hover)
+        {
+            return true;
+        }
+
+        EnterDrop(DropPhase.Hover);
+        Schedule(DropRecheck, RecheckDropHover);
+        return true;
+    }
+
+    /// <summary>FileDragLeft: the drag went away without a drop. Only a waiting drop zone closes.</summary>
+    public void FileDragLeft()
+    {
+        if (Mode == IslandMode.Drop && DropPhase == DropPhase.Hover)
+        {
+            LeaveDrop();
+        }
+    }
+
+    /// <summary>FileDropCompleted: the upload starts; the island stays in Drop until it has finished.</summary>
+    public bool BeginDropUpload()
+    {
+        if (!IsDropEnabled || (Mode == IslandMode.Drop && DropPhase == DropPhase.Uploading))
+        {
+            return false;
+        }
+
+        EnterDrop(DropPhase.Uploading);
+        return true;
+    }
+
+    /// <summary>DropSucceeded / DropFailed: show the result for a moment, then rest.</summary>
+    public void FinishDrop(bool succeeded)
+    {
+        if (Mode != IslandMode.Drop || DropPhase != DropPhase.Uploading)
+        {
+            return;
+        }
+
+        SetDropPhase(succeeded ? DropPhase.Succeeded : DropPhase.Failed);
+        Schedule(succeeded ? DropSuccessLinger : DropFailureLinger, LeaveDrop);
+    }
+
     public void Dispose() => CancelTimer();
+
+    private void EnterDrop(DropPhase phase)
+    {
+        CancelTimer();
+        SetDropPhase(phase);
+        SetMode(IslandMode.Drop, ActivitySource.None);
+    }
+
+    private void LeaveDrop()
+    {
+        if (Mode == IslandMode.Drop)
+        {
+            CancelTimer();
+            SetMode(RestingMode, ActivitySource.None);
+        }
+    }
+
+    private void RecheckDropHover()
+    {
+        if (Mode != IslandMode.Drop || DropPhase != DropPhase.Hover)
+        {
+            return;
+        }
+
+        if (DropProbe?.Invoke() == false)
+        {
+            LeaveDrop();
+            return;
+        }
+
+        Schedule(DropRecheck, RecheckDropHover);
+    }
+
+    private void SetDropPhase(DropPhase phase)
+    {
+        if (DropPhase != phase)
+        {
+            DropPhase = phase;
+            DropPhaseChanged?.Invoke(phase);
+        }
+    }
 
     /// <summary>The pointer state, corrected by a fresh probe when one is available.</summary>
     private bool PointerIsOver()
@@ -369,6 +531,11 @@ public sealed class IslandStateMachine : IDisposable
         Mode = mode;
         ActivitySource = source;
         ModeChanged?.Invoke(old, mode);
+        if (mode != IslandMode.Drop)
+        {
+            // Leaving the drop zone (also through Hide or Toggle) ends its phase.
+            SetDropPhase(DropPhase.None);
+        }
     }
 
     private void Schedule(TimeSpan due, Action action)

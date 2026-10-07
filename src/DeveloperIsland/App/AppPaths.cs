@@ -30,9 +30,11 @@ internal static class AppPaths
 /// <summary>
 /// Command-line options: <c>--demo</c>, <c>--autostart</c>, <c>--settings[=section]</c>, and for development
 /// <c>--snapshot=folder</c> (demo only: renders every state to PNG offscreen, then exits), with an
-/// optional <c>--culture=en-US</c> so documentation renders use one number and date format.
+/// optional <c>--culture=en-US</c> so documentation renders use one number and date format, and
+/// <c>--homecloud-upload=path</c> (sends one file or folder through the Home Cloud drop pipeline, then
+/// exits with 0 on success; reads the settings, never writes them; with <c>--demo</c> the demo settings).
 /// </summary>
-internal sealed record AppOptions(bool IsDemo, bool IsAutostart, string? SettingsSection, string? SnapshotDirectory = null, string? SnapshotCulture = null)
+internal sealed record AppOptions(bool IsDemo, bool IsAutostart, string? SettingsSection, string? SnapshotDirectory = null, string? SnapshotCulture = null, string? HomeCloudUploadPath = null)
 {
     public static AppOptions Parse(IEnumerable<string> args)
     {
@@ -41,9 +43,15 @@ internal sealed record AppOptions(bool IsDemo, bool IsAutostart, string? Setting
         string? settings = null;
         string? snapshot = null;
         string? culture = null;
+        string? upload = null;
         foreach (var arg in list)
         {
-            if (arg.Equals("--settings", StringComparison.OrdinalIgnoreCase))
+            if (arg.StartsWith("--homecloud-upload=", StringComparison.OrdinalIgnoreCase))
+            {
+                var path = arg["--homecloud-upload=".Length..].Trim('"');
+                upload = path.Length == 0 ? null : Path.GetFullPath(path);
+            }
+            else if (arg.Equals("--settings", StringComparison.OrdinalIgnoreCase))
             {
                 settings = "General";
             }
@@ -63,6 +71,12 @@ internal sealed record AppOptions(bool IsDemo, bool IsAutostart, string? Setting
         }
 
         var demo = set.Contains("--demo");
+        if (upload is not null)
+        {
+            // The upload debug run is a short pipeline run of its own: no snapshots, no Settings window.
+            return new AppOptions(demo, false, null, HomeCloudUploadPath: upload);
+        }
+
         var snapshotDirectory = demo ? snapshot : null;
         return new AppOptions(demo, set.Contains(Platform.Startup.AutostartService.Argument), settings, snapshotDirectory, snapshotDirectory is null ? null : culture);
     }

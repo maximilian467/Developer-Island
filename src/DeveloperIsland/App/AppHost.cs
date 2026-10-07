@@ -82,6 +82,12 @@ internal sealed class AppHost : IDisposable
 
     public void Start()
     {
+        if (_options.HomeCloudUploadPath is { } uploadPath)
+        {
+            StartHomeCloudUpload(uploadPath);
+            return;
+        }
+
         // Demo and production may run concurrently; each writer needs its own file.
         Log.Initialize(_options.IsDemo ? Path.Combine(AppPaths.Logs, "demo") : AppPaths.Logs);
         if (Environment.GetEnvironmentVariable("DI_LOG_DEBUG") == "1")
@@ -144,6 +150,7 @@ internal sealed class AppHost : IDisposable
         _window.VisiblePanelChanged += tab => _modules.OnPanelVisible(tab);
         _window.DragCompleted += OnDragCompleted;
         _window.PlacementInvalidated += () => _dispatcher.TryEnqueue(PlaceIsland);
+        _window.ConfigureHomeCloud(settings.HomeCloudEnabled, settings.HomeCloudTargetPath, settings.HomeCloudDropSide);
         PlaceIsland();
 
         _host = new HostWindow();
@@ -329,7 +336,135 @@ internal sealed class AppHost : IDisposable
         _viewModel.SetLastActive(null);
         await Task.Delay(400);
 
+        await DropSnapshotsAsync(shot);
+
         await new SettingsWindow(_settings, _options.IsDemo, () => false, _secrets).SaveSnapshotsAsync(_options.SnapshotDirectory!);
+    }
+
+    /// <summary>
+    /// The Home Cloud drop zone on either side, uploading, after success and after an error, and opened
+    /// from the notch. Driven through the state machine and the window's drop feedback; nothing is copied.
+    /// </summary>
+    private async Task DropSnapshotsAsync(Func<string, Task> shot)
+    {
+        var s = _settings.Current;
+
+        // A result lingers only briefly: capture it without the long settle delay of a morph.
+        async Task Quick(string name)
+        {
+            await Task.Delay(300);
+            await _window.SaveSnapshotAsync(Path.Combine(_options.SnapshotDirectory!, name + ".png"));
+        }
+
+        // The shown result closes the zone by itself.
+        Task BackToRest() => Task.Delay(IslandStateMachine.DropFailureLinger + TimeSpan.FromMilliseconds(600));
+
+        foreach (var side in new[] { Core.HomeCloud.HomeCloudDropSide.Right, Core.HomeCloud.HomeCloudDropSide.Left })
+        {
+            _window.ConfigureHomeCloud(true, s.HomeCloudTargetPath, side);
+            _state.FileDragEntered();
+            await shot("drop-hover-" + side.ToString().ToLowerInvariant());
+            _state.FileDragLeft();
+            await Task.Delay(600);
+        }
+
+        _window.ConfigureHomeCloud(true, s.HomeCloudTargetPath, Core.HomeCloud.HomeCloudDropSide.Right);
+        _state.FileDragEntered();
+        _state.BeginDropUpload();
+        _window.DropFeedback.Report(new Core.HomeCloud.HomeCloudProgress(4_200_000, 10_000_000, 3, 5));
+        await shot("drop-progress");
+        _window.ShowDropResult(Core.HomeCloud.HomeCloudUploadResult.Succeeded(5, 10_000_000, TimeSpan.FromSeconds(3)));
+        await Quick("drop-success");
+        await BackToRest();
+
+        _state.FileDragEntered();
+        _state.BeginDropUpload();
+        _window.ShowDropResult(Core.HomeCloud.HomeCloudUploadResult.Failed("Target not reachable"));
+        await Quick("drop-error");
+        await BackToRest();
+
+        _state.SetRest(Core.Island.RestMode.Retracted);
+        await Task.Delay(600);
+        _state.FileDragEntered();
+        await Task.Delay(400); // the morph from a 48 px notch travels furthest
+        await shot("drop-from-notch");
+        _state.FileDragLeft();
+        _state.SetRest(Core.Island.RestMode.Compact);
+        await Task.Delay(600);
+
+        _window.ConfigureHomeCloud(s.HomeCloudEnabled, s.HomeCloudTargetPath, s.HomeCloudDropSide);
+    }
+
+    /// <summary>
+    /// Development (<c>--homecloud-upload=path</c>): sends one file or folder through the same drop
+    /// pipeline a real drop takes (drop zone, uploader, feedback), from a hidden island at the user's
+    /// placement, then quits with exit code 0 on success. Runs beside the user's island: no tray, no
+    /// watchers, no providers, an in-memory database, and the settings are read but never written.
+    /// </summary>
+    private void StartHomeCloudUpload(string path)
+    {
+        Log.Initialize(Path.Combine(AppPaths.Logs, "homecloud-upload"));
+        Log.Info("homecloud", "Upload debug run starting", new { demo = _options.IsDemo });
+
+        // Read only: nothing on this path calls Update, so the file is never written.
+        _settings = new SettingsStore(AppPaths.Settings(_options.IsDemo));
+        var settings = _settings.Current;
+        _database = UsageDatabase.OpenInMemory();
+        _focusHistory = new FocusHistory(_database);
+        _focusTimer = new FocusTimer();
+        _media = new DemoMediaSource(AppPaths.Assets); // never started: the island shows no music
+        var focus = new FocusViewModel(_focusTimer, _focusHistory, settings.CustomFocusMinutes, _ => { });
+        _viewModel = new IslandViewModel(new UsageViewModel(), new MusicViewModel(_media), focus, ModuleViewModels.Create(), _options.IsDemo);
+        _state = new IslandStateMachine(TimeProvider.System, action => _dispatcher.TryEnqueue(() => action()));
+        _window = new IslandWindow(_viewModel, _state, settings.AlwaysOnTop);
+        _window.PlacementInvalidated += () => _dispatcher.TryEnqueue(PlaceIsland);
+        _window.ConfigureHomeCloud(settings.HomeCloudEnabled, settings.HomeCloudTargetPath, settings.HomeCloudDropSide);
+        PlaceIsland();
+
+        // Only the drop zone shows; afterwards the island hides again, like a drop onto a hidden island.
+        _state.Hide();
+        _ = RunHomeCloudUploadAsync(path, settings.HomeCloudEnabled);
+    }
+
+    private async Task RunHomeCloudUploadAsync(string path, bool enabled)
+    {
+        var exitCode = 1;
+        try
+        {
+            if (!enabled)
+            {
+                Log.Warn("homecloud", "Upload debug run: Home Cloud is off");
+                exitCode = 2;
+                return;
+            }
+
+            await Task.Delay(500);
+            var closed = new TaskCompletionSource();
+            _state.ModeChanged += (from, _) =>
+            {
+                if (from == Core.Island.IslandMode.Drop)
+                {
+                    closed.TrySetResult();
+                }
+            };
+
+            // Enter and drop in one go: the zone's drag re-check would close a hover with no real drag.
+            _state.FileDragEntered();
+            var result = await _window.UploadDroppedAsync([path]);
+            await closed.Task.WaitAsync(TimeSpan.FromSeconds(15));
+            exitCode = result.Status == Core.HomeCloud.HomeCloudUploadStatus.Succeeded ? 0 : 1;
+            Log.Info("homecloud", "Upload debug run finished", new { status = result.Status.ToString(), files = result.FileCount, bytes = result.Bytes, exitCode });
+        }
+        catch (Exception ex)
+        {
+            // The type only: IO messages name paths.
+            Log.Error("homecloud", "Upload debug run failed", data: new { error = ex.GetType().Name });
+        }
+        finally
+        {
+            Program.ExitCode = exitCode;
+            QuitRequested?.Invoke();
+        }
     }
 
     /// <summary>Second launch of the app: show the island.</summary>
@@ -531,6 +666,7 @@ internal sealed class AppHost : IDisposable
         _plan?.Configure(settings.ClaudeEnabled);
         _viewModel.EnsureValidTab();
         _window.SetAlwaysOnTop(settings.AlwaysOnTop);
+        _window.ConfigureHomeCloud(settings.HomeCloudEnabled, settings.HomeCloudTargetPath, settings.HomeCloudDropSide);
         PlaceIsland();
         SyncAutostart(settings);
         _settingsWindow?.ApplyTheme(settings.Theme);

@@ -1,3 +1,4 @@
+using DeveloperIsland.Core.HomeCloud;
 using DeveloperIsland.Core.Placement;
 using DeveloperIsland.Core.Settings;
 
@@ -77,6 +78,42 @@ public class SettingsPersistenceTests
         Assert.Equal(0, settings.OffsetX);
         Assert.Equal(240, settings.CustomFocusMinutes);
         Assert.Equal(IslandAnchor.TopLeft, settings.Anchor);
+    }
+
+    [Fact]
+    public void Home_cloud_defaults_apply_when_missing_from_an_old_file()
+    {
+        File.WriteAllText(_path, """{ "alwaysOnTop": false }""");
+
+        var settings = new SettingsStore(_path).Current;
+
+        Assert.True(settings.HomeCloudEnabled);
+        Assert.Equal(@"\\buntu-1\homecloud\Notch-Inbox", settings.HomeCloudTargetPath);
+        Assert.Equal(HomeCloudDropSide.Right, settings.HomeCloudDropSide);
+    }
+
+    [Fact]
+    public void Home_cloud_settings_round_trip_and_clone()
+    {
+        var store = new SettingsStore(_path);
+        store.Update(s =>
+        {
+            s.HomeCloudEnabled = false;
+            s.HomeCloudTargetPath = @"D:\Inbox";
+            s.HomeCloudDropSide = HomeCloudDropSide.Left;
+        });
+
+        var reloaded = new SettingsStore(_path).Current;
+        var clone = reloaded.Clone();
+        clone.HomeCloudTargetPath = "changed";
+
+        Assert.False(reloaded.HomeCloudEnabled);
+        Assert.Equal(@"D:\Inbox", reloaded.HomeCloudTargetPath);
+        Assert.Equal(HomeCloudDropSide.Left, reloaded.HomeCloudDropSide);
+        Assert.Contains("\"left\"", File.ReadAllText(_path), StringComparison.OrdinalIgnoreCase);
+        Assert.False(clone.HomeCloudEnabled);
+        Assert.Equal(HomeCloudDropSide.Left, clone.HomeCloudDropSide);
+        Assert.Equal(@"D:\Inbox", reloaded.HomeCloudTargetPath);
     }
 
     [Fact]

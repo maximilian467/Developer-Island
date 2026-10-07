@@ -112,6 +112,21 @@ internal static partial class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool GetCursorPos(out POINT lpPoint);
 
+    public const int SM_SWAPBUTTON = 23;
+    public const int SM_CXDRAG = 68;
+    public const int SM_CYDRAG = 69;
+    public const int VK_LBUTTON = 0x01;
+    public const int VK_RBUTTON = 0x02;
+
+    [LibraryImport("user32.dll")]
+    public static partial short GetAsyncKeyState(int vKey);
+
+    [LibraryImport("user32.dll")]
+    public static partial int GetSystemMetrics(int nIndex);
+
+    /// <summary>The button that drags (left, or right with swapped buttons) is held down right now.</summary>
+    public static bool IsPrimaryButtonDown() => GetAsyncKeyState(GetSystemMetrics(SM_SWAPBUTTON) != 0 ? VK_RBUTTON : VK_LBUTTON) < 0;
+
     [LibraryImport("user32.dll")]
     public static partial IntPtr GetForegroundWindow();
 

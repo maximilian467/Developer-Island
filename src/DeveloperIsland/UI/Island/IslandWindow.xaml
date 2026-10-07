@@ -23,6 +23,8 @@
             <island:CompactView x:Name="Compact" />
             <island:ActivityView x:Name="Activity" Visibility="Collapsed" />
             <expanded:ExpandedView x:Name="Expanded" Visibility="Collapsed" />
+            <!-- Home Cloud: files dragged onto the island. -->
+            <island:DropView x:Name="DropZone" Visibility="Collapsed" />
         </Grid>
     </components:CursorGrid>
 </Window>

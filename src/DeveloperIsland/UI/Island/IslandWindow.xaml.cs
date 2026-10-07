@@ -112,10 +112,13 @@ public sealed partial class IslandWindow : Window
         Compact.SizeChanged += OnViewSizeChanged;
         Activity.SizeChanged += OnViewSizeChanged;
         Expanded.SizeChanged += OnViewSizeChanged;
+        DropZone.SizeChanged += OnViewSizeChanged;
         NotchPrivacy.Source = viewModel.Privacy;
 
         _state.ModeChanged += OnModeChanged;
         _state.PointerProbe = ProbePointer;
+        _state.DropProbe = ProbeDrop;
+        InitializeDropTarget();
         _outsideClicks = new OutsideClickWatcher(() => DispatcherQueue.TryEnqueue(OnClickedOutside));
         _viewModel.PropertyChanged += (_, e) =>
         {
@@ -168,6 +171,8 @@ public sealed partial class IslandWindow : Window
             Root.UpdateLayout();
             RefreshShape(animate: false);
         }
+
+        UpdateDropArming();
     }
 
     public void SetAlwaysOnTop(bool value)
@@ -195,6 +200,8 @@ public sealed partial class IslandWindow : Window
         _exiting = true;
         _outsideClicks.Stop();
         _mediaTicker.Stop();
+        StopDropTarget();
+        UpdateDropArming();
     }
 
     public void ShowIsland()
@@ -337,6 +344,7 @@ public sealed partial class IslandWindow : Window
         IslandMode.Retracted => Notch,
         IslandMode.Activity => Activity,
         IslandMode.Expanded => Expanded,
+        IslandMode.Drop => DropZone,
         _ => Compact,
     };
 
@@ -440,7 +448,7 @@ public sealed partial class IslandWindow : Window
             h == HorizontalAlignment.Right ? EdgeMargin : 0,
             top ? 0 : EdgeMargin);
 
-        foreach (var view in new FrameworkElement[] { Compact, Activity, Expanded })
+        foreach (var view in new FrameworkElement[] { Compact, Activity, Expanded, DropZone })
         {
             view.HorizontalAlignment = h;
             view.VerticalAlignment = top ? VerticalAlignment.Top : VerticalAlignment.Bottom;
@@ -455,11 +463,15 @@ public sealed partial class IslandWindow : Window
 
     // Region --------------------------------------------------------------------------------------
 
-    private static Rect RegionFor(FrameworkElement view, Rect capsule, bool elevated) =>
-        view.Name == "Notch"
-            // Only the part below the screen edge, plus 2 DIP so the edge-hugging tab is easy to hit.
-            ? Clamp(new Rect(capsule.X - 1, ScreenEdgeY, capsule.Width + 2, Math.Max(1, capsule.Bottom - ScreenEdgeY + 2)))
-            : RegionFor(capsule, elevated);
+    private Rect RegionFor(FrameworkElement view, Rect capsule, bool elevated) => view.Name switch
+    {
+        // Only the part below the screen edge, plus 2 DIP so the edge-hugging tab is easy to hit.
+        "Notch" => Clamp(new Rect(capsule.X - 1, ScreenEdgeY, capsule.Width + 2, Math.Max(1, capsule.Bottom - ScreenEdgeY + 2))),
+
+        // The drop zone also covers the arm zone above it, so a drag that armed it stays inside.
+        "DropZone" => Union(RegionFor(capsule, elevated), _armRegion),
+        _ => RegionFor(capsule, elevated),
+    };
 
     private static Rect RegionFor(Rect capsule, bool elevated)
     {
@@ -473,6 +485,11 @@ public sealed partial class IslandWindow : Window
         if (a.IsEmpty)
         {
             return b;
+        }
+
+        if (b.IsEmpty)
+        {
+            return a;
         }
 
         var left = Math.Min(a.Left, b.Left);
@@ -496,6 +513,11 @@ public sealed partial class IslandWindow : Window
     private void ApplyRegion(Rect dip, bool force = false)
     {
         _regionRect = dip;
+        ApplyWindowRegion(EffectiveRegion(), force);
+    }
+
+    private void ApplyWindowRegion(Rect dip, bool force)
+    {
         var s = _scale;
         var px = ((int)Math.Floor(dip.Left * s), (int)Math.Floor(dip.Top * s), (int)Math.Ceiling(dip.Right * s), (int)Math.Ceiling(dip.Bottom * s));
         if (!force && px == _appliedRegion)

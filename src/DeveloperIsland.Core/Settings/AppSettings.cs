@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using DeveloperIsland.Core.HomeCloud;
 using DeveloperIsland.Core.Modules;
 using DeveloperIsland.Core.Placement;
 
@@ -153,6 +154,15 @@ public sealed class AppSettings
 
     /// <summary>One of <see cref="ShortcutGesture.Presets"/>, by its text.</summary>
     public string GlobalShortcut { get; set; } = ShortcutGesture.Default.Text;
+
+    // Home Cloud (drop files onto the island to copy them to the home server)
+    public bool HomeCloudEnabled { get; set; } = true;
+
+    /// <summary>Folder (UNC path ok) that dropped files are copied into.</summary>
+    public string HomeCloudTargetPath { get; set; } = @"\\buntu-1\homecloud\Notch-Inbox";
+
+    [JsonConverter(typeof(JsonStringEnumConverter<HomeCloudDropSide>))]
+    public HomeCloudDropSide HomeCloudDropSide { get; set; } = HomeCloudDropSide.Right;
 
     [JsonIgnore]
     public IReadOnlyList<ModuleId> Order => ModuleCatalog.NormalizeOrder(ModuleOrder);
