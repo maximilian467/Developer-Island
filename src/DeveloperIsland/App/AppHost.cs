@@ -336,7 +336,63 @@ internal sealed class AppHost : IDisposable
         _viewModel.SetLastActive(null);
         await Task.Delay(400);
 
+        await DropSnapshotsAsync(shot);
+
         await new SettingsWindow(_settings, _options.IsDemo, () => false, _secrets).SaveSnapshotsAsync(_options.SnapshotDirectory!);
+    }
+
+    /// <summary>
+    /// The Home Cloud drop zone on either side, uploading, after success and after an error, and opened
+    /// from the notch. Driven through the state machine and the window's drop feedback; nothing is copied.
+    /// </summary>
+    private async Task DropSnapshotsAsync(Func<string, Task> shot)
+    {
+        var s = _settings.Current;
+
+        // A result lingers only briefly: capture it without the long settle delay of a morph.
+        async Task Quick(string name)
+        {
+            await Task.Delay(300);
+            await _window.SaveSnapshotAsync(Path.Combine(_options.SnapshotDirectory!, name + ".png"));
+        }
+
+        // The shown result closes the zone by itself.
+        Task BackToRest() => Task.Delay(IslandStateMachine.DropFailureLinger + TimeSpan.FromMilliseconds(600));
+
+        foreach (var side in new[] { Core.HomeCloud.HomeCloudDropSide.Right, Core.HomeCloud.HomeCloudDropSide.Left })
+        {
+            _window.ConfigureHomeCloud(true, s.HomeCloudTargetPath, side);
+            _state.FileDragEntered();
+            await shot("drop-hover-" + side.ToString().ToLowerInvariant());
+            _state.FileDragLeft();
+            await Task.Delay(600);
+        }
+
+        _window.ConfigureHomeCloud(true, s.HomeCloudTargetPath, Core.HomeCloud.HomeCloudDropSide.Right);
+        _state.FileDragEntered();
+        _state.BeginDropUpload();
+        _window.DropFeedback.Report(new Core.HomeCloud.HomeCloudProgress(4_200_000, 10_000_000, 3, 5));
+        await shot("drop-progress");
+        _window.ShowDropResult(Core.HomeCloud.HomeCloudUploadResult.Succeeded(5, 10_000_000, TimeSpan.FromSeconds(3)));
+        await Quick("drop-success");
+        await BackToRest();
+
+        _state.FileDragEntered();
+        _state.BeginDropUpload();
+        _window.ShowDropResult(Core.HomeCloud.HomeCloudUploadResult.Failed("Target not reachable"));
+        await Quick("drop-error");
+        await BackToRest();
+
+        _state.SetRest(Core.Island.RestMode.Retracted);
+        await Task.Delay(600);
+        _state.FileDragEntered();
+        await Task.Delay(400); // the morph from a 48 px notch travels furthest
+        await shot("drop-from-notch");
+        _state.FileDragLeft();
+        _state.SetRest(Core.Island.RestMode.Compact);
+        await Task.Delay(600);
+
+        _window.ConfigureHomeCloud(s.HomeCloudEnabled, s.HomeCloudTargetPath, s.HomeCloudDropSide);
     }
 
     /// <summary>
