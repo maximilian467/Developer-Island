@@ -144,6 +144,7 @@ internal sealed class AppHost : IDisposable
         _window.VisiblePanelChanged += tab => _modules.OnPanelVisible(tab);
         _window.DragCompleted += OnDragCompleted;
         _window.PlacementInvalidated += () => _dispatcher.TryEnqueue(PlaceIsland);
+        _window.ConfigureHomeCloud(settings.HomeCloudEnabled, settings.HomeCloudTargetPath, settings.HomeCloudDropSide);
         PlaceIsland();
 
         _host = new HostWindow();
@@ -531,6 +532,7 @@ internal sealed class AppHost : IDisposable
         _plan?.Configure(settings.ClaudeEnabled);
         _viewModel.EnsureValidTab();
         _window.SetAlwaysOnTop(settings.AlwaysOnTop);
+        _window.ConfigureHomeCloud(settings.HomeCloudEnabled, settings.HomeCloudTargetPath, settings.HomeCloudDropSide);
         PlaceIsland();
         SyncAutostart(settings);
         _settingsWindow?.ApplyTheme(settings.Theme);

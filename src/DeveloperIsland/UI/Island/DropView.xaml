@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Home Cloud drop zone: 340 x 64 pill (radius 32). The cloud zone (112 x 48, concentric radius 24)
+    sits on the configured side at an 8 DIP inset; the text takes the rest.
+-->
+<UserControl
+    x:Class="DeveloperIsland.UI.Island.DropView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid x:Name="Root" Width="340" Height="64" Padding="8" Background="Transparent"
+          AutomationProperties.Name="Save to Home Cloud"
+          AutomationProperties.LiveSetting="Polite">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <Border x:Name="Zone" Grid.Column="2" Width="112" Height="48" CornerRadius="24"
+                Background="{StaticResource SurfaceRaisedBrush}" BorderBrush="{StaticResource AccentBrush}" BorderThickness="1.5">
+            <FontIcon x:Name="ZoneIcon" Glyph="&#xE753;" FontSize="20" FontFamily="{StaticResource IconFont}"
+                      Foreground="{StaticResource AccentBrush}" />
+        </Border>
+
+        <StackPanel x:Name="Texts" Grid.Column="1" VerticalAlignment="Center" Spacing="1" Margin="12,0,14,0">
+            <TextBlock x:Name="TitleText" Text="Save to Home Cloud" Style="{StaticResource LabelTextStyle}" />
+            <TextBlock x:Name="DetailText" Text="Release to copy" Style="{StaticResource CaptionTextStyle}" />
+        </StackPanel>
+    </Grid>
+</UserControl>

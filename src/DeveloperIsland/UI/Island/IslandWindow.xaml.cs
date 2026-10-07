@@ -112,10 +112,12 @@ public sealed partial class IslandWindow : Window
         Compact.SizeChanged += OnViewSizeChanged;
         Activity.SizeChanged += OnViewSizeChanged;
         Expanded.SizeChanged += OnViewSizeChanged;
+        DropZone.SizeChanged += OnViewSizeChanged;
         NotchPrivacy.Source = viewModel.Privacy;
 
         _state.ModeChanged += OnModeChanged;
         _state.PointerProbe = ProbePointer;
+        _state.DropProbe = ProbeDrop;
         _outsideClicks = new OutsideClickWatcher(() => DispatcherQueue.TryEnqueue(OnClickedOutside));
         _viewModel.PropertyChanged += (_, e) =>
         {
@@ -195,6 +197,7 @@ public sealed partial class IslandWindow : Window
         _exiting = true;
         _outsideClicks.Stop();
         _mediaTicker.Stop();
+        StopDropTarget();
     }
 
     public void ShowIsland()
@@ -337,6 +340,7 @@ public sealed partial class IslandWindow : Window
         IslandMode.Retracted => Notch,
         IslandMode.Activity => Activity,
         IslandMode.Expanded => Expanded,
+        IslandMode.Drop => DropZone,
         _ => Compact,
     };
 
@@ -440,7 +444,7 @@ public sealed partial class IslandWindow : Window
             h == HorizontalAlignment.Right ? EdgeMargin : 0,
             top ? 0 : EdgeMargin);
 
-        foreach (var view in new FrameworkElement[] { Compact, Activity, Expanded })
+        foreach (var view in new FrameworkElement[] { Compact, Activity, Expanded, DropZone })
         {
             view.HorizontalAlignment = h;
             view.VerticalAlignment = top ? VerticalAlignment.Top : VerticalAlignment.Bottom;
