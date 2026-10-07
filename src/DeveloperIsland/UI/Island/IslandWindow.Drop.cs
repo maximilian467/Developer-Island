@@ -402,7 +402,8 @@ public sealed partial class IslandWindow
         }
         catch (Exception ex)
         {
-            Log.Error("homecloud", "Drop failed", ex);
+            // The type only: IO messages name paths.
+            Log.Error("homecloud", "Drop failed", data: new { error = ex.GetType().Name });
             ShowDropResult(HomeCloudUploadResult.Failed("Copy failed"));
         }
     }

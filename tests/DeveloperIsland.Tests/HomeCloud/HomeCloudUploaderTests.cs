@@ -209,6 +209,32 @@ public class HomeCloudUploaderTests
     }
 
     [Fact]
+    public async Task A_failure_keeps_file_names_and_paths_out_of_the_log()
+    {
+        var file = Write("secret-name.txt");
+        var lines = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        var previous = DeveloperIsland.Core.Diagnostics.Log.Sink;
+        DeveloperIsland.Core.Diagnostics.Log.Sink = lines.Enqueue;
+        try
+        {
+            var result = await new HomeCloudUploader(new TestSink { ThrowOnWrite = true }).UploadAsync([file], _target);
+            Assert.Equal(HomeCloudUploadStatus.Failed, result.Status);
+        }
+        finally
+        {
+            DeveloperIsland.Core.Diagnostics.Log.Sink = previous;
+        }
+
+        var homeCloud = lines.Where(l => l.Contains("\"homecloud\"", StringComparison.Ordinal)).ToList();
+        Assert.Contains(homeCloud, l => l.Contains("IOException", StringComparison.Ordinal));
+        Assert.All(homeCloud, l =>
+        {
+            Assert.DoesNotContain("secret-name", l);
+            Assert.DoesNotContain(Path.GetFileName(_source), l);
+        });
+    }
+
+    [Fact]
     public async Task A_missing_source_fails()
     {
         var result = await new HomeCloudUploader(new FileSystemSink()).UploadAsync([Path.Combine(_source, "nope.txt")], _target);

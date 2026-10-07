@@ -138,7 +138,8 @@ public sealed class HomeCloudUploader(IFileSink sink)
     private static HomeCloudUploadResult Fail(string reason, int files, long bytes, Stopwatch watch, Exception? ex = null)
     {
         watch.Stop();
-        Log.Warn("homecloud", "upload finished", new { status = "Failed", reason, files, bytes, ms = watch.ElapsedMilliseconds }, ex);
+        // The exception type only: IO messages name files and paths.
+        Log.Warn("homecloud", "upload finished", new { status = "Failed", reason, files, bytes, ms = watch.ElapsedMilliseconds, error = ex?.GetType().Name });
         return HomeCloudUploadResult.Failed(reason, files, bytes, watch.Elapsed);
     }
 
@@ -248,7 +249,7 @@ public sealed class HomeCloudUploader(IFileSink sink)
         }
         catch (Exception ex)
         {
-            Log.Warn("homecloud", "could not remove partial file", null, ex);
+            Log.Warn("homecloud", "could not remove partial file", new { error = ex.GetType().Name });
         }
     }
 
