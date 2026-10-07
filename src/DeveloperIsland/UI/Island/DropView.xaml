@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Home Cloud drop zone: 340 x 64 pill (radius 32). The cloud zone (112 x 48, concentric radius 24)
-    sits on the configured side at an 8 DIP inset; the text takes the rest.
+    sits on the configured side at an 8 DIP inset; the text takes the rest. While uploading a 3 DIP
+    bar under the text fills with the copied bytes; the zone's glyph turns into a check mark or an
+    error mark when the upload ends.
 -->
 <UserControl
     x:Class="DeveloperIsland.UI.Island.DropView"
@@ -9,7 +11,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <Grid x:Name="Root" Width="340" Height="64" Padding="8" Background="Transparent"
-          AutomationProperties.Name="Save to Home Cloud"
           AutomationProperties.LiveSetting="Polite">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto" />
@@ -24,8 +25,16 @@
         </Border>
 
         <StackPanel x:Name="Texts" Grid.Column="1" VerticalAlignment="Center" Spacing="1" Margin="12,0,14,0">
-            <TextBlock x:Name="TitleText" Text="Save to Home Cloud" Style="{StaticResource LabelTextStyle}" />
-            <TextBlock x:Name="DetailText" Text="Release to copy" Style="{StaticResource CaptionTextStyle}" />
+            <TextBlock x:Name="TitleText" Style="{StaticResource LabelTextStyle}" />
+            <TextBlock x:Name="DetailText" Style="{StaticResource CaptionTextStyle}" />
+            <Grid x:Name="Bar" Height="3" Margin="0,5,0,0" CornerRadius="1.5" Visibility="Collapsed"
+                  Background="{StaticResource ProgressTrackBrush}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="BarDone" Width="0*" />
+                    <ColumnDefinition x:Name="BarRest" Width="1*" />
+                </Grid.ColumnDefinitions>
+                <Border CornerRadius="1.5" Background="{StaticResource AccentBrush}" />
+            </Grid>
         </StackPanel>
     </Grid>
 </UserControl>

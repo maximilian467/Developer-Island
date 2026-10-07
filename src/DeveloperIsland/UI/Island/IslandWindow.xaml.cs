@@ -118,6 +118,7 @@ public sealed partial class IslandWindow : Window
         _state.ModeChanged += OnModeChanged;
         _state.PointerProbe = ProbePointer;
         _state.DropProbe = ProbeDrop;
+        InitializeDropTarget();
         _outsideClicks = new OutsideClickWatcher(() => DispatcherQueue.TryEnqueue(OnClickedOutside));
         _viewModel.PropertyChanged += (_, e) =>
         {

@@ -1,6 +1,7 @@
 using DeveloperIsland.Core.Diagnostics;
 using DeveloperIsland.Core.HomeCloud;
 using DeveloperIsland.Core.Island;
+using DeveloperIsland.ViewModels;
 using Microsoft.UI.Xaml;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Foundation;
@@ -21,6 +22,68 @@ public sealed partial class IslandWindow
     private bool _homeCloudEnabled;
     private string _homeCloudTarget = "";
     private (RoutedEvent Event, DragEventHandler Handler)[]? _dragHandlers;
+    private CancellationTokenSource? _reachabilityCheck;
+
+    /// <summary>What the drop zone shows.</summary>
+    internal DropViewModel DropFeedback { get; } = new();
+
+    private void InitializeDropTarget()
+    {
+        DropZone.ViewModel = DropFeedback;
+        _state.DropPhaseChanged += OnDropPhaseChanged;
+    }
+
+    /// <summary>
+    /// Every way into the zone (a real drag, the debug path, a snapshot) passes here: a new hover asks
+    /// once whether the server can be reached, so the zone can say so before the drop.
+    /// </summary>
+    private void OnDropPhaseChanged(DropPhase phase)
+    {
+        _reachabilityCheck?.Cancel();
+        _reachabilityCheck = null;
+        switch (phase)
+        {
+            case DropPhase.Hover:
+                DropFeedback.BeginHover();
+                if (!SnapshotMode)
+                {
+                    _ = CheckReachabilityAsync();
+                }
+
+                break;
+            case DropPhase.Uploading:
+                DropFeedback.BeginUpload();
+                break;
+        }
+    }
+
+    private async Task CheckReachabilityAsync()
+    {
+        var check = new CancellationTokenSource();
+        _reachabilityCheck = check;
+        try
+        {
+            var result = await HomeCloudReachability.CheckAsync(_homeCloudTarget, TimeSpan.FromSeconds(2), check.Token);
+            if (ReferenceEquals(_reachabilityCheck, check) && _state.DropPhase == DropPhase.Hover)
+            {
+                DropFeedback.SetReachability(result);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Log.Debug("homecloud", "Reachability check failed", new { error = ex.GetType().Name });
+        }
+    }
+
+    /// <summary>Shows a finished upload in the zone, which then closes after a moment.</summary>
+    internal void ShowDropResult(HomeCloudUploadResult result)
+    {
+        DropFeedback.Finish(result);
+        _state.FinishDrop(result.Status == HomeCloudUploadStatus.Succeeded);
+    }
 
     /// <summary>Applies the Home Cloud settings; switching off removes every drop hook at once.</summary>
     public void ConfigureHomeCloud(bool enabled, string targetPath, HomeCloudDropSide side)
@@ -79,12 +142,15 @@ public sealed partial class IslandWindow
             var target = _homeCloudTarget;
             var token = _dropCancel.Token;
 
+            // Created here, so reports arrive on the UI thread.
+            var progress = new Progress<HomeCloudProgress>(DropFeedback.Report);
+
             // The uploader's first steps touch the share synchronously; never on the UI thread.
-            result = await Task.Run(() => _uploader.UploadAsync(paths, target, null, token));
+            result = await Task.Run(() => _uploader.UploadAsync(paths, target, progress, token));
         }
 
         Log.Info("homecloud", "Drop handled", new { items = paths.Count, status = result.Status.ToString(), files = result.FileCount, bytes = result.Bytes, ms = (long)result.Duration.TotalMilliseconds });
-        _state.FinishDrop(result.Status == HomeCloudUploadStatus.Succeeded);
+        ShowDropResult(result);
         return result;
     }
 
@@ -174,7 +240,7 @@ public sealed partial class IslandWindow
         catch (Exception ex)
         {
             Log.Error("homecloud", "Drop failed", ex);
-            _state.FinishDrop(succeeded: false);
+            ShowDropResult(HomeCloudUploadResult.Failed("Copy failed"));
         }
     }
 
