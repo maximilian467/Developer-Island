@@ -61,6 +61,7 @@ internal sealed class AppHost : IDisposable
     private PlanUsageService? _plan;
     private DispatcherQueueTimer? _planReset;
     private DispatcherQueueTimer? _historyDebounce;
+    private DispatcherQueueTimer? _displaySettle;
     private DispatcherQueueTimer? _midnight;
     private Core.Island.AutoHideCoordinator? _autoHide;
     private DispatcherQueueTimer? _autoHideCheck;
@@ -154,7 +155,7 @@ internal sealed class AppHost : IDisposable
         PlaceIsland();
 
         _host = new HostWindow();
-        _host.DisplaySettingsChanged += () => _dispatcher.TryEnqueue(PlaceIsland);
+        _host.DisplaySettingsChanged += () => _dispatcher.TryEnqueue(RequestDisplayPlacement);
         _tray = new TrayIcon(_host, AppPaths.Icon)
         {
             IsIslandVisible = () => _window.IsIslandVisible,
@@ -843,10 +844,38 @@ internal sealed class AppHost : IDisposable
         }
     }
 
+    /// <summary>
+    /// Connecting, disconnecting or docking sends a burst of display messages, and the monitor list
+    /// passes through intermediate layouts on the way. Place the island once things are quiet.
+    /// </summary>
+    private void RequestDisplayPlacement()
+    {
+        if (_displaySettle is null)
+        {
+            _displaySettle = _dispatcher.CreateTimer();
+            _displaySettle.IsRepeating = false;
+            _displaySettle.Interval = TimeSpan.FromMilliseconds(400);
+            _displaySettle.Tick += (_, _) => OnDisplaysSettled();
+        }
+
+        _displaySettle.Stop();
+        _displaySettle.Start();
+    }
+
+    private void OnDisplaysSettled()
+    {
+        var monitors = MonitorService.GetMonitors();
+        Log.Info("window", "Displays changed", new
+        {
+            monitors = monitors.Select(m => new { device = m.DeviceName, m.Bounds.Width, m.Bounds.Height, m.Scale, primary = m.IsPrimary }).ToArray(),
+        });
+        PlaceIsland();
+    }
+
     private void OnDragCompleted(PixelRect capsule)
     {
         var drop = IslandPlacement.FromDrop(MonitorService.GetMonitors(), capsule);
-        Log.Info("window", "Island moved", new { anchor = drop.Anchor.ToString(), drop.OffsetX, drop.OffsetY });
+        Log.Info("window", "Island moved", new { device = drop.Monitor.DeviceName, anchor = drop.Anchor.ToString(), drop.OffsetX, drop.OffsetY });
         _settings.Update(s =>
         {
             s.MonitorDevice = drop.Monitor.IsPrimary ? null : drop.Monitor.DeviceName;

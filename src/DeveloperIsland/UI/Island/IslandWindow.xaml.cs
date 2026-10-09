@@ -201,7 +201,9 @@ public sealed partial class IslandWindow : Window
 
         // Sized for the DPI the window has now. If the move takes it to a monitor with another
         // scale, Windows sends WM_DPICHANGED and RectForScale sizes it for the new one.
-        var rect = IslandPlacement.WindowRect(monitor, anchor, offsetX, offsetY, WindowWidth, WindowHeight, EdgeMargin, WindowScale());
+        var windowScale = WindowScale();
+        var rect = IslandPlacement.WindowRect(monitor, anchor, offsetX, offsetY, WindowWidth, WindowHeight, EdgeMargin, windowScale);
+        Log.Debug("window", "Placed", new { device = monitor.DeviceName, monitorScale = monitor.Scale, windowScale, anchor = anchor.ToString(), rect.X, rect.Y, rect.Width, rect.Height });
         if (SnapshotMode)
         {
             // Rendered offscreen only: never visible on any monitor.
