@@ -166,8 +166,8 @@ internal sealed class AppHost : IDisposable
         if (!IsSnapshot)
         {
             _tray.Add();
-            _fullscreen = new FullscreenWatcher(_host, _window.Handle, OnFullscreenChanged);
-            _foreground = new ForegroundWatcher(_window.Handle, () => _settings.Current.SmartHideProcesses, info => _autoHide?.ForegroundChanged(info));
+            _fullscreen = new FullscreenWatcher(_host, () => _window.MonitorHandle, OnFullscreenChanged);
+            _foreground = new ForegroundWatcher(() => _window.MonitorHandle, () => _settings.Current.SmartHideProcesses, info => _autoHide?.ForegroundChanged(info));
             _foreground.Switched += _window.KeepOnTop;
             _privacy = new Platform.Privacy.PrivacyWatcher(state => _dispatcher.TryEnqueue(() => OnPrivacyChanged(state)));
             _hotkey = new GlobalHotKey(_host);

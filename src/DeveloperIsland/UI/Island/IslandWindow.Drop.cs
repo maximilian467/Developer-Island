@@ -168,7 +168,7 @@ public sealed partial class IslandWindow
             return null;
         }
 
-        var monitor = MonitorFromWindow(_hwnd, MONITOR_DEFAULTTONEAREST);
+        var monitor = MonitorHandle;
         var info = new MONITORINFOEX { cbSize = System.Runtime.InteropServices.Marshal.SizeOf<MONITORINFOEX>() };
         if (monitor == IntPtr.Zero || !GetMonitorInfo(monitor, ref info))
         {

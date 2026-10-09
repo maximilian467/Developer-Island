@@ -162,6 +162,27 @@ public sealed partial class IslandWindow : Window
 
     public bool IsIslandVisible => _visible;
 
+    /// <summary>
+    /// The monitor that shows the capsule: the one under its anchor point. The window itself is much
+    /// larger than the capsule and can reach into a neighbouring monitor, so MonitorFromWindow on it
+    /// may name the wrong one.
+    /// </summary>
+    public IntPtr MonitorHandle
+    {
+        get
+        {
+            if (!GetWindowRect(_hwnd, out var window))
+            {
+                return MonitorFromWindow(_hwnd, MONITOR_DEFAULTTONEAREST);
+            }
+
+            var (ax, ay) = IslandPlacement.AnchorInWindow(_anchor, WindowWidth, WindowHeight, EdgeMargin);
+            var s = WindowScale();
+            var point = new POINT { X = window.Left + (int)Math.Round(ax * s), Y = window.Top + (int)Math.Round(ay * s) };
+            return MonitorFromPoint(point, MONITOR_DEFAULTTONEAREST);
+        }
+    }
+
     /// <summary>Positions the window for a monitor and anchor. Content alignment follows the anchor.</summary>
     public void Place(MonitorInfo monitor, IslandAnchor anchor, double offsetX, double offsetY)
     {

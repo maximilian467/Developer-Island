@@ -30,7 +30,7 @@ internal sealed class ForegroundWatcher : IDisposable
     private const uint WINEVENT_SKIPOWNPROCESS = 0x0002;
     private const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
 
-    private readonly IntPtr _island;
+    private readonly Func<IntPtr> _islandMonitor;
     private readonly Func<IReadOnlyCollection<string>> _watched;
     private readonly Action<ForegroundInfo?> _changed;
     private readonly WinEventProc _proc;
@@ -42,9 +42,9 @@ internal sealed class ForegroundWatcher : IDisposable
     private IntPtr _foreground;
     private ForegroundInfo? _current;
 
-    public ForegroundWatcher(IntPtr islandWindow, Func<IReadOnlyCollection<string>> watchedProcesses, Action<ForegroundInfo?> changed)
+    public ForegroundWatcher(Func<IntPtr> islandMonitor, Func<IReadOnlyCollection<string>> watchedProcesses, Action<ForegroundInfo?> changed)
     {
-        _island = islandWindow;
+        _islandMonitor = islandMonitor;
         _watched = watchedProcesses;
         _changed = changed;
         _proc = OnWinEvent;
@@ -169,7 +169,7 @@ internal sealed class ForegroundWatcher : IDisposable
     private ForegroundInfo Describe(IntPtr hwnd, uint pid, string? name = null) => new(
         name ?? ProcessName(pid),
         IsZoomed(hwnd),
-        MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST) == MonitorFromWindow(_island, MONITOR_DEFAULTTONEAREST));
+        MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST) == _islandMonitor());
 
     /// <summary>The top-level owner: a menu, popup or dialog stands for its main window.</summary>
     private static IntPtr Root(IntPtr hwnd)

@@ -24,17 +24,17 @@ internal sealed partial class FullscreenWatcher : IDisposable
     private const uint CallbackMessage = 0x8000 + 2; // WM_APP + 2
 
     private readonly HostWindow _host;
-    private readonly IntPtr _island;
+    private readonly Func<IntPtr> _islandMonitor;
     private readonly Action<bool> _changed;
     private readonly WinEventProc _proc;
     private readonly IntPtr _hook;
     private bool _registeredAppBar;
     private bool? _last;
 
-    public FullscreenWatcher(HostWindow host, IntPtr islandWindow, Action<bool> changed)
+    public FullscreenWatcher(HostWindow host, Func<IntPtr> islandMonitor, Action<bool> changed)
     {
         _host = host;
-        _island = islandWindow;
+        _islandMonitor = islandMonitor;
         _changed = changed;
         _proc = OnWinEvent;
         _hook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, IntPtr.Zero, _proc, 0, 0, WINEVENT_OUTOFCONTEXT);
@@ -120,7 +120,7 @@ internal sealed partial class FullscreenWatcher : IDisposable
             IsVisible: IsWindowVisible(foreground) && !IsCloaked(foreground),
             IsMaximized: IsZoomed(foreground),
             HasCaption: (GetWindowLongPtr(foreground, GWL_STYLE).ToInt64() & WS_CAPTION) == WS_CAPTION,
-            IsOnIslandMonitor: monitor == MonitorFromWindow(_island, MONITOR_DEFAULTTONEAREST),
+            IsOnIslandMonitor: monitor == _islandMonitor(),
             CoversMonitor: CoversMonitor(foreground, monitor));
 
         var fullscreen = FullscreenPolicy.IsFullscreenApp(window);
