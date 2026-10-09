@@ -164,7 +164,7 @@ More, including offscreen snapshots and the hardware report: [docs/DEVELOPMENT.m
 
 - Fully usable from the keyboard: the global shortcut opens the island with focus, Tab and the arrow keys move through it, Esc closes it and returns focus to where you were.
 - Respects the Windows "Animation effects" setting.
-- Per-monitor DPI aware; placement is recalculated when scaling or monitors change.
+- Per-monitor DPI aware: the island can be dragged between monitors with different scaling, and placement is recalculated when scaling or monitors change.
 - Controls carry accessible names for screen readers; a full Narrator pass is still open.
 
 ## Known limitations
