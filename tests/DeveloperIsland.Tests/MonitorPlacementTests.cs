@@ -9,10 +9,13 @@ public class MonitorPlacementTests
     private static readonly MonitorInfo Secondary = new(@"\\.\DISPLAY2", new PixelRect(1920, 0, 2560, 1440), new PixelRect(1920, 0, 2560, 1400), 1.5, false);
     private static readonly MonitorInfo[] Both = [Secondary, Primary];
 
+    private const string DellId = @"\\?\DISPLAY#DELA0F4#5&1a2b3c4d&0&UID4352#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}";
+    private const string LgId = @"\\?\DISPLAY#GSM5B7F#5&1a2b3c4d&0&UID4353#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}";
+
     [Fact]
     public void Saved_monitor_is_used_when_present()
     {
-        var placement = IslandPlacement.Resolve(Both, @"\\.\DISPLAY2", IslandAnchor.BottomLeft, 12, -8);
+        var placement = IslandPlacement.Resolve(Both, null, @"\\.\DISPLAY2", IslandAnchor.BottomLeft, 12, -8);
 
         Assert.Same(Secondary, placement.Monitor);
         Assert.Equal(IslandAnchor.BottomLeft, placement.Anchor);
@@ -23,7 +26,7 @@ public class MonitorPlacementTests
     [Fact]
     public void Missing_monitor_falls_back_to_primary_top_center()
     {
-        var placement = IslandPlacement.Resolve([Primary], @"\\.\DISPLAY7", IslandAnchor.BottomRight, 300, 40);
+        var placement = IslandPlacement.Resolve([Primary], null, @"\\.\DISPLAY7", IslandAnchor.BottomRight, 300, 40);
 
         Assert.Same(Primary, placement.Monitor);
         Assert.Equal(IslandAnchor.TopCenter, placement.Anchor);
@@ -34,13 +37,51 @@ public class MonitorPlacementTests
     [Fact]
     public void No_saved_monitor_means_primary()
     {
-        Assert.Same(Primary, IslandPlacement.Resolve(Both, null, IslandAnchor.TopCenter, 0, 0).Monitor);
+        Assert.Same(Primary, IslandPlacement.Resolve(Both, null, null, IslandAnchor.TopCenter, 0, 0).Monitor);
     }
 
     [Fact]
     public void Monitor_names_match_case_insensitively()
     {
-        Assert.Same(Secondary, IslandPlacement.Resolve(Both, @"\\.\display2", IslandAnchor.TopCenter, 0, 0).Monitor);
+        Assert.Same(Secondary, IslandPlacement.Resolve(Both, null, @"\\.\display2", IslandAnchor.TopCenter, 0, 0).Monitor);
+    }
+
+    [Fact]
+    public void Saved_id_finds_the_monitor_after_windows_renumbered_it()
+    {
+        // Saved as DISPLAY2; after a dock change the same monitor is DISPLAY5 and DISPLAY2 is another one.
+        var renamed = Secondary with { DeviceName = @"\\.\DISPLAY5", Id = DellId };
+        var other = Secondary with { Id = LgId, Bounds = new PixelRect(-1920, 0, 1920, 1080) };
+
+        var placement = IslandPlacement.Resolve([Primary, other, renamed], DellId, @"\\.\DISPLAY2", IslandAnchor.BottomLeft, 12, -8);
+
+        Assert.Same(renamed, placement.Monitor);
+        Assert.False(placement.IsFallback);
+    }
+
+    [Fact]
+    public void Device_name_never_stands_in_for_a_different_monitor()
+    {
+        var other = Secondary with { Id = LgId };
+
+        var placement = IslandPlacement.Resolve([Primary, other], DellId, @"\\.\DISPLAY2", IslandAnchor.BottomLeft, 12, -8);
+
+        Assert.Same(Primary, placement.Monitor);
+        Assert.True(placement.IsFallback);
+    }
+
+    [Fact]
+    public void Settings_from_before_ids_still_find_the_monitor_by_name()
+    {
+        var withId = Secondary with { Id = DellId };
+
+        Assert.Same(withId, IslandPlacement.Resolve([Primary, withId], null, @"\\.\DISPLAY2", IslandAnchor.TopCenter, 0, 0).Monitor);
+    }
+
+    [Fact]
+    public void Monitor_without_an_id_is_matched_by_name()
+    {
+        Assert.Same(Secondary, IslandPlacement.Resolve(Both, DellId, @"\\.\DISPLAY2", IslandAnchor.TopCenter, 0, 0).Monitor);
     }
 
     [Fact]

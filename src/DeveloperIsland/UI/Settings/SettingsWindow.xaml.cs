@@ -222,18 +222,14 @@ public sealed partial class SettingsWindow : Window
 
             _monitors = MonitorService.GetMonitors();
             MonitorPicker.Items.Clear();
-            var selected = 0;
-            for (var i = 0; i < _monitors.Count; i++)
+            foreach (var monitor in _monitors)
             {
-                MonitorPicker.Items.Add(MonitorService.DisplayName(_monitors[i]));
-                var isSaved = s.MonitorDevice is null ? _monitors[i].IsPrimary : string.Equals(_monitors[i].DeviceName, s.MonitorDevice, StringComparison.OrdinalIgnoreCase);
-                if (isSaved)
-                {
-                    selected = i;
-                }
+                MonitorPicker.Items.Add(MonitorService.DisplayName(monitor));
             }
 
-            MonitorPicker.SelectedIndex = _monitors.Count > 0 ? selected : -1;
+            // The monitor the island is on now: the saved one, or the primary it fell back to.
+            var shown = IslandPlacement.Resolve(_monitors, s.MonitorId, s.MonitorDevice, s.Anchor, s.OffsetX, s.OffsetY).Monitor;
+            MonitorPicker.SelectedIndex = _monitors.Count > 0 ? Math.Max(0, _monitors.ToList().IndexOf(shown)) : -1;
         }
         finally
         {
@@ -359,7 +355,11 @@ public sealed partial class SettingsWindow : Window
         }
 
         var monitor = _monitors[MonitorPicker.SelectedIndex];
-        _store.Update(s => s.MonitorDevice = monitor.IsPrimary ? null : monitor.DeviceName);
+        _store.Update(s =>
+        {
+            s.MonitorDevice = monitor.IsPrimary ? null : monitor.DeviceName;
+            s.MonitorId = monitor.IsPrimary ? null : monitor.Id;
+        });
     }
 
     private void OnResetPosition(object sender, RoutedEventArgs e) => _store.Update(s =>

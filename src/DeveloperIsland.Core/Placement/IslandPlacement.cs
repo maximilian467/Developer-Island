@@ -15,7 +15,9 @@ public readonly record struct PixelRect(int X, int Y, int Width, int Height)
 }
 
 /// <summary>A display as reported by the OS.</summary>
-public sealed record MonitorInfo(string DeviceName, PixelRect Bounds, PixelRect WorkArea, double Scale, bool IsPrimary);
+/// <param name="DeviceName">The GDI name, for example <c>\\.\DISPLAY2</c>. Windows can renumber these when displays are connected or a dock changes.</param>
+/// <param name="Id">The monitor's device interface path, stable for the same monitor on the same port; null when Windows reports none.</param>
+public sealed record MonitorInfo(string DeviceName, PixelRect Bounds, PixelRect WorkArea, double Scale, bool IsPrimary, string? Id = null);
 
 /// <summary>Where the island ended up, and whether the saved monitor was unavailable.</summary>
 public sealed record ResolvedPlacement(MonitorInfo Monitor, IslandAnchor Anchor, double OffsetX, double OffsetY, bool IsFallback);
@@ -36,10 +38,12 @@ public static class IslandPlacement
     public const double SnapDistance = 18;
 
     /// <summary>
-    /// Picks the saved monitor by device name. If it is gone, falls back to the primary monitor at
-    /// Top Center without offsets.
+    /// Picks the saved monitor, by its stable id first and by device name second (settings saved
+    /// before ids, or a monitor without one). A device name never stands in for a different monitor
+    /// whose id is known. If the saved monitor is gone, falls back to the primary monitor at Top
+    /// Center without offsets. Nothing saved means the primary monitor.
     /// </summary>
-    public static ResolvedPlacement Resolve(IReadOnlyList<MonitorInfo> monitors, string? deviceName, IslandAnchor anchor, double offsetX, double offsetY)
+    public static ResolvedPlacement Resolve(IReadOnlyList<MonitorInfo> monitors, string? monitorId, string? deviceName, IslandAnchor anchor, double offsetX, double offsetY)
     {
         if (monitors.Count == 0)
         {
@@ -47,15 +51,31 @@ public static class IslandPlacement
         }
 
         var primary = monitors.FirstOrDefault(m => m.IsPrimary) ?? monitors[0];
-        if (string.IsNullOrEmpty(deviceName))
+        if (string.IsNullOrEmpty(monitorId) && string.IsNullOrEmpty(deviceName))
         {
             return new ResolvedPlacement(primary, anchor, offsetX, offsetY, false);
         }
 
-        var match = monitors.FirstOrDefault(m => string.Equals(m.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase));
+        var match = FindSaved(monitors, monitorId, deviceName);
         return match is not null
             ? new ResolvedPlacement(match, anchor, offsetX, offsetY, false)
             : new ResolvedPlacement(primary, IslandAnchor.TopCenter, 0, 0, true);
+    }
+
+    /// <summary>The saved monitor if it is connected, else null.</summary>
+    public static MonitorInfo? FindSaved(IReadOnlyList<MonitorInfo> monitors, string? monitorId, string? deviceName)
+    {
+        var hasId = !string.IsNullOrEmpty(monitorId);
+        if (hasId && monitors.FirstOrDefault(m => string.Equals(m.Id, monitorId, StringComparison.OrdinalIgnoreCase)) is { } byId)
+        {
+            return byId;
+        }
+
+        return string.IsNullOrEmpty(deviceName)
+            ? null
+            : monitors.FirstOrDefault(m =>
+                string.Equals(m.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase)
+                && (!hasId || string.IsNullOrEmpty(m.Id)));
     }
 
     /// <summary>The anchor point inside the island window, in DIPs.</summary>

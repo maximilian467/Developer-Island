@@ -827,7 +827,7 @@ internal sealed class AppHost : IDisposable
         try
         {
             var s = _settings.Current;
-            var placement = IslandPlacement.Resolve(MonitorService.GetMonitors(), s.MonitorDevice, s.Anchor, s.OffsetX, s.OffsetY);
+            var placement = IslandPlacement.Resolve(MonitorService.GetMonitors(), s.MonitorId, s.MonitorDevice, s.Anchor, s.OffsetX, s.OffsetY);
             if (placement.IsFallback)
             {
                 Log.Info("window", "Saved monitor not found; using the primary monitor", new { device = s.MonitorDevice });
@@ -850,6 +850,7 @@ internal sealed class AppHost : IDisposable
         _settings.Update(s =>
         {
             s.MonitorDevice = drop.Monitor.IsPrimary ? null : drop.Monitor.DeviceName;
+            s.MonitorId = drop.Monitor.IsPrimary ? null : drop.Monitor.Id;
             s.Anchor = drop.Anchor;
             s.OffsetX = drop.OffsetX;
             s.OffsetY = drop.OffsetY;
@@ -885,7 +886,7 @@ internal sealed class AppHost : IDisposable
     private void ApplySmartHide()
     {
         var s = _settings.Current;
-        var placement = IslandPlacement.Resolve(MonitorService.GetMonitors(), s.MonitorDevice, s.Anchor, s.OffsetX, s.OffsetY);
+        var placement = IslandPlacement.Resolve(MonitorService.GetMonitors(), s.MonitorId, s.MonitorDevice, s.Anchor, s.OffsetX, s.OffsetY);
         _autoHidePlacement = (placement.Anchor, placement.OffsetY);
         _autoHide?.Reevaluate();
         UpdateAutoHideCheck();

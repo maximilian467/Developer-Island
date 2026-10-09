@@ -23,7 +23,8 @@ internal static class MonitorService
                     ToRect(info.rcMonitor),
                     ToRect(info.rcWork),
                     scale,
-                    (info.dwFlags & NativeMethods.MONITORINFOF_PRIMARY) != 0));
+                    (info.dwFlags & NativeMethods.MONITORINFOF_PRIMARY) != 0,
+                    MonitorId(info.szDevice)));
             }
 
             return true;
@@ -47,6 +48,27 @@ internal static class MonitorService
         var name = string.IsNullOrEmpty(number) ? monitor.DeviceName : $"Display {number}";
         var primary = monitor.IsPrimary ? ", primary" : string.Empty;
         return $"{name} ({monitor.Bounds.Width}\u00A0×\u00A0{monitor.Bounds.Height}{primary})";
+    }
+
+    /// <summary>
+    /// The device interface path of the active monitor on a display output, for example
+    /// <c>\\?\DISPLAY#DELA0F4#5&amp;...#{e6f07b5f-...}</c>. It names the monitor model and its
+    /// connection, and stays the same when Windows renumbers the <c>\\.\DISPLAYn</c> names.
+    /// </summary>
+    private static string? MonitorId(string deviceName)
+    {
+        var device = new NativeMethods.DISPLAY_DEVICE { cb = Marshal.SizeOf<NativeMethods.DISPLAY_DEVICE>() };
+        for (uint i = 0; NativeMethods.EnumDisplayDevices(deviceName, i, ref device, NativeMethods.EDD_GET_DEVICE_INTERFACE_NAME); i++)
+        {
+            if ((device.StateFlags & NativeMethods.DISPLAY_DEVICE_ACTIVE) != 0 && !string.IsNullOrEmpty(device.DeviceID))
+            {
+                return device.DeviceID;
+            }
+
+            device = new NativeMethods.DISPLAY_DEVICE { cb = Marshal.SizeOf<NativeMethods.DISPLAY_DEVICE>() };
+        }
+
+        return null;
     }
 
     private static PixelRect ToRect(NativeMethods.RECT r) => new(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);

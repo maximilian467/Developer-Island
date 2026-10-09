@@ -72,6 +72,12 @@ public sealed class AppSettings
     /// <summary>Device name of the monitor (for example <c>\.\DISPLAY2</c>); null means the primary monitor.</summary>
     public string? MonitorDevice { get; set; }
 
+    /// <summary>
+    /// Stable id of the same monitor (its device interface path), which survives Windows renumbering
+    /// the device names; null means the primary monitor or a monitor without an id.
+    /// </summary>
+    public string? MonitorId { get; set; }
+
     [JsonConverter(typeof(JsonStringEnumConverter<IslandAnchor>))]
     public IslandAnchor Anchor { get; set; } = IslandAnchor.TopCenter;
 
