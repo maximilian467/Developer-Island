@@ -86,10 +86,16 @@ public static class IslandPlacement
         return (x, y);
     }
 
-    /// <summary>Window rectangle (physical pixels) for a window of the given DIP size.</summary>
-    public static PixelRect WindowRect(MonitorInfo monitor, IslandAnchor anchor, double offsetX, double offsetY, double windowWidth, double windowHeight, double margin)
+    /// <summary>
+    /// Window rectangle (physical pixels) for a window of the given DIP size. The gap and offset are
+    /// in the monitor's scale; the window's content is in <paramref name="contentScale"/>, the DPI
+    /// Windows renders the window at. The two differ for a moment after a move to a monitor with
+    /// another scale, and whenever most of the window lies on a neighbouring monitor.
+    /// </summary>
+    public static PixelRect WindowRect(MonitorInfo monitor, IslandAnchor anchor, double offsetX, double offsetY, double windowWidth, double windowHeight, double margin, double? contentScale = null)
     {
         var s = monitor.Scale;
+        var c = contentScale ?? s;
         var (ax, ay) = AnchorOnMonitor(monitor, anchor);
         ax += offsetX * s;
         ay += offsetY * s;
@@ -101,10 +107,10 @@ public static class IslandPlacement
 
         var (wx, wy) = AnchorInWindow(anchor, windowWidth, windowHeight, margin);
         return new PixelRect(
-            (int)Math.Round(ax - wx * s),
-            (int)Math.Round(ay - wy * s),
-            (int)Math.Ceiling(windowWidth * s),
-            (int)Math.Ceiling(windowHeight * s));
+            (int)Math.Round(ax - wx * c),
+            (int)Math.Round(ay - wy * c),
+            (int)Math.Ceiling(windowWidth * c),
+            (int)Math.Ceiling(windowHeight * c));
     }
 
     /// <summary>

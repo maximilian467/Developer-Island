@@ -65,6 +65,27 @@ public class MonitorPlacementTests
     }
 
     [Fact]
+    public void Window_rendered_at_another_scale_still_puts_the_capsule_on_the_anchor()
+    {
+        // The window still renders at 100 % on the 150 % monitor: 500x400 px, anchor point unchanged.
+        var rect = IslandPlacement.WindowRect(Secondary, IslandAnchor.TopCenter, 0, 0, 500, 400, 40, contentScale: 1.0);
+        var (ax, ay) = IslandPlacement.AnchorOnMonitor(Secondary, IslandAnchor.TopCenter);
+
+        Assert.Equal(500, rect.Width);
+        Assert.Equal(400, rect.Height);
+        Assert.Equal(ax, rect.X + 250);
+        Assert.Equal(ay, rect.Y + 40);
+    }
+
+    [Fact]
+    public void Content_scale_defaults_to_the_monitor_scale()
+    {
+        Assert.Equal(
+            IslandPlacement.WindowRect(Secondary, IslandAnchor.BottomLeft, 12, -8, 500, 400, 40),
+            IslandPlacement.WindowRect(Secondary, IslandAnchor.BottomLeft, 12, -8, 500, 400, 40, contentScale: 1.5));
+    }
+
+    [Fact]
     public void Stale_offsets_cannot_push_the_island_off_screen()
     {
         var rect = IslandPlacement.WindowRect(Primary, IslandAnchor.TopCenter, 5000, 5000, 500, 400, 40);

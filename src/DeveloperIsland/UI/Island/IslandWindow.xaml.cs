@@ -49,6 +49,8 @@ public sealed partial class IslandWindow : Window
     private readonly IslandMorph _morph;
     private readonly DispatcherQueueTimer _mediaTicker;
     private IslandAnchor _anchor = IslandAnchor.TopCenter;
+    private (MonitorInfo Monitor, double OffsetX, double OffsetY)? _placement;
+    private readonly DpiChangeHook _dpiHook;
     private FrameworkElement? _current;
     private Rect _regionRect;
     private (int L, int T, int R, int B) _appliedRegion;
@@ -81,6 +83,7 @@ public sealed partial class IslandWindow : Window
         SystemBackdrop = new TransparentBackdrop();
         _hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         IslandWindowChrome.Apply(_hwnd, AppWindow, alwaysOnTop);
+        _dpiHook = new DpiChangeHook(_hwnd, RectForScale);
 
         // Nothing is visible until the first layout sets the real region; this avoids a black
         // frame on the first composition pass.
@@ -172,9 +175,12 @@ public sealed partial class IslandWindow : Window
 
         var anchorChanged = anchor != _anchor;
         _anchor = anchor;
+        _placement = (monitor, offsetX, offsetY);
         ApplyAnchorLayout();
 
-        var rect = IslandPlacement.WindowRect(monitor, anchor, offsetX, offsetY, WindowWidth, WindowHeight, EdgeMargin);
+        // Sized for the DPI the window has now. If the move takes it to a monitor with another
+        // scale, Windows sends WM_DPICHANGED and RectForScale sizes it for the new one.
+        var rect = IslandPlacement.WindowRect(monitor, anchor, offsetX, offsetY, WindowWidth, WindowHeight, EdgeMargin, WindowScale());
         if (SnapshotMode)
         {
             // Rendered offscreen only: never visible on any monitor.
@@ -189,6 +195,28 @@ public sealed partial class IslandWindow : Window
         }
 
         UpdateDropArming();
+    }
+
+    /// <summary>
+    /// The window rectangle at a new DPI (WM_DPICHANGED): under the cursor while dragging, else at the
+    /// current placement. Null keeps Windows' suggestion.
+    /// </summary>
+    private PixelRect? RectForScale(double scale)
+    {
+        if (SnapshotMode || _exiting)
+        {
+            return null;
+        }
+
+        if (_dragging && GetCursorPos(out var cursor))
+        {
+            var (x, y) = IslandDrag.WindowPosition(cursor.X, cursor.Y, _dragGrab, scale);
+            return new PixelRect(x, y, (int)Math.Ceiling(WindowWidth * scale), (int)Math.Ceiling(WindowHeight * scale));
+        }
+
+        return _placement is { } p
+            ? IslandPlacement.WindowRect(p.Monitor, _anchor, p.OffsetX, p.OffsetY, WindowWidth, WindowHeight, EdgeMargin, scale)
+            : null;
     }
 
     public void SetAlwaysOnTop(bool value)
@@ -214,6 +242,7 @@ public sealed partial class IslandWindow : Window
     public void PrepareForExit()
     {
         _exiting = true;
+        _dpiHook.Dispose();
         _outsideClicks.Stop();
         _mediaTicker.Stop();
         StopDropTarget();
