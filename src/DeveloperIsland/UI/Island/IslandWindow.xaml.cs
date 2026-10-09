@@ -69,7 +69,8 @@ public sealed partial class IslandWindow : Window
     private bool _placementDeferred;
     private readonly OutsideClickWatcher _outsideClicks;
     private POINT _dragStartCursor;
-    private RECT _dragStartWindow;
+    private (double X, double Y) _dragGrab;
+    private readonly DispatcherQueueTimer _dragTicker;
 
     public IslandWindow(IslandViewModel viewModel, IslandStateMachine state, bool alwaysOnTop)
     {
@@ -98,6 +99,12 @@ public sealed partial class IslandWindow : Window
         _mediaTicker.Interval = TimeSpan.FromSeconds(1);
         _mediaTicker.Tick += (_, _) => _viewModel.Music.Tick();
 
+        // Runs only during a drag: carries it on if the pointer capture is lost when the window
+        // changes DPI between monitors, and ends it when the button is up.
+        _dragTicker = DispatcherQueue.CreateTimer();
+        _dragTicker.Interval = TimeSpan.FromMilliseconds(15);
+        _dragTicker.Tick += (_, _) => OnDragTick();
+
         Root.SizeChanged += (_, e) => _morph.SetCanvasSize(e.NewSize);
         Root.Loaded += OnLoaded;
         Root.PointerEntered += OnPointerEntered;
@@ -105,7 +112,7 @@ public sealed partial class IslandWindow : Window
         Root.PointerPressed += OnPointerPressed;
         Root.PointerMoved += OnPointerMoved;
         Root.PointerReleased += OnPointerReleased;
-        Root.PointerCaptureLost += (_, _) => EndDrag(commit: _dragging);
+        Root.PointerCaptureLost += OnPointerCaptureLost;
         Root.KeyDown += OnKeyDown;
         Activated += OnWindowActivated;
         AppWindow.Closing += OnClosing;
@@ -671,7 +678,8 @@ public sealed partial class IslandWindow : Window
         _pointerDown = true;
         _dragging = false;
         GetCursorPos(out _dragStartCursor);
-        GetWindowRect(_hwnd, out _dragStartWindow);
+        GetWindowRect(_hwnd, out var window);
+        _dragGrab = IslandDrag.GrabPoint(_dragStartCursor.X, _dragStartCursor.Y, window.Left, window.Top, WindowScale());
         Root.CapturePointer(e.Pointer);
         e.Handled = true;
     }
@@ -694,12 +702,63 @@ public sealed partial class IslandWindow : Window
             _dragging = true;
             _state.BeginDrag();
             Root.SetCursor(InputSystemCursor.Create(InputSystemCursorShape.SizeAll));
+            _dragTicker.Start();
         }
 
         if (_dragging)
         {
-            SetWindowPos(_hwnd, IntPtr.Zero, _dragStartWindow.Left + dx, _dragStartWindow.Top + dy, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+            MoveDrag(cursor);
         }
+    }
+
+    /// <summary>
+    /// Keeps the grabbed point under the cursor. The scale is read from the window each time: it
+    /// changes the moment the window crosses into a monitor with another scale.
+    /// </summary>
+    private void MoveDrag(POINT cursor)
+    {
+        var (x, y) = IslandDrag.WindowPosition(cursor.X, cursor.Y, _dragGrab, WindowScale());
+        SetWindowPos(_hwnd, IntPtr.Zero, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+
+    private void OnDragTick()
+    {
+        if (!_dragging)
+        {
+            _dragTicker.Stop();
+            return;
+        }
+
+        if (!IsPrimaryButtonDown())
+        {
+            // The release was not delivered (capture lost on the way): drop where the cursor let go.
+            EndDrag(commit: true);
+            return;
+        }
+
+        if (GetCursorPos(out var cursor))
+        {
+            MoveDrag(cursor);
+        }
+    }
+
+    private void OnPointerCaptureLost(object sender, PointerRoutedEventArgs e)
+    {
+        // A DPI change can take the capture while the button is still held: the drag ticker carries on.
+        if (_dragging && IsPrimaryButtonDown())
+        {
+            Log.Debug("island", "Pointer capture lost during drag");
+            return;
+        }
+
+        EndDrag(commit: _dragging);
+    }
+
+    /// <summary>The window's own DPI scale; follows a monitor change before XAML reports it.</summary>
+    private double WindowScale()
+    {
+        var dpi = GetDpiForWindow(_hwnd);
+        return dpi > 0 ? dpi / 96.0 : _scale;
     }
 
     private void OnPointerReleased(object sender, PointerRoutedEventArgs e)
@@ -737,6 +796,7 @@ public sealed partial class IslandWindow : Window
         }
 
         _dragging = false;
+        _dragTicker.Stop();
         _state.EndDrag();
         Root.SetCursor(null);
         var placementDeferred = _placementDeferred;
@@ -746,11 +806,12 @@ public sealed partial class IslandWindow : Window
             // Saving the drop places the island again, which also covers a deferred placement.
             GetWindowRect(_hwnd, out var window);
             var t = _morph.Target;
+            var s = WindowScale();
             var capsule = new PixelRect(
-                window.Left + (int)Math.Round(t.X * _scale),
-                window.Top + (int)Math.Round(t.Y * _scale),
-                (int)Math.Round(t.Width * _scale),
-                (int)Math.Round(t.Height * _scale));
+                window.Left + (int)Math.Round(t.X * s),
+                window.Top + (int)Math.Round(t.Y * s),
+                (int)Math.Round(t.Width * s),
+                (int)Math.Round(t.Height * s));
             DragCompleted?.Invoke(capsule);
         }
         else if (placementDeferred)
