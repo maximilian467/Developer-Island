@@ -66,6 +66,7 @@ public sealed partial class IslandWindow : Window
     // Drag state (physical pixels).
     private bool _pointerDown;
     private bool _dragging;
+    private bool _placementDeferred;
     private readonly OutsideClickWatcher _outsideClicks;
     private POINT _dragStartCursor;
     private RECT _dragStartWindow;
@@ -154,6 +155,14 @@ public sealed partial class IslandWindow : Window
     /// <summary>Positions the window for a monitor and anchor. Content alignment follows the anchor.</summary>
     public void Place(MonitorInfo monitor, IslandAnchor anchor, double offsetX, double offsetY)
     {
+        if (_dragging)
+        {
+            // The drop decides where the island goes. Placing it now (the DPI change of crossing
+            // into another monitor asks for that) would pull it back to the saved monitor.
+            _placementDeferred = true;
+            return;
+        }
+
         var anchorChanged = anchor != _anchor;
         _anchor = anchor;
         ApplyAnchorLayout();
@@ -730,8 +739,11 @@ public sealed partial class IslandWindow : Window
         _dragging = false;
         _state.EndDrag();
         Root.SetCursor(null);
+        var placementDeferred = _placementDeferred;
+        _placementDeferred = false;
         if (commit)
         {
+            // Saving the drop places the island again, which also covers a deferred placement.
             GetWindowRect(_hwnd, out var window);
             var t = _morph.Target;
             var capsule = new PixelRect(
@@ -740,6 +752,10 @@ public sealed partial class IslandWindow : Window
                 (int)Math.Round(t.Width * _scale),
                 (int)Math.Round(t.Height * _scale));
             DragCompleted?.Invoke(capsule);
+        }
+        else if (placementDeferred)
+        {
+            PlacementInvalidated?.Invoke();
         }
     }
 
