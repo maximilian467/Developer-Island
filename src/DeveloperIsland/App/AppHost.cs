@@ -870,6 +870,7 @@ internal sealed class AppHost : IDisposable
             monitors = monitors.Select(m => new { device = m.DeviceName, m.Bounds.Width, m.Bounds.Height, m.Scale, primary = m.IsPrimary }).ToArray(),
         });
         PlaceIsland();
+        _settingsWindow?.RefreshMonitors();
     }
 
     private void OnDragCompleted(PixelRect capsule)

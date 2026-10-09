@@ -220,21 +220,40 @@ public sealed partial class SettingsWindow : Window
                 : "Drag the island anywhere. Near an anchor, it snaps into place.";
             ResetPositionButton.IsEnabled = s.HasCustomPosition;
 
-            _monitors = MonitorService.GetMonitors();
-            MonitorPicker.Items.Clear();
-            foreach (var monitor in _monitors)
-            {
-                MonitorPicker.Items.Add(MonitorService.DisplayName(monitor));
-            }
-
-            // The monitor the island is on now: the saved one, or the primary it fell back to.
-            var shown = IslandPlacement.Resolve(_monitors, s.MonitorId, s.MonitorDevice, s.Anchor, s.OffsetX, s.OffsetY).Monitor;
-            MonitorPicker.SelectedIndex = _monitors.Count > 0 ? Math.Max(0, _monitors.ToList().IndexOf(shown)) : -1;
+            LoadMonitors(s);
         }
         finally
         {
             _loading = false;
         }
+    }
+
+    /// <summary>Displays were connected, disconnected or changed: list the ones there are now.</summary>
+    public void RefreshMonitors()
+    {
+        _loading = true;
+        try
+        {
+            LoadMonitors(_store.Current);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void LoadMonitors(AppSettings s)
+    {
+        _monitors = MonitorService.GetMonitors();
+        MonitorPicker.Items.Clear();
+        foreach (var monitor in _monitors)
+        {
+            MonitorPicker.Items.Add(MonitorService.DisplayName(monitor));
+        }
+
+        // The monitor the island is on now: the saved one, or the primary it fell back to.
+        var shown = IslandPlacement.Resolve(_monitors, s.MonitorId, s.MonitorDevice, s.Anchor, s.OffsetX, s.OffsetY).Monitor;
+        MonitorPicker.SelectedIndex = _monitors.Count > 0 ? Math.Max(0, _monitors.ToList().IndexOf(shown)) : -1;
     }
 
     private void OnNav(object sender, RoutedEventArgs e)
