@@ -18,6 +18,11 @@ All notable changes to Developer Island are documented here. The format follows 
 - The usage graph reacts to hover, click and tap again; pointer input went to the scroll area behind it.
 - The favorite star sits in the same place on every tab, Usage (Claude Code) included, and is no longer pushed aside or cut off by long names. On Usage it stands for the enabled providers.
 - Git and GitHub CLI calls still running when the app quits end with it.
+- The island can be dragged onto a monitor with a different scale. It used to jump back to its old monitor, and the capsule slid away from the cursor; now the point you hold stays under it, and a DPI change cannot end the drag.
+- After moving to a monitor with another scale, the island lands at its anchor at once instead of briefly at the wrong size and place.
+- The island remembers its monitor by hardware id, so it returns to the right display after docking or reconnecting, when Windows renumbers the displays.
+- Fullscreen apps and auto-hide apps count only on the island's own monitor, also when its window reaches into the neighbouring one.
+- Connecting or disconnecting displays places the island once the change has settled, and the Monitor list in Settings updates.
 
 ## [0.1.0] - 2026-10-01
 
