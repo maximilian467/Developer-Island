@@ -25,6 +25,9 @@ skills-lock.json
 *.key
 *.snk
 
+# Launch video output (/brag)
+brag-output*/
+
 # Editors and tools
 .vscode/
 .idea/
