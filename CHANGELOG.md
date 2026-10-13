@@ -6,7 +6,7 @@ All notable changes to Developer Island are documented here. The format follows 
 
 ### Added
 
-- **Home Cloud drop zone:** drop files or folders onto the island to copy them to your own server (default `\\buntu-1\homecloud\Notch-Inbox`). It works in every state, also while the island is a notch or hidden: dragging toward the top edge arms the zone. Progress, success and error feedback; uploads go through a `.part` file and a rename. File names and paths are never logged. Settings, Home Cloud sets the target and the side, and turns it all off.
+- **Home Cloud drop zone:** drop files or folders onto the island to copy them to your own server. It is off until you set a target folder. It works in every state, also while the island is a notch or hidden: dragging toward the top edge arms the zone. Progress, success and error feedback; uploads go through a `.part` file and a rename. File names and paths are never logged. Settings, Home Cloud sets the target and the side, and turns it all off.
 - `--homecloud-upload=<path>` sends a file through the Home Cloud pipeline for testing.
 - **Quit Developer Island** in Settings, General: ends the whole app (island, tray icon, background work) after a confirmation. Closing Settings or hiding the island keeps it running.
 
@@ -23,6 +23,11 @@ All notable changes to Developer Island are documented here. The format follows 
 - The island remembers its monitor by hardware id, so it returns to the right display after docking or reconnecting, when Windows renumbers the displays.
 - Fullscreen apps and auto-hide apps count only on the island's own monitor, also when its window reaches into the neighbouring one.
 - Connecting or disconnecting displays places the island once the change has settled, and the Monitor list in Settings updates.
+
+### Security
+
+- Git status ignores a repository's own `core.fsmonitor` setting, so a prepared repository in an AI session's folder cannot start a program through the Git module.
+- Calendar downloads are capped at 16 MB also when the server sends no size.
 
 ## [0.1.0] - 2026-10-01
 

@@ -419,7 +419,9 @@ public sealed class GitService : IDisposable
 
     private async Task<GitRepoStatus?> ReadRepositoryAsync(string git, string root)
     {
-        var status = await ProcessRunner.RunAsync(git, ["--no-optional-locks", "-C", root, "status", "--porcelain=v2", "--branch"], timeout: TimeSpan.FromSeconds(10));
+        // Repositories come from AI sessions' working folders, so a repository's own config must not
+        // start programs here: core.fsmonitor would run its command on every status.
+        var status = await ProcessRunner.RunAsync(git, ["--no-optional-locks", "-c", "core.fsmonitor=false", "-C", root, "status", "--porcelain=v2", "--branch"], timeout: TimeSpan.FromSeconds(10));
         if (!status.Succeeded)
         {
             Log.Debug("git", "git status failed", new { exit = status.ExitCode });

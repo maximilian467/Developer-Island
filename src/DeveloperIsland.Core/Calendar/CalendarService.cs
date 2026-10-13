@@ -41,6 +41,8 @@ public sealed class IcsCalendarSource(string location, HttpClient http) : ICalen
                 throw new InvalidDataException("Calendar too large");
             }
 
+            // Without a Content-Length the check above passes, so the buffer itself is capped too.
+            await response.Content.LoadIntoBufferAsync(MaxBytes, cancellationToken);
             text = await response.Content.ReadAsStringAsync(cancellationToken);
         }
         else
