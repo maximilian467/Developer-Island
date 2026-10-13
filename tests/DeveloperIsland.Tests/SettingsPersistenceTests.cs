@@ -87,9 +87,22 @@ public class SettingsPersistenceTests
 
         var settings = new SettingsStore(_path).Current;
 
-        Assert.True(settings.HomeCloudEnabled);
-        Assert.Equal(@"\\buntu-1\homecloud\Notch-Inbox", settings.HomeCloudTargetPath);
+        Assert.False(settings.HomeCloudEnabled);
+        Assert.Equal("", settings.HomeCloudTargetPath);
+        Assert.False(settings.HomeCloudActive);
         Assert.Equal(HomeCloudDropSide.Right, settings.HomeCloudDropSide);
+    }
+
+    [Theory]
+    [InlineData(true, @"\\server\share\Inbox", true)]
+    [InlineData(true, "", false)]
+    [InlineData(true, "   ", false)]
+    [InlineData(false, @"\\server\share\Inbox", false)]
+    public void Home_cloud_is_active_only_when_on_and_with_a_target(bool enabled, string path, bool active)
+    {
+        var settings = new AppSettings { HomeCloudEnabled = enabled, HomeCloudTargetPath = path };
+
+        Assert.Equal(active, settings.HomeCloudActive);
     }
 
     [Fact]

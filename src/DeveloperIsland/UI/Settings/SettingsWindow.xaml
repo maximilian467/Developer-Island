@@ -346,7 +346,7 @@
                                         <TextBlock Text="Target folder" Style="{StaticResource SettingsRowTitleStyle}" />
                                         <TextBlock Text="Network path or local folder." Style="{StaticResource SettingsRowDescriptionStyle}" />
                                     </StackPanel>
-                                    <TextBox x:Name="HomeCloudPathBox" Grid.Column="1" MinWidth="240" VerticalAlignment="Center"
+                                    <TextBox x:Name="HomeCloudPathBox" Grid.Column="1" MinWidth="240" VerticalAlignment="Center" PlaceholderText="\\server\share\Inbox"
                                              AutomationProperties.Name="Home Cloud target folder" LostFocus="OnHomeCloudPathLostFocus" KeyDown="OnHomeCloudPathKeyDown" />
                                 </Grid>
                                 <Rectangle Style="{StaticResource SettingsDividerStyle}" />

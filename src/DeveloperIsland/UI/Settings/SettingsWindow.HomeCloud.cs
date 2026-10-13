@@ -24,6 +24,11 @@ public sealed partial class SettingsWindow
         {
             dependent.IsEnabled = s.HomeCloudEnabled;
         }
+
+        if (s.HomeCloudEnabled && !s.HomeCloudActive)
+        {
+            HomeCloudStatus.Text = "Set a target folder to use the drop zone.";
+        }
     }
 
     private void OnHomeCloudToggled(object sender, RoutedEventArgs e)
@@ -77,6 +82,11 @@ public sealed partial class SettingsWindow
     private async void OnHomeCloudTest(object sender, RoutedEventArgs e)
     {
         CommitHomeCloudPath();
+        if (!HasHomeCloudTarget())
+        {
+            return;
+        }
+
         HomeCloudTestButton.IsEnabled = false;
         HomeCloudStatus.Text = "Checking…";
         try
@@ -98,6 +108,11 @@ public sealed partial class SettingsWindow
     private void OnHomeCloudOpen(object sender, RoutedEventArgs e)
     {
         CommitHomeCloudPath();
+        if (!HasHomeCloudTarget())
+        {
+            return;
+        }
+
         try
         {
             Process.Start("explorer.exe", $"\"{_store.Current.HomeCloudTargetPath}\"")?.Dispose();
@@ -108,5 +123,16 @@ public sealed partial class SettingsWindow
             Log.Warn("homecloud", "could not open the target folder", null, ex);
             HomeCloudStatus.Text = "Could not open the folder in Explorer.";
         }
+    }
+
+    private bool HasHomeCloudTarget()
+    {
+        if (!string.IsNullOrWhiteSpace(_store.Current.HomeCloudTargetPath))
+        {
+            return true;
+        }
+
+        HomeCloudStatus.Text = "Set a target folder first.";
+        return false;
     }
 }

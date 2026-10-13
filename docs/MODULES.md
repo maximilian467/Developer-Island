@@ -115,14 +115,14 @@ The compact island speaks up only when something needs attention: a battery at 2
 
 ## Home Cloud
 
-Not a tab, but a drop zone of the island: drop files or folders onto it and they are copied to a folder on your own server (a network share, by default `\\buntu-1\homecloud\Notch-Inbox`). There is no cloud service involved; the target is only the path you configure.
+Not a tab, but a drop zone of the island: drop files or folders onto it and they are copied to a folder on your own server (a network share such as `\\server\share\Inbox`). There is no cloud service involved; the target is only the path you configure. Home Cloud is off and has no target until you set one: the drop zone stays inactive while the target folder is empty, so a fresh install never sends files anywhere.
 
 - **Drop in any state.** In compact, live activity and expanded the island accepts a file drag directly. Once files hover over it, it turns into the drop zone ("Save to Home Cloud", "Release to copy") on the side set in Settings. Only real files and folders (Copy) are taken; virtual items without a path are skipped.
 - **Retracted and hidden.** While an auto-hide app is in front, the island is a notch or invisible, and a file drag could not find it. A low-level mouse hook therefore watches for a drag that starts elsewhere and moves toward the top edge: when the button is held, the cursor moved past the system drag threshold and is inside the arm zone (300 DIP wide around the zone centre, 60 DIP from the top of the monitor), the zone becomes droppable. A press that starts inside the zone (tabs, title bars) never arms it, and neither does a hidden cursor (games). Letting go or leaving the zone restores everything. While armed, the zone covers a 300 × 60 DIP strip at the top for other (non-file) drags.
 - **Feedback.** On entering, the target is checked for reachability (2 s). "Saving to Home Cloud" shows progress such as "3/5 · 42 %"; success shows a check mark for 1.5 s ("Saved to Home Cloud"), a failure shows "Home Cloud not reachable" with the reason for 4 s. A running upload keeps the zone open; afterwards the island returns to where it rested (compact, notch or hidden).
 - **Upload.** Files are copied one after another through a `.part` file that is renamed atomically when complete, so the target never holds half files. A name that exists gets `name (1).ext`. Folders are copied recursively.
 - **Emergency stop.** **Home Cloud** off in Settings removes the drop handlers and the mouse hook; the island behaves as before.
-- **Debug.** `DeveloperIsland.exe --homecloud-upload=<path>` sends a file through the same pipeline without dragging (own instance, reads settings without writing them). Exit code 0 on success, 1 on failure, 2 when Home Cloud is off, 3 when another debug run is active. It combines with `--demo`.
+- **Debug.** `DeveloperIsland.exe --homecloud-upload=<path>` sends a file through the same pipeline without dragging (own instance, reads settings without writing them). Exit code 0 on success, 1 on failure, 2 when Home Cloud is off or has no target folder, 3 when another debug run is active. It combines with `--demo`.
 
 ## Settings
 
@@ -136,7 +136,7 @@ Not a tab, but a drop zone of the island: drop files or folders onto it and they
 | General | Start with Windows, always on top, launch hidden, keyboard shortcut; Quit Developer Island (ends the app, its tray icon and all background work) |
 | Position | Monitor, anchor, custom position; Auto-hide in apps (on or off, notch or hide, only when maximized, an app list with icons and Add application or Browse) |
 | Modules | Every module on or off and in which order; Claude plan usage (connect or disconnect); Git repositories; calendars |
-| Home Cloud | Home Cloud on or off (`HomeCloudEnabled`, default on), target folder (`HomeCloudTargetPath`, default `\\buntu-1\homecloud\Notch-Inbox`), side of the drop zone (`HomeCloudDropSide`, Left or Right, default Right) |
+| Home Cloud | Home Cloud on or off (`HomeCloudEnabled`, default off), target folder (`HomeCloudTargetPath`, default empty; the zone works only once it is set), side of the drop zone (`HomeCloudDropSide`, Left or Right, default Right) |
 | Appearance | System or Dark (the island itself is always dark) |
 
 Changes apply immediately.

@@ -47,7 +47,7 @@ AI coding tools spend tokens and plan limits where you can't see them, and the r
 
 ### Home Cloud
 
-- **Drop files onto the island** to copy them to your own server (a folder on a network share such as `\\buntu-1\homecloud\Notch-Inbox`, set in Settings, Home Cloud). It works from every state, also while the island is retracted into the notch or hidden: dragging a file toward the top edge arms a small drop zone. Uploads run in a queue with progress; names are never logged, and nothing goes to a cloud service. A switch in Settings turns the feature off completely.
+- **Drop files onto the island** to copy them to your own server (a folder on a network share such as `\\server\share\Inbox`). It is off until you switch it on and set your own target folder in Settings, Home Cloud; the path stays in your local settings and is never part of the app. It works from every state, also while the island is retracted into the notch or hidden: dragging a file toward the top edge arms a small drop zone. Uploads run in a queue with progress; names are never logged, and nothing goes to a cloud service. The same switch turns the feature off completely.
 
 ### Smart island
 

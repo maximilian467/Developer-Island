@@ -162,13 +162,17 @@ public sealed class AppSettings
     public string GlobalShortcut { get; set; } = ShortcutGesture.Default.Text;
 
     // Home Cloud (drop files onto the island to copy them to the home server)
-    public bool HomeCloudEnabled { get; set; } = true;
+    public bool HomeCloudEnabled { get; set; }
 
-    /// <summary>Folder (UNC path ok) that dropped files are copied into.</summary>
-    public string HomeCloudTargetPath { get; set; } = @"\\buntu-1\homecloud\Notch-Inbox";
+    /// <summary>Folder (UNC path ok) that dropped files are copied into. Empty until the user sets one.</summary>
+    public string HomeCloudTargetPath { get; set; } = "";
 
     [JsonConverter(typeof(JsonStringEnumConverter<HomeCloudDropSide>))]
     public HomeCloudDropSide HomeCloudDropSide { get; set; } = HomeCloudDropSide.Right;
+
+    /// <summary>The drop zone works only when it is switched on and has a target folder.</summary>
+    [JsonIgnore]
+    public bool HomeCloudActive => HomeCloudEnabled && !string.IsNullOrWhiteSpace(HomeCloudTargetPath);
 
     [JsonIgnore]
     public IReadOnlyList<ModuleId> Order => ModuleCatalog.NormalizeOrder(ModuleOrder);

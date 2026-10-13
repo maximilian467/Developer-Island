@@ -151,7 +151,7 @@ internal sealed class AppHost : IDisposable
         _window.VisiblePanelChanged += tab => _modules.OnPanelVisible(tab);
         _window.DragCompleted += OnDragCompleted;
         _window.PlacementInvalidated += () => _dispatcher.TryEnqueue(PlaceIsland);
-        _window.ConfigureHomeCloud(settings.HomeCloudEnabled, settings.HomeCloudTargetPath, settings.HomeCloudDropSide);
+        _window.ConfigureHomeCloud(settings.HomeCloudActive, settings.HomeCloudTargetPath, settings.HomeCloudDropSide);
         PlaceIsland();
 
         _host = new HostWindow();
@@ -393,7 +393,7 @@ internal sealed class AppHost : IDisposable
         _state.SetRest(Core.Island.RestMode.Compact);
         await Task.Delay(600);
 
-        _window.ConfigureHomeCloud(s.HomeCloudEnabled, s.HomeCloudTargetPath, s.HomeCloudDropSide);
+        _window.ConfigureHomeCloud(s.HomeCloudActive, s.HomeCloudTargetPath, s.HomeCloudDropSide);
     }
 
     /// <summary>
@@ -419,12 +419,12 @@ internal sealed class AppHost : IDisposable
         _state = new IslandStateMachine(TimeProvider.System, action => _dispatcher.TryEnqueue(() => action()));
         _window = new IslandWindow(_viewModel, _state, settings.AlwaysOnTop);
         _window.PlacementInvalidated += () => _dispatcher.TryEnqueue(PlaceIsland);
-        _window.ConfigureHomeCloud(settings.HomeCloudEnabled, settings.HomeCloudTargetPath, settings.HomeCloudDropSide);
+        _window.ConfigureHomeCloud(settings.HomeCloudActive, settings.HomeCloudTargetPath, settings.HomeCloudDropSide);
         PlaceIsland();
 
         // Only the drop zone shows; afterwards the island hides again, like a drop onto a hidden island.
         _state.Hide();
-        _ = RunHomeCloudUploadAsync(path, settings.HomeCloudEnabled);
+        _ = RunHomeCloudUploadAsync(path, settings.HomeCloudActive);
     }
 
     private async Task RunHomeCloudUploadAsync(string path, bool enabled)
@@ -434,7 +434,7 @@ internal sealed class AppHost : IDisposable
         {
             if (!enabled)
             {
-                Log.Warn("homecloud", "Upload debug run: Home Cloud is off");
+                Log.Warn("homecloud", "Upload debug run: Home Cloud is off or has no target folder");
                 exitCode = 2;
                 return;
             }
@@ -667,7 +667,7 @@ internal sealed class AppHost : IDisposable
         _plan?.Configure(settings.ClaudeEnabled);
         _viewModel.EnsureValidTab();
         _window.SetAlwaysOnTop(settings.AlwaysOnTop);
-        _window.ConfigureHomeCloud(settings.HomeCloudEnabled, settings.HomeCloudTargetPath, settings.HomeCloudDropSide);
+        _window.ConfigureHomeCloud(settings.HomeCloudActive, settings.HomeCloudTargetPath, settings.HomeCloudDropSide);
         PlaceIsland();
         SyncAutostart(settings);
         _settingsWindow?.ApplyTheme(settings.Theme);
