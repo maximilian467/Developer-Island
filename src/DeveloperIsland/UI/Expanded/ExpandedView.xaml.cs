@@ -19,6 +19,9 @@ namespace DeveloperIsland.UI.Expanded;
 /// </summary>
 public sealed partial class ExpandedView : UserControl
 {
+    /// <summary>From this many tabs on, the tab buttons are 28 instead of 32 DIP wide.</summary>
+    private const int CompactTabCount = 9;
+
     private readonly Dictionary<IslandTab, Button> _tabButtons = [];
     private readonly Dictionary<IslandTab, FrameworkElement> _panels;
     private IslandViewModel _viewModel = null!;
@@ -38,6 +41,7 @@ public sealed partial class ExpandedView : UserControl
             [IslandTab.Calendar] = CalendarView,
             [IslandTab.Tasks] = TasksView,
             [IslandTab.System] = SystemView,
+            [IslandTab.Awake] = AwakeView,
         };
         ElementCompositionPreview.SetIsTranslationEnabled(TabIndicator, true);
         Tabs.SizeChanged += (_, _) => MoveIndicator(animate: false);
@@ -63,6 +67,7 @@ public sealed partial class ExpandedView : UserControl
             CalendarView.ViewModel = value.Calendar;
             TasksView.ViewModel = value.Tasks;
             SystemView.ViewModel = value.System;
+            AwakeView.ViewModel = value.Awake;
             value.PropertyChanged += (_, e) =>
             {
                 if (e.PropertyName == nameof(IslandViewModel.Favorites))
@@ -129,15 +134,21 @@ public sealed partial class ExpandedView : UserControl
 
         Tabs.Children.Clear();
         _tabButtons.Clear();
+
+        // Nine tabs at 32 DIP would leave the section name no room; they shrink a little instead.
+        var size = tabs.Count >= CompactTabCount ? 28 : 32;
+        TabIndicator.Width = size;
+        TabIndicator.Height = size;
+        TabIndicator.CornerRadius = new CornerRadius(size / 2.0);
         foreach (var tab in tabs)
         {
             var name = IslandViewModel.TabName(tab);
             var button = new Button
             {
                 Style = (Style)Application.Current.Resources["IslandIconButtonStyle"],
-                Width = 32,
-                Height = 32,
-                CornerRadius = new CornerRadius(16),
+                Width = size,
+                Height = size,
+                CornerRadius = new CornerRadius(size / 2.0),
                 Tag = tab,
                 // Usage shows the mark of the provider it stands for (Claude, or OpenAI when Codex is active).
                 Content = new ModuleIcon { Module = tab == IslandTab.Usage ? _viewModel.ModuleForTab(tab) : IslandViewModel.TabModule(tab) },

@@ -408,6 +408,23 @@
                             </Grid>
                         </Border>
 
+                        <TextBlock Text="Awake" Style="{StaticResource SettingsGroupLabelStyle}" Margin="4,20,0,4" />
+                        <Border Style="{StaticResource SettingsCardStyle}">
+                            <Grid Style="{StaticResource SettingsRowStyle}" ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                    <TextBlock Text="End on low battery" Style="{StaticResource SettingsRowTitleStyle}" />
+                                    <TextBlock Text="On battery, an awake session ends below this level, and closing the lid sleeps the PC again. During a session the lid-close action is set to &#x201C;Do nothing&#x201D; and put back afterwards. Use a well-ventilated surface, not a bag."
+                                               Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                </StackPanel>
+                                <ComboBox x:Name="AwakeBatteryPicker" Grid.Column="1" MinWidth="120" VerticalAlignment="Center"
+                                          AutomationProperties.Name="End an awake session on battery below" SelectionChanged="OnAwakeBatteryChanged" />
+                            </Grid>
+                        </Border>
+
                         <TextBlock Text="Git repositories" Style="{StaticResource SettingsGroupLabelStyle}" Margin="4,20,0,4" />
                         <Border Style="{StaticResource SettingsCardStyle}">
                             <StackPanel>

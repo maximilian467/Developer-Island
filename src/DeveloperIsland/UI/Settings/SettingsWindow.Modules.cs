@@ -29,6 +29,7 @@ public sealed partial class SettingsWindow
         ModuleId.Calendar => "Your next event from a calendar link or an .ics file.",
         ModuleId.Tasks => "A small to-do list, stored on this PC.",
         ModuleId.System => "CPU, memory and battery. Speaks up only when something needs attention.",
+        ModuleId.Awake => "Keeps this PC awake for a set time or until you end it, also with the lid closed.",
         _ => string.Empty,
     };
 

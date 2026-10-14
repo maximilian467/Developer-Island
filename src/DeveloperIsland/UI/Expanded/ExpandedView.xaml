@@ -20,7 +20,7 @@
         <!-- Camera and microphone marks: centered at the top edge, like a phone status light; the header keeps its room. -->
         <components:PrivacyIndicators x:Name="PrivacyMarks" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-11,0,0" />
 
-        <!-- With all nine modules on (eight tabs) the longest name, "Calendar", still fits; a longer one would trim, never move the star. -->
+        <!-- With all ten modules on (nine tabs, 28 DIP each) the longest name, "Calendar", still fits; a longer one would trim, never move the star. -->
         <Grid Height="32">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
@@ -59,6 +59,7 @@
             <local:CalendarPanel x:Name="CalendarView" Visibility="Collapsed" />
             <local:TasksPanel x:Name="TasksView" Visibility="Collapsed" />
             <local:SystemPanel x:Name="SystemView" Visibility="Collapsed" />
+            <local:AwakePanel x:Name="AwakeView" Visibility="Collapsed" />
             <TextBlock x:Name="NoTabsText" Text="All modules are turned off. Turn one on in Settings." Style="{StaticResource CaptionTextStyle}"
                        Visibility="Collapsed" />
         </Grid>

@@ -15,6 +15,7 @@ internal sealed class HostWindow : IDisposable
     private const string ClassName = "DeveloperIsland.Host";
     private readonly WndProc _wndProc;
     private readonly uint _taskbarCreated;
+    private readonly List<IntPtr> _powerNotifications = [];
 
     public HostWindow()
     {
@@ -49,8 +50,40 @@ internal sealed class HostWindow : IDisposable
     /// <summary>WM_HOTKEY with the registered id.</summary>
     public event Action<int>? HotKey;
 
+    /// <summary>A registered power setting changed: its GUID and its DWORD value.</summary>
+    public event Action<Guid, uint>? PowerSettingChanged;
+
+    /// <summary>
+    /// Subscribes to power setting notifications (battery level, power source, lid). Windows sends the
+    /// current value right after registering. Replaces an earlier subscription.
+    /// </summary>
+    public void RegisterPowerSettings(params Guid[] settings)
+    {
+        UnregisterPowerSettings();
+        foreach (var setting in settings)
+        {
+            var guid = setting;
+            var handle = Power.PowerNative.RegisterPowerSettingNotification(Handle, ref guid, Power.PowerNative.DEVICE_NOTIFY_WINDOW_HANDLE);
+            if (handle != IntPtr.Zero)
+            {
+                _powerNotifications.Add(handle);
+            }
+        }
+    }
+
+    public void UnregisterPowerSettings()
+    {
+        foreach (var handle in _powerNotifications)
+        {
+            Power.PowerNative.UnregisterPowerSettingNotification(handle);
+        }
+
+        _powerNotifications.Clear();
+    }
+
     public void Dispose()
     {
+        UnregisterPowerSettings();
         if (Handle != IntPtr.Zero)
         {
             DestroyWindow(Handle);
@@ -84,6 +117,16 @@ internal sealed class HostWindow : IDisposable
                     }
 
                     break;
+                case Power.PowerNative.WM_POWERBROADCAST when (int)wParam == Power.PowerNative.PBT_POWERSETTINGCHANGE && lParam != IntPtr.Zero:
+                    // POWERBROADCAST_SETTING: the setting's GUID, the data length, then the data.
+                    var setting = Marshal.PtrToStructure<Guid>(lParam);
+                    var length = Marshal.ReadInt32(lParam, 16);
+                    if (length >= 4)
+                    {
+                        PowerSettingChanged?.Invoke(setting, (uint)Marshal.ReadInt32(lParam, 20));
+                    }
+
+                    return new IntPtr(1);
                 case >= WM_APP and < 0xC000:
                     Message?.Invoke(msg, lParam, wParam);
                     return IntPtr.Zero;

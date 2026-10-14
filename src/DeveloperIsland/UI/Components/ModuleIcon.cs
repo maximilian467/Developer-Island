@@ -8,8 +8,9 @@ using Path = Microsoft.UI.Xaml.Shapes.Path;
 namespace DeveloperIsland.UI.Components;
 
 /// <summary>
-/// The icon of a module, 16 DIP. Fluent glyphs where one fits; Git and GitHub have none, so they
-/// get simple drawn marks (a branch, and a pull request) on the same 16-unit grid and stroke weight.
+/// The icon of a module, 16 DIP. Fluent glyphs where one fits; Git, GitHub and Awake have none, so
+/// they get simple drawn marks (a branch, a pull request and a coffee cup) on the same 16-unit grid
+/// and stroke weight.
 /// Foreground follows the control's Foreground, so tabs can dim unselected icons.
 /// </summary>
 public sealed class ModuleIcon : UserControl
@@ -89,6 +90,14 @@ public sealed class ModuleIcon : UserControl
             Stroke("M4.5,1.6 A1.8,1.8 0 1 1 4.49,1.6 Z");
             Stroke("M4.5,10.8 A1.8,1.8 0 1 1 4.49,10.8 Z");
             Stroke("M11.5,1.6 A1.8,1.8 0 1 1 11.49,1.6 Z");
+        }
+        else if (Module == ModuleId.Awake)
+        {
+            // Coffee cup: a rounded cup with a handle and two wisps of steam.
+            Stroke("M2.6,6.6 L11,6.6 L11,10.2 C11,12.3 9.5,13.8 7.4,13.8 L6.2,13.8 C4.1,13.8 2.6,12.3 2.6,10.2 Z");
+            Stroke("M11,7.8 L12.1,7.8 C13.3,7.8 14.1,8.6 14.1,9.6 C14.1,10.6 13.3,11.4 12.1,11.4 L11,11.4");
+            Stroke("M5.4,1.8 C4.5,2.7 6.3,3.5 5.4,4.4");
+            Stroke("M8.4,1.8 C7.5,2.7 9.3,3.5 8.4,4.4");
         }
         else
         {

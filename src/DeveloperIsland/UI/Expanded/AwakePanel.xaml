@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="DeveloperIsland.UI.Expanded.AwakePanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid>
+        <!-- Idle: presets -->
+        <StackPanel Visibility="{x:Bind ViewModel.IsIdle, Mode=OneWay}">
+            <TextBlock Text="Stay awake" Style="{StaticResource TitleTextStyle}" />
+            <TextBlock Text="Keeps this PC awake, also with the lid closed, so Claude Code and other agents keep working."
+                       Style="{StaticResource CaptionTextStyle}" TextWrapping="WrapWholeWords" Margin="0,2,0,0" />
+            <TextBlock Text="{x:Bind ViewModel.SafetyText, Mode=OneWay}" Style="{StaticResource FineTextStyle}" Margin="0,2,0,0" />
+
+            <!-- Five pills in 380 DIP: the hour presets are a little narrower than the default pill. -->
+            <StackPanel x:Name="PresetRow" Orientation="Horizontal" Spacing="6" Margin="0,16,0,2"
+                        Visibility="{x:Bind ViewModel.IsPresetRowVisible, Mode=OneWay}">
+                <Button x:Name="Preset1" Style="{StaticResource IslandPillButtonStyle}" MinWidth="56" Content="1 h" Tag="60" Click="OnPreset" />
+                <Button Style="{StaticResource IslandPillButtonStyle}" MinWidth="56" Content="4 h" Tag="240" Click="OnPreset" />
+                <Button Style="{StaticResource IslandPillButtonStyle}" MinWidth="56" Content="8 h" Tag="480" Click="OnPreset" />
+                <Button Style="{StaticResource IslandPillButtonStyle}" Content="Custom…" Click="OnOpenCustom" />
+                <Button Style="{StaticResource IslandPillButtonStyle}" Content="∞ Always" Click="OnIndefinite"
+                        AutomationProperties.Name="Always, until you end it" ToolTipService.ToolTip="Until you end it" />
+            </StackPanel>
+
+            <Grid x:Name="CustomRow" Margin="0,16,0,2" ColumnSpacing="8" Visibility="{x:Bind ViewModel.IsCustomRowVisible, Mode=OneWay}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="84" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Button x:Name="MinusButton" Style="{StaticResource IslandIconButtonStyle}" Width="32" Height="32" CornerRadius="16" FontSize="12"
+                        Background="{StaticResource SurfaceRaisedBrush}" Content="&#xE738;" Tag="-30" Click="OnAdjust"
+                        AutomationProperties.Name="30 minutes less" />
+                <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.CustomMinutesText, Mode=OneWay}" Style="{StaticResource LabelTextStyle}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+                <Button Grid.Column="2" Style="{StaticResource IslandIconButtonStyle}" Width="32" Height="32" CornerRadius="16" FontSize="12"
+                        Background="{StaticResource SurfaceRaisedBrush}" Content="&#xE710;" Tag="30" Click="OnAdjust"
+                        AutomationProperties.Name="30 minutes more" />
+                <Button Grid.Column="4" Style="{StaticResource IslandPillButtonStyle}" Content="Cancel" Click="OnCloseCustom" />
+                <Button Grid.Column="5" Style="{StaticResource IslandAccentPillButtonStyle}" Content="Start" Click="OnStartCustom" />
+            </Grid>
+        </StackPanel>
+
+        <!-- Running -->
+        <StackPanel Visibility="{x:Bind ViewModel.IsActive, Mode=OneWay}">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+                <Ellipse Width="6" Height="6" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="Awake" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />
+                <TextBlock Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" />
+            </StackPanel>
+
+            <TextBlock Typography.NumeralAlignment="Tabular" Text="{x:Bind ViewModel.HeroText, Mode=OneWay}" Style="{StaticResource HeroTextStyle}" Margin="0,4,0,0"
+                       AutomationProperties.Name="{x:Bind ViewModel.AccessibleSummary, Mode=OneWay}" />
+
+            <Grid Height="3" Margin="0,10,0,0" CornerRadius="1.5" Background="{StaticResource ProgressTrackBrush}"
+                  Visibility="{x:Bind ViewModel.IsTimed, Mode=OneWay}">
+                <Rectangle Fill="{StaticResource AccentBrush}" RadiusX="1.5" RadiusY="1.5" RenderTransformOrigin="0,0.5">
+                    <Rectangle.RenderTransform>
+                        <ScaleTransform ScaleX="{x:Bind ViewModel.Progress, Mode=OneWay}" />
+                    </Rectangle.RenderTransform>
+                </Rectangle>
+            </Grid>
+
+            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,12,0,0">
+                <FontIcon Glyph="&#xE7BA;" FontSize="12" Style="{StaticResource IconTextStyle}" Foreground="{StaticResource WarningBrush}"
+                          Visibility="{x:Bind ViewModel.LidFailed, Mode=OneWay}" />
+                <TextBlock Text="{x:Bind ViewModel.LidText, Mode=OneWay}" Style="{StaticResource CaptionTextStyle}" TextWrapping="WrapWholeWords" MaxWidth="360" />
+            </StackPanel>
+            <TextBlock Text="{x:Bind ViewModel.SafetyText, Mode=OneWay}" Style="{StaticResource FineTextStyle}" Margin="0,2,0,0" />
+
+            <Grid Margin="0,16,0,2">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button x:Name="ExtendButton" Style="{StaticResource IslandPillButtonStyle}" Content="+1 h" Click="OnExtend"
+                            Visibility="{x:Bind ViewModel.IsTimed, Mode=OneWay}" AutomationProperties.Name="One hour more" />
+                    <Button x:Name="EndButton" Style="{StaticResource IslandPillButtonStyle}" Content="End" Click="OnStop"
+                            AutomationProperties.Name="End and allow sleep again" />
+                </StackPanel>
+                <TextBlock Text="{x:Bind ViewModel.DetailText, Mode=OneWay}" Style="{StaticResource FineTextStyle}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+            </Grid>
+        </StackPanel>
+    </Grid>
+</UserControl>

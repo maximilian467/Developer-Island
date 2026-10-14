@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Compact capsule: 36 DIP tall, width follows content. Time-critical signals (focus, next event, system alert, failing CI), then the featured module, or the classic summary (AI usage, music art) when nothing is featured. -->
+<!-- Compact capsule: 36 DIP tall, width follows content. Time-critical signals (focus, an awake session, next event, system alert, failing CI), then the featured module, or the classic summary (AI usage, music art) when nothing is featured. -->
 <UserControl
     x:Class="DeveloperIsland.UI.Island.CompactView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -13,6 +13,11 @@
             <StackPanel Orientation="Horizontal" Spacing="7" Visibility="{x:Bind ViewModel.CompactShowFocus, Mode=OneWay}">
                 <Ellipse Width="6" Height="6" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" />
                 <components:StableText Text="{x:Bind ViewModel.Focus.RemainingText, Mode=OneWay}" VerticalAlignment="Center" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="6" Visibility="{x:Bind ViewModel.CompactShowAwake, Mode=OneWay}">
+                <components:ModuleIcon Module="Awake" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                <components:StableText Text="{x:Bind ViewModel.Awake.RemainingText, Mode=OneWay}" VerticalAlignment="Center" />
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" Spacing="6" Visibility="{x:Bind ViewModel.CompactShowCalendar, Mode=OneWay}">

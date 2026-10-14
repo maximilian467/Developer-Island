@@ -118,6 +118,8 @@ public sealed class SettingsStore
         }
 
         s.CustomFocusMinutes = Math.Clamp(s.CustomFocusMinutes, 5, 240);
+        s.AwakeCustomMinutes = Math.Clamp(s.AwakeCustomMinutes, 30, 24 * 60);
+        s.AwakeBatteryFloor = Math.Clamp(s.AwakeBatteryFloor, 0, 50);
         if (!Enum.IsDefined(s.SmartHideBehavior))
         {
             s.SmartHideBehavior = SmartHideBehavior.Retract;

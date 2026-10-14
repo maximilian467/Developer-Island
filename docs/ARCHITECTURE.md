@@ -123,6 +123,21 @@ Every module follows **Provider, then State, then ViewModel, then View**, with o
 
 `HardwareCapabilities` is derived from the samples themselves, so a component that does not exist simply never appears. Manual fan control is gated by `FanControlCapability`, which requires a crash-safe fallback to firmware control; no supported interface offers that, so the island monitors only. `DeveloperIsland.exe --system-report` prints what a device exposes.
 
+## Awake
+
+`AwakeController` (Core, tested with fakes for `IPowerControl` and `IAwakeBackstop`) runs a timed or indefinite session. In the app, `WindowsPowerControl` holds a power request (`PowerCreateRequest`, system- and execution-required; Windows drops it with the process) and writes `LIDACTION` in the active scheme through `powrprof` (`PowerWrite{AC,DC}ValueIndex`, then `PowerSetActiveScheme`), without admin rights or a `powercfg` process.
+
+The lid change outlives a crash, so it follows a journal-first rule:
+
+| Step | Order |
+|---|---|
+| Start | read the original values, write `awake-session.json`, then write "do nothing", then the power request, then schedule the backstop. Without a journal, the lid is not changed. |
+| End (timer, End, battery floor, module off, Quit) | release the request, put back each value that still reads "do nothing" (`AwakeRules.Restoration`), then delete the journal and the backstop. A failed restore keeps the journal as an ended session. |
+| App start | `AwakeRules.OnStartup`: an indefinite or unexpired session resumes; an ended one is restored. |
+| Backstop | `ScheduledTaskBackstop` registers a one-time task (UTF-16 task XML through `schtasks /Create /XML`, `StartWhenAvailable`, no battery limits, expires and deletes itself a week later). `DeveloperIsland.exe --awake-restore` exits at once while the island runs (its instance mutex exists), otherwise restores an ended session. |
+
+Battery level, power source and lid state come from `RegisterPowerSettingNotification` on the host window, only while a session runs; lid events are logged, not acted on.
+
 ## State, content and global signals
 
 Four things are kept apart:

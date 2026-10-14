@@ -13,7 +13,7 @@ public class ModuleCatalogTests
     public void Default_order_matches_the_product_order()
     {
         Assert.Equal(
-            [ModuleId.Claude, ModuleId.Codex, ModuleId.Music, ModuleId.Git, ModuleId.GitHub, ModuleId.Focus, ModuleId.Calendar, ModuleId.Tasks, ModuleId.System],
+            [ModuleId.Claude, ModuleId.Codex, ModuleId.Music, ModuleId.Git, ModuleId.GitHub, ModuleId.Focus, ModuleId.Calendar, ModuleId.Tasks, ModuleId.System, ModuleId.Awake],
             new AppSettings().Order);
     }
 
@@ -25,7 +25,8 @@ public class ModuleCatalogTests
         Assert.Equal(ModuleId.Focus, order[0]);
         Assert.Equal(ModuleId.Music, order[1]);
         Assert.Equal(ModuleId.Claude, order[2]);
-        Assert.Equal(9, order.Count);
+        Assert.Equal(10, order.Count);
+        Assert.Equal(ModuleId.Awake, order[^1]);
         Assert.Equal(ModuleId.Codex, order[3]);
     }
 

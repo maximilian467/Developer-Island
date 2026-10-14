@@ -12,6 +12,7 @@ public enum TrayCommand
     Settings = 4,
     Quit = 5,
     NewTask = 6,
+    Awake = 7,
 }
 
 /// <summary>
@@ -51,6 +52,9 @@ internal sealed class TrayIcon : IDisposable
     public Func<bool>? IsFocusAvailable { get; set; }
 
     public Func<bool> IsTasksAvailable { get; set; } = () => true;
+
+    /// <summary>Whether the Awake module is on, and whether a session runs (the item then ends it).</summary>
+    public Func<(bool Enabled, bool Active)> AwakeState { get; set; } = () => (false, false);
 
     public void Add()
     {
@@ -144,6 +148,8 @@ internal sealed class TrayIcon : IDisposable
             AppendMenu(menu, MF_SEPARATOR, UIntPtr.Zero, null);
             AppendMenu(menu, MF_STRING | (focus ? 0 : MF_GRAYED), (UIntPtr)(uint)TrayCommand.StartFocus, "Start Focus");
             AppendMenu(menu, MF_STRING | (IsTasksAvailable() ? 0 : MF_GRAYED), (UIntPtr)(uint)TrayCommand.NewTask, "New Task…");
+            var awake = AwakeState();
+            AppendMenu(menu, MF_STRING | (awake.Enabled ? 0 : MF_GRAYED), (UIntPtr)(uint)TrayCommand.Awake, awake.Active ? "End Stay Awake" : "Stay Awake…");
             AppendMenu(menu, MF_STRING, (UIntPtr)(uint)TrayCommand.Settings, "Settings…");
             AppendMenu(menu, MF_SEPARATOR, UIntPtr.Zero, null);
             AppendMenu(menu, MF_STRING, (UIntPtr)(uint)TrayCommand.Quit, "Quit Developer Island");

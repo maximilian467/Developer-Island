@@ -9,6 +9,7 @@ public enum ActivityKind
     Usage,
     Calendar,
     System,
+    Awake,
     Info,
 }
 

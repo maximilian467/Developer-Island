@@ -14,6 +14,12 @@ public static class Program
             return StatusLineBridge.Run();
         }
 
+        // Awake backstop (a scheduled task): undo an ended session's lid change if the island is not running.
+        if (AwakeRestore.IsRequested(args))
+        {
+            return AwakeRestore.Run();
+        }
+
         // Hardware support check: prints what the System module can read, then exits.
         if (SystemReport.IsRequested(args))
         {

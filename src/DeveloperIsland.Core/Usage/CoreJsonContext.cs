@@ -8,6 +8,7 @@ namespace DeveloperIsland.Core.Usage;
 [JsonSerializable(typeof(CodexFileState))]
 [JsonSerializable(typeof(PricingOverrides))]
 [JsonSerializable(typeof(DeveloperIsland.Core.Focus.FocusSessionState))]
+[JsonSerializable(typeof(DeveloperIsland.Core.Awake.AwakeJournal))]
 [JsonSerializable(typeof(List<DeveloperIsland.Core.Tasks.TaskItem>))]
 [JsonSerializable(typeof(List<string>))]
 [JsonSerializable(typeof(DeveloperIsland.Core.Settings.UiState))]

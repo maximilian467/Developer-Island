@@ -4,6 +4,11 @@ All notable changes to Developer Island are documented here. The format follows 
 
 ## [Unreleased]
 
+### Added
+
+- **Awake** module (a coffee cup): keeps the PC awake for 1, 4 or 8 hours, a custom length or Always, also with the lid closed, so coding agents keep working. During a session the lid-close action is "Do nothing"; it is journaled first and put back at the end, at the next start or by a one-time scheduled task if the app is gone. On battery, a session ends below 10 % (adjustable). Countdown in the capsule, Stay Awake in the tray menu.
+- With nine tabs, the tab buttons of the open island are 28 instead of 32 DIP wide, so the section name still fits.
+
 ## [0.2.0] - 2026-10-13
 
 ### Added

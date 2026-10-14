@@ -1,4 +1,5 @@
 using System.Globalization;
+using DeveloperIsland.Core.Awake;
 using DeveloperIsland.Core.Calendar;
 using DeveloperIsland.Core.Demo;
 using DeveloperIsland.Core.Diagnostics;
@@ -17,6 +18,7 @@ using DeveloperIsland.Core.Storage;
 using DeveloperIsland.Core.Usage;
 using DeveloperIsland.Platform.Media;
 using DeveloperIsland.Platform.Monitors;
+using DeveloperIsland.Platform.Power;
 using DeveloperIsland.Platform.Startup;
 using DeveloperIsland.Platform.Tray;
 using DeveloperIsland.Platform.Windowing;
@@ -69,6 +71,10 @@ internal sealed class AppHost : IDisposable
     private FocusState _lastFocusState = FocusState.Idle;
     private DateTimeOffset? _lastFocusStartedAt;
     private FocusSessionStore? _focusStore;
+    private AwakeController? _awake;
+    private ScheduledTaskBackstop? _awakeBackstop;
+    private bool _awakePowerEvents;
+    private bool _awakeQuiet;
     private bool _mediaPrimed;
     private bool _hiddenByUser;
     private bool _hiddenForFullscreen;
@@ -118,6 +124,7 @@ internal sealed class AppHost : IDisposable
             minutes => _settings.Update(s => s.CustomFocusMinutes = minutes));
         var modules = ModuleViewModels.Create();
         _viewModel = new IslandViewModel(usage, music, focus, modules, _options.IsDemo);
+        CreateAwake(modules.Awake, settings);
         // Private calendar links live in Windows Credential Manager; demo mode keeps them in memory.
         _secrets = _options.IsDemo ? new MemorySecretStore() : new CredentialManagerSecretStore();
         MigrateCalendarLinks();
@@ -161,6 +168,7 @@ internal sealed class AppHost : IDisposable
             IsIslandVisible = () => _window.IsIslandVisible,
             IsFocusAvailable = () => _settings.Current.FocusEnabled && !_focusTimer.Snapshot.IsActive,
             IsTasksAvailable = () => _settings.Current.TasksEnabled,
+            AwakeState = () => (_settings.Current.AwakeEnabled, _awake?.Snapshot.IsActive ?? false),
         };
         _tray.Activated += () => ShowIsland(expand: true);
         _tray.CommandInvoked += OnTrayCommand;
@@ -176,6 +184,7 @@ internal sealed class AppHost : IDisposable
             _hotkey.Apply(settings.GlobalShortcutEnabled, ShortcutGesture.FromText(settings.GlobalShortcut));
         }
 
+        RestoreAwakeSession(settings);
         WireEvents();
         RestoreFocusSession(settings);
 
@@ -323,7 +332,7 @@ internal sealed class AppHost : IDisposable
         _modules.Apply(_settings.Current); // back to the demo content after the empty and error states
 
         // The compact island featuring each module (as a single favorite).
-        foreach (var module in new[] { ModuleId.Claude, ModuleId.Codex, ModuleId.Music, ModuleId.Focus, ModuleId.System, ModuleId.Calendar, ModuleId.Git, ModuleId.GitHub, ModuleId.Tasks })
+        foreach (var module in new[] { ModuleId.Claude, ModuleId.Codex, ModuleId.Music, ModuleId.Focus, ModuleId.System, ModuleId.Calendar, ModuleId.Git, ModuleId.GitHub, ModuleId.Tasks, ModuleId.Awake })
         {
             _viewModel.SetFavorites([module]);
             await shot("50-compact-" + module.ToString().ToLowerInvariant());
@@ -337,9 +346,37 @@ internal sealed class AppHost : IDisposable
         _viewModel.SetLastActive(null);
         await Task.Delay(400);
 
+        await AwakeSnapshotsAsync(shot);
         await DropSnapshotsAsync(shot);
 
         await new SettingsWindow(_settings, _options.IsDemo, () => false, _secrets).SaveSnapshotsAsync(_options.SnapshotDirectory!);
+    }
+
+    /// <summary>An awake session (demo power control: nothing on the system changes), timed and indefinite.</summary>
+    private async Task AwakeSnapshotsAsync(Func<string, Task> shot)
+    {
+        if (_awake is null)
+        {
+            return;
+        }
+
+        _awakeQuiet = true;
+        _awake.StartTimed(TimeSpan.FromHours(4));
+        await Task.Delay(400);
+        await shot("70-awake-compact");
+        _viewModel.OnAwakeStarted();
+        await shot("71-awake-activity");
+        _state.Dismiss();
+        await Task.Delay(400);
+        _viewModel.PrepareExpandTo(IslandTab.Awake);
+        _state.Activate();
+        await shot("72-awake-expanded");
+        _awake.StartIndefinite();
+        await shot("73-awake-indefinite");
+        _awake.Stop();
+        await shot("74-awake-idle");
+        _state.Dismiss();
+        await Task.Delay(600);
     }
 
     /// <summary>
@@ -473,6 +510,14 @@ internal sealed class AppHost : IDisposable
 
     public void Dispose()
     {
+        // Quit ends an awake session: sleep and the lid work as usual again once the app is gone.
+        if (_awake is { Snapshot.IsActive: true })
+        {
+            _awake.Stop(AwakeEndReason.Quit);
+        }
+
+        _awake?.Dispose();
+        _awakeBackstop?.Flush(TimeSpan.FromSeconds(3));
         _window?.PrepareForExit();
         _shutdown.Cancel();
         _providers.Dispose();
@@ -512,6 +557,79 @@ internal sealed class AppHost : IDisposable
             // The island still works; history just is not kept this session.
             Log.Error("database", "Usage database unavailable; using a temporary in-memory store", ex);
             return UsageDatabase.OpenInMemory();
+        }
+    }
+
+    /// <summary>
+    /// The Awake session: real power control and the scheduled backstop, or in demo mode stand-ins
+    /// that never touch the system.
+    /// </summary>
+    private void CreateAwake(AwakeViewModel viewModel, AppSettings settings)
+    {
+        IPowerControl power = _options.IsDemo ? new DemoPowerControl() : new WindowsPowerControl();
+        _awakeBackstop = _options.IsDemo || Environment.ProcessPath is not { } exe ? null : new ScheduledTaskBackstop(exe, AppPaths.Root);
+        _awake = new AwakeController(power, (IAwakeBackstop?)_awakeBackstop ?? new NoBackstop(), new AwakeJournalStore(_options.IsDemo ? null : AppPaths.AwakeSession));
+        viewModel.Attach(_awake, settings.AwakeCustomMinutes, minutes => _settings.Update(s => s.AwakeCustomMinutes = minutes));
+    }
+
+    /// <summary>
+    /// A session still running when the app closed (a restart, a crash) continues; one that ended
+    /// meanwhile has its lid setting put back. Quietly: no "staying awake" announcement.
+    /// </summary>
+    private void RestoreAwakeSession(AppSettings settings)
+    {
+        if (_awake is null)
+        {
+            return;
+        }
+
+        var action = _awake.Recover();
+        if (action == AwakeStartupAction.Resume && !settings.AwakeEnabled)
+        {
+            _awake.Stop(AwakeEndReason.Disabled);
+        }
+
+        _viewModel.Awake.Update(_awake.Snapshot);
+        UpdateAwakePowerEvents(_awake.Snapshot.IsActive);
+    }
+
+    /// <summary>Battery, power source and lid notifications, only while a session runs.</summary>
+    private void UpdateAwakePowerEvents(bool active)
+    {
+        if (_options.IsDemo || _host is null || active == _awakePowerEvents)
+        {
+            return;
+        }
+
+        if (active)
+        {
+            _host.RegisterPowerSettings(PowerNative.BatteryPercentageRemaining, PowerNative.AcDcPowerSource, PowerNative.LidSwitchStateChange);
+        }
+        else
+        {
+            _host.UnregisterPowerSettings();
+        }
+
+        _awakePowerEvents = active;
+    }
+
+    private void OnPowerSettingChanged(Guid setting, uint value)
+    {
+        if (setting == PowerNative.LidSwitchStateChange)
+        {
+            Log.Info("awake", value == 0 ? "Lid closed" : "Lid opened", new { active = _awake?.Snapshot.IsActive });
+            return;
+        }
+
+        CheckAwakeBattery();
+    }
+
+    private void CheckAwakeBattery()
+    {
+        if (_awake is { Snapshot.IsActive: true } && !_options.IsDemo)
+        {
+            var (percent, onMains) = WindowsPowerControl.ReadBattery();
+            _awake.OnBattery(percent, onMains, _settings.Current.AwakeBatteryFloor);
         }
     }
 
@@ -623,6 +741,26 @@ internal sealed class AppHost : IDisposable
             });
         };
 
+        if (_awake is not null)
+        {
+            _awake.Changed += snapshot => _dispatcher.TryEnqueue(() =>
+            {
+                var started = snapshot.IsActive && !_viewModel.Awake.Snapshot.IsActive;
+                _viewModel.Awake.Update(snapshot);
+                _viewModel.RefreshActivityTrailing();
+                if (started && !_awakeQuiet)
+                {
+                    _viewModel.OnAwakeStarted();
+                }
+
+                _awakeQuiet = false;
+                UpdateAwakePowerEvents(snapshot.IsActive);
+            });
+            _awake.Ended += reason => _dispatcher.TryEnqueue(() => _viewModel.OnAwakeEnded(reason));
+        }
+
+        _host.PowerSettingChanged += OnPowerSettingChanged;
+
         _viewModel.ActivityRequested += duration =>
         {
             var shown = _state.ShowEvent(duration);
@@ -678,6 +816,14 @@ internal sealed class AppHost : IDisposable
         {
             _focusTimer.Stop();
         }
+
+        if (!settings.AwakeEnabled && _awake is { Snapshot.IsActive: true })
+        {
+            _awake.Stop(AwakeEndReason.Disabled);
+        }
+
+        // A changed battery floor applies at once.
+        CheckAwakeBattery();
 
         if (!_options.IsDemo)
         {
@@ -787,6 +933,8 @@ internal sealed class AppHost : IDisposable
         _viewModel.Usage.Codex.IsEnabled = settings.CodexEnabled;
         _viewModel.Music.IsEnabled = settings.MusicEnabled;
         _viewModel.Focus.IsEnabled = settings.FocusEnabled;
+        _viewModel.Awake.IsEnabled = settings.AwakeEnabled;
+        _viewModel.Awake.BatteryFloor = settings.AwakeBatteryFloor;
     }
 
     private async Task SyncProvidersAsync(AppSettings settings)
@@ -1033,6 +1181,13 @@ internal sealed class AppHost : IDisposable
                     _window.ExpandToTaskCapture();
                 }
 
+                break;
+            case TrayCommand.Awake when _awake is { Snapshot.IsActive: true }:
+                _awake.Stop();
+                break;
+            case TrayCommand.Awake when _settings.Current.AwakeEnabled:
+                _viewModel.PrepareExpandTo(IslandTab.Awake);
+                ShowIsland(expand: true);
                 break;
             case TrayCommand.Settings:
                 OpenSettings();

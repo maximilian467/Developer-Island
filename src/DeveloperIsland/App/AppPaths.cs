@@ -13,6 +13,9 @@ internal static class AppPaths
 
     public static string FocusSession => Path.Combine(Root, "focus-session.json");
 
+    /// <summary>The Awake session's recovery journal (the lid setting to put back).</summary>
+    public static string AwakeSession => Path.Combine(Root, "awake-session.json");
+
     public static string Tasks => Path.Combine(Root, "tasks.json");
 
     public static string UiState => Path.Combine(Root, "ui-state.json");

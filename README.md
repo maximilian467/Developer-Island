@@ -40,6 +40,11 @@ AI coding tools spend tokens and plan limits where you can't see them, and the r
 - **Tasks**, a small local to-do list, plus **Git** (branch, changes, push state of your current project) and **GitHub** (notifications, pull requests and CI through the GitHub CLI, read-only).
 - **Favorites:** star a module and the compact capsule features it; several favorites take turns.
 
+### Awake
+
+- **Keep the PC awake, also with the lid closed**, so Claude Code, Codex and other agents keep working, in the terminal, the Claude app or VS Code alike. Choose 1, 4 or 8 hours, a custom length, or Always (until you end it). The capsule shows the countdown with a coffee cup.
+- During a session, the lid-close action of your power plan is set to "Do nothing" and put back afterwards; a value you change meanwhile stays yours. The change is written to a journal first, so a crash or restart cannot leave it behind: the next start, or a one-time scheduled task at the session's end, puts it back. On battery, a session ends below 10 % (adjustable, or off). Quit ends the session. Use a well-ventilated surface, not a bag.
+
 ### System monitoring
 
 - CPU, memory, GPU and battery with **60-second graphs** that turn orange or red under sustained load.
@@ -75,7 +80,7 @@ All details per module: [docs/MODULES.md](docs/MODULES.md).
 Developer Island is **local-first**. It has no account, no telemetry and no cloud sync, and it does not upload your prompts or code.
 
 - **Read locally:** Claude Code transcripts (`~/.claude/projects`) and Codex rollout files (`~/.codex/sessions`). Only usage metadata is extracted (token counts, model, timestamps, session IDs, working directory); prompt, message and code content is never stored, displayed or logged.
-- **Stored locally** in `%LOCALAPPDATA%\DeveloperIsland`: a SQLite database with token counts and daily totals, settings, tasks, focus history and the last Claude plan percentages. Logs contain events and error types, never content, and are kept for 7 days.
+- **Stored locally** in `%LOCALAPPDATA%\DeveloperIsland`: a SQLite database with token counts and daily totals, settings, tasks, focus history, the last Claude plan percentages and, during an Awake session, the lid setting to put back. Logs contain events and error types, never content, and are kept for 7 days.
 - **Credentials:** private calendar links are kept in Windows Credential Manager. GitHub access goes through the GitHub CLI's own sign-in; Developer Island never sees a token.
 - **Network:** only the calendar links you add, the GitHub CLI's read-only requests while the GitHub module is on, and, if you drop files onto the island, the copy to the folder you configured under Home Cloud (your own server).
 - **Camera and microphone:** only "in use or not" is read from Windows' own consent store; app names are never stored or shown.

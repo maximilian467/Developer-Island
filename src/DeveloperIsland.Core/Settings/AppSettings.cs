@@ -108,6 +108,8 @@ public sealed class AppSettings
 
     public bool SystemEnabled { get; set; } = true;
 
+    public bool AwakeEnabled { get; set; } = true;
+
     /// <summary>Modules starred in the expanded island; the compact island features them (see CompactSelector).</summary>
     public List<string> FavoriteModules { get; set; } = [];
 
@@ -135,6 +137,12 @@ public sealed class AppSettings
 
     // Focus
     public int CustomFocusMinutes { get; set; } = 45;
+
+    // Awake
+    public int AwakeCustomMinutes { get; set; } = 120;
+
+    /// <summary>An awake session on battery ends below this percentage; 0 turns the rule off.</summary>
+    public int AwakeBatteryFloor { get; set; } = 10;
 
     // Smart Auto-Hide (top-center island over maximized browsers)
     public bool SmartHideEnabled { get; set; } = true;
@@ -188,6 +196,7 @@ public sealed class AppSettings
         ModuleId.Calendar => CalendarEnabled,
         ModuleId.Tasks => TasksEnabled,
         ModuleId.System => SystemEnabled,
+        ModuleId.Awake => AwakeEnabled,
         _ => false,
     };
 
@@ -204,6 +213,7 @@ public sealed class AppSettings
             case ModuleId.Calendar: CalendarEnabled = enabled; break;
             case ModuleId.Tasks: TasksEnabled = enabled; break;
             case ModuleId.System: SystemEnabled = enabled; break;
+            case ModuleId.Awake: AwakeEnabled = enabled; break;
         }
     }
 

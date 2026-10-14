@@ -16,6 +16,7 @@ public enum IslandTab
     Calendar,
     Tasks,
     System,
+    Awake,
 }
 
 /// <summary>
@@ -44,6 +45,7 @@ public sealed class IslandViewModel : ObservableObject
         Calendar = modules.Calendar;
         Tasks = modules.Tasks;
         System = modules.System;
+        Awake = modules.Awake;
         IsDemo = isDemo;
         Activity.Privacy = Privacy;
         Usage.PropertyChanged += (_, _) => OnCompactChanged();
@@ -82,6 +84,17 @@ public sealed class IslandViewModel : ObservableObject
         };
         System.PropertyChanged += (_, _) => OnCompactChanged();
         GitHub.PropertyChanged += (_, _) => OnCompactChanged();
+        Awake.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is "" or null or nameof(AwakeViewModel.IsEnabled))
+            {
+                OnCompactChanged();
+            }
+            else if (e.PropertyName == nameof(AwakeViewModel.RemainingText))
+            {
+                OnPrimaryChanged(ModuleId.Awake);
+            }
+        };
     }
 
     /// <summary>Requests the medium state for an event (duration null means the default).</summary>
@@ -106,6 +119,8 @@ public sealed class IslandViewModel : ObservableObject
 
     public SystemViewModel System { get; }
 
+    public AwakeViewModel Awake { get; }
+
     public ActivityViewModel Activity { get; } = new();
 
     /// <summary>Camera and microphone in use: shown in every state, independent of the module shown.</summary>
@@ -123,6 +138,8 @@ public sealed class IslandViewModel : ObservableObject
     public bool CompactShowSystem => System.HasCompact && CompactModule != ModuleId.System;
 
     public bool CompactShowGitHub => GitHub.HasCompactSignal && CompactModule != ModuleId.GitHub;
+
+    public bool CompactShowAwake => Awake.IsActive && CompactModule != ModuleId.Awake;
 
     // The classic summary (AI usage and music art) is shown when no module is featured.
     public bool CompactShowMusic => !IsFeaturing && Music.IsEnabled && Music.IsPlaying;
@@ -156,6 +173,7 @@ public sealed class IslandViewModel : ObservableObject
         ModuleId.Claude => Usage.Claude.ShortName,
         ModuleId.Codex => Usage.Codex.ShortName,
         ModuleId.Focus when !Focus.IsActive => "Focus",
+        ModuleId.Awake when !Awake.IsActive => "Awake",
         _ => string.Empty,
     };
 
@@ -172,6 +190,7 @@ public sealed class IslandViewModel : ObservableObject
         ModuleId.Git => Git.CompactText,
         ModuleId.GitHub => GitHub.CompactSummary,
         ModuleId.Tasks => Tasks.CompactText,
+        ModuleId.Awake => Awake.IsActive ? Awake.RemainingText : "Off",
         _ => string.Empty,
     };
 
@@ -245,6 +264,7 @@ public sealed class IslandViewModel : ObservableObject
         ModuleId.Git => Git.IsReady && Git.Active is not null,
         ModuleId.GitHub => GitHub.IsReady,
         ModuleId.Tasks => Tasks.IsReady && Tasks.OpenCount > 0,
+        ModuleId.Awake => Awake.IsActive,
         _ => false,
     };
 
@@ -259,6 +279,7 @@ public sealed class IslandViewModel : ObservableObject
         ModuleId.Calendar => Calendar.IsEnabled,
         ModuleId.Tasks => Tasks.IsEnabled,
         ModuleId.System => System.IsEnabled,
+        ModuleId.Awake => Awake.IsEnabled,
         _ => false,
     };
 
@@ -299,7 +320,7 @@ public sealed class IslandViewModel : ObservableObject
         }
     }
 
-    public bool CompactIsEmpty => !CompactShowFocus && !CompactShowCalendar && !CompactShowSystem && !CompactShowGitHub
+    public bool CompactIsEmpty => !CompactShowFocus && !CompactShowAwake && !CompactShowCalendar && !CompactShowSystem && !CompactShowGitHub
         && !CompactShowMusic && !CompactShowClaude && !CompactShowCodex;
 
     public string CompactAccessibleName
@@ -308,6 +329,7 @@ public sealed class IslandViewModel : ObservableObject
         {
             var parts = new List<string> { "Developer Island" };
             if (CompactShowFocus) parts.Add(Focus.AccessibleSummary);
+            if (CompactShowAwake) parts.Add(Awake.AccessibleSummary);
             if (CompactShowCalendar) parts.Add(Calendar.CompactText);
             if (CompactShowSystem) parts.Add(System.CompactText);
             if (CompactShowGitHub) parts.Add(GitHub.CompactText);
@@ -319,7 +341,7 @@ public sealed class IslandViewModel : ObservableObject
     }
 
     /// <summary>Something time-critical is in the capsule; AI usage then shrinks to one provider.</summary>
-    private bool HasUrgentSignal => Focus.IsActive || Calendar.HasCompact || System.HasCompact || GitHub.HasCompactSignal;
+    private bool HasUrgentSignal => Focus.IsActive || Awake.IsActive || Calendar.HasCompact || System.HasCompact || GitHub.HasCompactSignal;
 
     // Tabs ------------------------------------------------------------------------------------
 
@@ -339,6 +361,7 @@ public sealed class IslandViewModel : ObservableObject
         IslandTab.Focus => ModuleId.Focus,
         IslandTab.Calendar => ModuleId.Calendar,
         IslandTab.Tasks => ModuleId.Tasks,
+        IslandTab.Awake => ModuleId.Awake,
         _ => ModuleId.System,
     };
 
@@ -352,6 +375,7 @@ public sealed class IslandViewModel : ObservableObject
         IslandTab.Calendar => Calendar.IsEnabled,
         IslandTab.Tasks => Tasks.IsEnabled,
         IslandTab.System => System.IsEnabled,
+        IslandTab.Awake => Awake.IsEnabled,
         _ => false,
     };
 
@@ -372,6 +396,7 @@ public sealed class IslandViewModel : ObservableObject
                     ModuleId.Focus => IslandTab.Focus,
                     ModuleId.Calendar => IslandTab.Calendar,
                     ModuleId.Tasks => IslandTab.Tasks,
+                    ModuleId.Awake => IslandTab.Awake,
                     _ => IslandTab.System,
                 };
                 if (!tabs.Contains(tab) && IsTabAvailable(tab))
@@ -404,6 +429,7 @@ public sealed class IslandViewModel : ObservableObject
         ModuleId.Focus => IslandTab.Focus,
         ModuleId.Calendar => IslandTab.Calendar,
         ModuleId.Tasks => IslandTab.Tasks,
+        ModuleId.Awake => IslandTab.Awake,
         _ => IslandTab.System,
     };
 
@@ -447,6 +473,7 @@ public sealed class IslandViewModel : ObservableObject
             ActivityKind.Usage => ModuleId.Claude,
             ActivityKind.Calendar => ModuleId.Calendar,
             ActivityKind.System => ModuleId.System,
+            ActivityKind.Awake => ModuleId.Awake,
             _ => null,
         };
         var requested = _pendingTab is { } pending ? TabModule(pending) : (ModuleId?)null;
@@ -601,12 +628,46 @@ public sealed class IslandViewModel : ObservableObject
         ActivityRequested?.Invoke(null);
     }
 
-    /// <summary>Keeps a visible focus activity's countdown current.</summary>
+    public void OnAwakeStarted()
+    {
+        if (!Awake.IsEnabled)
+        {
+            return;
+        }
+
+        SetAwakeActivity("Staying awake", Awake.IsTimed ? Awake.DetailText : "Until you end it");
+        _lastEventKind = ActivityKind.Awake;
+        ActivityRequested?.Invoke(TimeSpan.FromSeconds(3));
+    }
+
+    public void OnAwakeEnded(Core.Awake.AwakeEndReason reason)
+    {
+        if (!Awake.IsEnabled || reason is Core.Awake.AwakeEndReason.Quit or Core.Awake.AwakeEndReason.Disabled)
+        {
+            return;
+        }
+
+        var subtitle = reason switch
+        {
+            Core.Awake.AwakeEndReason.Battery => $"Battery below {Awake.BatteryFloor}{DisplayFormat.Nbsp}%",
+            Core.Awake.AwakeEndReason.Completed => "Time is up",
+            _ => "Ended",
+        };
+        Activity.Set(ActivityKind.Awake, "Sleep allowed again", subtitle, module: ModuleId.Awake);
+        _lastEventKind = ActivityKind.Awake;
+        ActivityRequested?.Invoke(TimeSpan.FromSeconds(reason == Core.Awake.AwakeEndReason.Stopped ? 3 : 6));
+    }
+
+    /// <summary>Keeps a visible focus or awake activity's countdown current.</summary>
     public void RefreshActivityTrailing()
     {
         if (Activity.Kind == ActivityKind.Focus && Focus.IsActive)
         {
             Activity.SetTrailing(Focus.RemainingText);
+        }
+        else if (Activity.Kind == ActivityKind.Awake && Awake.IsActive)
+        {
+            Activity.SetTrailing(Awake.RemainingText);
         }
     }
 
@@ -654,7 +715,18 @@ public sealed class IslandViewModel : ObservableObject
             case ModuleId.Tasks:
                 Activity.Set(ActivityKind.Info, "Tasks", Tasks.SummaryText, module: ModuleId.Tasks);
                 break;
+            case ModuleId.Awake when Awake.IsActive:
+                SetAwakeActivity("Awake", Awake.IsTimed ? Awake.DetailText : Awake.StatusText);
+                break;
+            case ModuleId.Awake:
+                Activity.Set(ActivityKind.Awake, "Awake", "Sleep as usual", module: ModuleId.Awake);
+                break;
         }
+    }
+
+    private void SetAwakeActivity(string title, string subtitle)
+    {
+        Activity.Set(ActivityKind.Awake, title, subtitle, Awake.RemainingText, module: ModuleId.Awake);
     }
 
     private void SetMusicActivity()
@@ -719,6 +791,7 @@ public sealed class IslandViewModel : ObservableObject
         OnPropertyChanged(nameof(CompactShowCalendar));
         OnPropertyChanged(nameof(CompactShowSystem));
         OnPropertyChanged(nameof(CompactShowGitHub));
+        OnPropertyChanged(nameof(CompactShowAwake));
         OnPropertyChanged(nameof(CompactShowMusic));
         OnPropertyChanged(nameof(CompactShowClaude));
         OnPropertyChanged(nameof(CompactShowCodex));
@@ -728,9 +801,9 @@ public sealed class IslandViewModel : ObservableObject
 }
 
 /// <summary>The view models of the modules added after V1, grouped to keep constructors short.</summary>
-public sealed record ModuleViewModels(GitViewModel Git, GitHubViewModel GitHub, CalendarViewModel Calendar, TasksViewModel Tasks, SystemViewModel System)
+public sealed record ModuleViewModels(GitViewModel Git, GitHubViewModel GitHub, CalendarViewModel Calendar, TasksViewModel Tasks, SystemViewModel System, AwakeViewModel Awake)
 {
-    public static ModuleViewModels Create() => new(new GitViewModel(), new GitHubViewModel(), new CalendarViewModel(), new TasksViewModel(), new SystemViewModel());
+    public static ModuleViewModels Create() => new(new GitViewModel(), new GitHubViewModel(), new CalendarViewModel(), new TasksViewModel(), new SystemViewModel(), new AwakeViewModel());
 
     public IEnumerable<ModuleViewModel> All => [Git, GitHub, Calendar, Tasks, System];
 }

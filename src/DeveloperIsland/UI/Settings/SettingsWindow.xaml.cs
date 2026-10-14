@@ -41,6 +41,8 @@ public sealed partial class SettingsWindow : Window
             ShortcutPicker.Items.Add(preset.Text);
         }
 
+        InitAwake();
+
 
         _sections = new()
         {
@@ -193,6 +195,7 @@ public sealed partial class SettingsWindow : Window
             AutoHideMaximizedToggle.IsOn = s.AutoHideOnlyMaximized;
             BuildAutoHideRows(s);
             LoadHomeCloud(s);
+            LoadAwake(s);
             foreach (var dependent in new Control[] { SmartHideRetract, SmartHideHide, AutoHideMaximizedToggle })
             {
                 dependent.IsEnabled = s.SmartHideEnabled;
