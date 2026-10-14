@@ -28,6 +28,7 @@ AI coding tools spend tokens and plan limits where you can't see them, and the r
 - **Plan usage** where the tool reports it: Claude's 5-hour and weekly windows with reset times, and Codex's windows from its own logs. Never computed from token counts.
 - A **26-week usage graph** with a tooltip per day, and an **estimated API equivalent** at public list prices (in the expanded view only).
 - The compact capsule reads like `Claude 1.12M · 72%`.
+- **Claude Code alerts:** a live activity when Claude Code needs your permission, waits for your input or has finished a reply, with the project's folder name, so an agent left running never waits unnoticed. Through Claude Code's hooks, connected once in Settings.
 
 ### Media
 
@@ -80,7 +81,7 @@ All details per module: [docs/MODULES.md](docs/MODULES.md).
 Developer Island is **local-first**. It has no account, no telemetry and no cloud sync, and it does not upload your prompts or code.
 
 - **Read locally:** Claude Code transcripts (`~/.claude/projects`) and Codex rollout files (`~/.codex/sessions`). Only usage metadata is extracted (token counts, model, timestamps, session IDs, working directory); prompt, message and code content is never stored, displayed or logged.
-- **Stored locally** in `%LOCALAPPDATA%\DeveloperIsland`: a SQLite database with token counts and daily totals, settings, tasks, focus history, the last Claude plan percentages and, during an Awake session, the lid setting to put back. Logs contain events and error types, never content, and are kept for 7 days.
+- **Stored locally** in `%LOCALAPPDATA%\DeveloperIsland`: a SQLite database with token counts and daily totals, settings, tasks, focus history, the last Claude plan percentages, the last Claude Code alert (its kind, project folder name and time) and, during an Awake session, the lid setting to put back. Logs contain events and error types, never content, and are kept for 7 days.
 - **Credentials:** private calendar links are kept in Windows Credential Manager. GitHub access goes through the GitHub CLI's own sign-in; Developer Island never sees a token.
 - **Network:** only the calendar links you add, the GitHub CLI's read-only requests while the GitHub module is on, and, if you drop files onto the island, the copy to the folder you configured under Home Cloud (your own server).
 - **Camera and microphone:** only "in use or not" is read from Windows' own consent store; app names are never stored or shown.
@@ -106,6 +107,7 @@ The installer is not code-signed yet, so Windows SmartScreen may ask you to conf
 | Click the ☆ next to a module's name | That module is featured in the compact capsule |
 | Drag the capsule | Move it; it snaps to the nearest anchor |
 | Settings, Modules, **Claude plan usage**, Connect | Claude's 5-hour and weekly usage (from Claude Code terminal sessions) |
+| Settings, Modules, **Claude Code alerts**, Connect | A peek when Claude Code waits for you or has finished |
 | Settings, Position, **Auto-hide in apps** | Choose which apps make the island step aside |
 
 Want to look around first? Start **Developer Island (Demo)** from the Start menu, or run `DeveloperIsland.exe --demo`. Demo mode uses invented data only: it never reads your Claude or Codex usage, tasks or repositories, and its settings are kept separately.
@@ -118,7 +120,7 @@ Everything is set in the Settings window and applies immediately:
 |---|---|
 | General | Start with Windows, always on top, launch hidden, keyboard shortcut |
 | Position | Monitor, anchor, custom position; auto-hide in apps (notch or hide, only when maximized, app list) |
-| Modules | Each module on or off and its order; Claude plan usage; Git repositories; calendars |
+| Modules | Each module on or off and its order; Claude plan usage; Claude Code alerts; Git repositories; calendars |
 | Appearance | System or Dark for Settings (the island itself is always dark) |
 
 API prices and the exchange rate for the API equivalent can be adjusted in `%LOCALAPPDATA%\DeveloperIsland\pricing.json` ([example](docs/PRIVACY.md)).
@@ -191,7 +193,9 @@ No dates; priorities follow feedback.
 
 ## Contributing
 
-Bug reports, ideas and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [changelog](CHANGELOG.md).
+Bug reports, ideas and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [changelog](CHANGELOG.md). A good place to start: the [issues marked "good first issue" or "help wanted"](https://github.com/maximilian467/Developer-Island/issues?q=is%3Aopen+label%3A%22good+first+issue%22%2C%22help+wanted%22), such as testing on Windows 10 or ARM64.
+
+If Developer Island is useful to you, a ⭐ on GitHub helps others find it.
 
 ## Security
 
