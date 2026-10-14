@@ -190,9 +190,12 @@ public sealed class IslandViewModel : ObservableObject
         ModuleId.Git => Git.CompactText,
         ModuleId.GitHub => GitHub.CompactSummary,
         ModuleId.Tasks => Tasks.CompactText,
-        ModuleId.Awake => Awake.IsActive ? Awake.RemainingText : "Off",
+        ModuleId.Awake => Awake.IsActive ? Awake.CompactText : "Off",
         _ => string.Empty,
     };
+
+    /// <summary>False for a featured module that shows only its icon (an awake session without an end).</summary>
+    public bool HasCompactPrimaryValue => CompactPrimaryValue.Length > 0;
 
     /// <summary>A secondary part after a dot (Git changes). Claude and Codex show no money in the capsule.</summary>
     public string CompactPrimaryDetail => _compactModule switch
@@ -311,6 +314,7 @@ public sealed class IslandViewModel : ObservableObject
             OnPropertyChanged(nameof(CompactPrimaryLabel));
             OnPropertyChanged(nameof(HasCompactPrimaryLabel));
             OnPropertyChanged(nameof(CompactPrimaryValue));
+            OnPropertyChanged(nameof(HasCompactPrimaryValue));
             OnPropertyChanged(nameof(CompactPrimaryDetail));
             OnPropertyChanged(nameof(HasCompactPrimaryDetail));
             OnPropertyChanged(nameof(CompactPrimaryShowsArt));
@@ -667,7 +671,7 @@ public sealed class IslandViewModel : ObservableObject
         }
         else if (Activity.Kind == ActivityKind.Awake && Awake.IsActive)
         {
-            Activity.SetTrailing(Awake.RemainingText);
+            Activity.SetTrailing(Awake.CompactText);
         }
     }
 
@@ -726,7 +730,7 @@ public sealed class IslandViewModel : ObservableObject
 
     private void SetAwakeActivity(string title, string subtitle)
     {
-        Activity.Set(ActivityKind.Awake, title, subtitle, Awake.RemainingText, module: ModuleId.Awake);
+        Activity.Set(ActivityKind.Awake, title, subtitle, Awake.CompactText, module: ModuleId.Awake);
     }
 
     private void SetMusicActivity()

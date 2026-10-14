@@ -65,6 +65,12 @@ public sealed class AwakeViewModel : ObservableObject
     /// <summary>The countdown, or the infinity sign for a session without an end (capsule, peek and panel).</summary>
     public string RemainingText => IsTimed ? DisplayFormat.Clock(_snapshot.Remaining) : "∞";
 
+    /// <summary>
+    /// The capsule and the peek: the countdown of a timed session, nothing for an indefinite one
+    /// (the coffee cup alone says it).
+    /// </summary>
+    public string CompactText => IsTimed ? DisplayFormat.Clock(_snapshot.Remaining) : string.Empty;
+
     public string StatusText => _snapshot.Mode switch
     {
         AwakeMode.Timed => $"{DisplayFormat.Duration(_snapshot.Planned)} session",
@@ -132,6 +138,7 @@ public sealed class AwakeViewModel : ObservableObject
         else
         {
             OnPropertyChanged(nameof(RemainingText));
+            OnPropertyChanged(nameof(CompactText));
             OnPropertyChanged(nameof(Progress));
             OnPropertyChanged(nameof(AccessibleSummary));
         }

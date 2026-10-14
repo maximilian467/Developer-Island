@@ -373,6 +373,10 @@ internal sealed class AppHost : IDisposable
         await shot("72-awake-expanded");
         _awake.StartIndefinite();
         await shot("73-awake-indefinite");
+        _state.Dismiss();
+        await Task.Delay(400);
+        await shot("75-awake-compact-indefinite");
+        _state.Activate();
         _awake.Stop();
         await shot("74-awake-idle");
         _state.Dismiss();
