@@ -62,11 +62,8 @@ public sealed class AwakeViewModel : ObservableObject
 
     public bool IsIndefinite => _snapshot.IsIndefinite;
 
-    /// <summary>The countdown, or ∞ for an indefinite session (capsule and peek).</summary>
+    /// <summary>The countdown, or the infinity sign for a session without an end (capsule, peek and panel).</summary>
     public string RemainingText => IsTimed ? DisplayFormat.Clock(_snapshot.Remaining) : "∞";
-
-    /// <summary>The big number: the countdown, or how long an indefinite session has run.</summary>
-    public string HeroText => IsTimed ? DisplayFormat.Clock(_snapshot.Remaining) : DisplayFormat.Duration(_snapshot.Elapsed);
 
     public string StatusText => _snapshot.Mode switch
     {
@@ -118,7 +115,7 @@ public sealed class AwakeViewModel : ObservableObject
     public string AccessibleSummary => _snapshot.Mode switch
     {
         AwakeMode.Timed => $"Awake, {RemainingText} remaining",
-        AwakeMode.Indefinite => $"Awake indefinitely, for {HeroText}",
+        AwakeMode.Indefinite => "Awake until you end it",
         _ => "Awake off",
     };
 
@@ -135,7 +132,6 @@ public sealed class AwakeViewModel : ObservableObject
         else
         {
             OnPropertyChanged(nameof(RemainingText));
-            OnPropertyChanged(nameof(HeroText));
             OnPropertyChanged(nameof(Progress));
             OnPropertyChanged(nameof(AccessibleSummary));
         }
