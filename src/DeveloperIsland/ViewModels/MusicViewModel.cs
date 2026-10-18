@@ -15,9 +15,10 @@ public sealed class MusicViewModel : ObservableObject
     private ImageSource? _art;
     private bool _isEnabled = true;
 
-    public MusicViewModel(IMediaController controller)
+    public MusicViewModel(IMediaController controller, AudioOutputViewModel audioOutput)
     {
         _controller = controller;
+        AudioOutput = audioOutput;
     }
 
     /// <summary>Raised when a different track starts (not on pause/resume or seek).</summary>
@@ -39,6 +40,8 @@ public sealed class MusicViewModel : ObservableObject
     }
 
     public MediaSnapshot Snapshot => _snapshot;
+
+    public AudioOutputViewModel AudioOutput { get; }
 
     public bool HasTrack => _isEnabled && _snapshot.HasTrack;
 

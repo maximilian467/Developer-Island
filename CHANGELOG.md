@@ -4,6 +4,10 @@ All notable changes to Developer Island are documented here. The format follows 
 
 ## [Unreleased]
 
+### Added
+
+- Choose the active Windows playback output from the Music panel.
+
 ## [0.3.0] - 2026-10-15
 
 ### Added

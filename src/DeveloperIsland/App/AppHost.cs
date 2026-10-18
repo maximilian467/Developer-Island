@@ -1,5 +1,6 @@
 using System.Globalization;
 using DeveloperIsland.Core.Awake;
+using DeveloperIsland.Core.Audio;
 using DeveloperIsland.Core.Calendar;
 using DeveloperIsland.Core.Demo;
 using DeveloperIsland.Core.Diagnostics;
@@ -17,6 +18,7 @@ using DeveloperIsland.Core.Settings;
 using DeveloperIsland.Core.Storage;
 using DeveloperIsland.Core.Usage;
 using DeveloperIsland.Platform.Media;
+using DeveloperIsland.Platform.Audio;
 using DeveloperIsland.Platform.Monitors;
 using DeveloperIsland.Platform.Power;
 using DeveloperIsland.Platform.Startup;
@@ -119,7 +121,8 @@ internal sealed class AppHost : IDisposable
 
         var settings = _settings.Current;
         var usage = new UsageViewModel();
-        var music = new MusicViewModel(_media);
+        var audioOutput = new AudioOutputViewModel(IsSnapshot ? null : new AudioOutputService(new CoreAudioOutputPlatform()));
+        var music = new MusicViewModel(_media, audioOutput);
         var focus = new FocusViewModel(_focusTimer, _focusHistory, settings.CustomFocusMinutes,
             minutes => _settings.Update(s => s.CustomFocusMinutes = minutes));
         var modules = ModuleViewModels.Create();
@@ -456,7 +459,8 @@ internal sealed class AppHost : IDisposable
         _focusTimer = new FocusTimer();
         _media = new DemoMediaSource(AppPaths.Assets); // never started: the island shows no music
         var focus = new FocusViewModel(_focusTimer, _focusHistory, settings.CustomFocusMinutes, _ => { });
-        _viewModel = new IslandViewModel(new UsageViewModel(), new MusicViewModel(_media), focus, ModuleViewModels.Create(), _options.IsDemo);
+        var audioOutput = new AudioOutputViewModel(null);
+        _viewModel = new IslandViewModel(new UsageViewModel(), new MusicViewModel(_media, audioOutput), focus, ModuleViewModels.Create(), _options.IsDemo);
         _state = new IslandStateMachine(TimeProvider.System, action => _dispatcher.TryEnqueue(() => action()));
         _window = new IslandWindow(_viewModel, _state, settings.AlwaysOnTop);
         _window.PlacementInvalidated += () => _dispatcher.TryEnqueue(PlaceIsland);

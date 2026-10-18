@@ -64,6 +64,8 @@ The **estimated API equivalent today** in euros prices every category at public 
 
 Works with anything that uses Windows media sessions (Spotify, Apple Music, browsers, Media Player and more), with no app-specific APIs and no accounts. It shows the track, artist, artwork and timeline, with Play and Pause, Previous and Next, and seeking when the player supports it. When several players are open, the one that is playing wins. When the player quits, the island clears instead of showing a stale track.
 
+The panel also lists active Windows playback devices and can make the selected device the default for console, multimedia and communications. This changes the system output for other applications too. Windows does not document a public API for setting the default endpoint; switching uses the private `IPolicyConfig` COM interface and may need updates if Windows changes it. The output selector remains live in Demo mode, while the media track and app data stay synthetic.
+
 ### Git
 
 <p align="center">

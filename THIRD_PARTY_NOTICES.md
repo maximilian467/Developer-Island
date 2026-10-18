@@ -23,6 +23,7 @@ Other icons are glyphs of the Segoe Fluent Icons font that ships with Windows (n
 | LibreHardwareMonitorLib | 0.9.6 | MPL-2.0 | [LibreHardwareMonitor/LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) |
 | BlackSharp.Core, DiskInfoToolkit, RAMSPDToolkit-NDD (dependencies of LibreHardwareMonitorLib) | 1.0.7, 1.1.2, 1.4.2 | MPL-2.0 | [Blacktempel/BlackSharp](https://github.com/Blacktempel/BlackSharp) and [nuget.org](https://www.nuget.org/packages/LibreHardwareMonitorLib/0.9.6#dependencies-body-tab) |
 | HidSharp | 2.6.4 | Apache-2.0 | [software.seekye.com/hidsharp](https://software.seekye.com/hidsharp) |
+| NAudio.Wasapi | 3.2.0 | MIT | [naudio/NAudio](https://github.com/naudio/NAudio) |
 | System.Management, System.CodeDom, System.IO.Ports | 10.0 | MIT | [dotnet/runtime](https://github.com/dotnet/runtime) |
 | Mono.Posix.NETStandard | 1.0.0 | [Mono license](https://github.com/mono/mono/blob/master/LICENSE) (class libraries: MIT) | [mono/mono](https://github.com/mono/mono) |
 | .NET runtime (self-contained release) | 10.0 | MIT | [dotnet/runtime](https://github.com/dotnet/runtime) |

@@ -252,6 +252,11 @@ public sealed partial class ExpandedView : UserControl
         UpdateSelectedForeground();
         if (selected is { } shown)
         {
+            if (shown == IslandTab.Music)
+            {
+                MusicView.RefreshAudioOutputs();
+            }
+
             if (reveal)
             {
                 Motion.FadeIn(_panels[shown], delay: TimeSpan.FromMilliseconds(40), fromY: 4);
