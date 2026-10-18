@@ -389,6 +389,27 @@
                             <StackPanel x:Name="ModuleRows" AutomationProperties.Name="Modules" />
                         </Border>
 
+                        <TextBlock Text="Claude Code and Codex" Style="{StaticResource SettingsGroupLabelStyle}" Margin="4,20,0,4" />
+                        <Border Style="{StaticResource SettingsCardStyle}">
+                            <Grid Style="{StaticResource SettingsRowStyle}" ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                    <TextBlock Text="Token metric" Style="{StaticResource SettingsRowTitleStyle}" />
+                                    <TextBlock Text="Fresh counts input, cache writes and output. All processed adds cache reads, the context re-read on every turn, which is usually most of the total. Applies to the capsule, peek, tooltips and usage graph; the breakdown always lists every category."
+                                               Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                </StackPanel>
+                                <Border Grid.Column="1" VerticalAlignment="Center" CornerRadius="8" Padding="2" Background="{ThemeResource SettingsSegmentBrush}">
+                                    <StackPanel Orientation="Horizontal" AutomationProperties.Name="Token metric">
+                                        <RadioButton x:Name="TokenMetricFresh" GroupName="TokenMetric" Style="{StaticResource SegmentedOptionStyle}" Content="Fresh" Tag="Fresh" Checked="OnTokenMetricChecked" />
+                                        <RadioButton x:Name="TokenMetricAll" GroupName="TokenMetric" Style="{StaticResource SegmentedOptionStyle}" Content="All processed" Tag="AllProcessed" Checked="OnTokenMetricChecked" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Border>
+
                         <TextBlock Text="Claude plan usage" Style="{StaticResource SettingsGroupLabelStyle}" Margin="4,20,0,4" />
                         <Border Style="{StaticResource SettingsCardStyle}">
                             <Grid Style="{StaticResource SettingsRowStyle}" ColumnSpacing="12">

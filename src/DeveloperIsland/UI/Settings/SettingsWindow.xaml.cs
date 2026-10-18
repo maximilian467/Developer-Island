@@ -196,6 +196,7 @@ public sealed partial class SettingsWindow : Window
             BuildAutoHideRows(s);
             LoadHomeCloud(s);
             LoadAwake(s);
+            LoadTokenMetric(s);
             foreach (var dependent in new Control[] { SmartHideRetract, SmartHideHide, AutoHideMaximizedToggle })
             {
                 dependent.IsEnabled = s.SmartHideEnabled;
