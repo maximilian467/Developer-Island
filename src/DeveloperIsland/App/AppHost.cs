@@ -935,6 +935,7 @@ internal sealed class AppHost : IDisposable
     {
         _viewModel.Usage.Claude.IsEnabled = settings.ClaudeEnabled;
         _viewModel.Usage.Codex.IsEnabled = settings.CodexEnabled;
+        _viewModel.Usage.Metric = settings.TokenMetric;
         _viewModel.Music.IsEnabled = settings.MusicEnabled;
         _viewModel.Focus.IsEnabled = settings.FocusEnabled;
         _viewModel.Awake.IsEnabled = settings.AwakeEnabled;

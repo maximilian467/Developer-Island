@@ -168,8 +168,13 @@ public sealed class IslandViewModel : ObservableObject
 
     public bool CompactRotates => CompactSelector.Rotates(_favorites.Where(IsModuleEnabled).ToList());
 
+    /// <summary>
+    /// The name before the featured value. With the "All processed" metric the value carries
+    /// "incl. cache reads"; the provider mark alone names Claude or Codex then, so the capsule stays as wide.
+    /// </summary>
     public string CompactPrimaryLabel => _compactModule switch
     {
+        ModuleId.Claude or ModuleId.Codex when Usage.Metric == Core.Models.TokenMetric.AllProcessed => string.Empty,
         ModuleId.Claude => Usage.Claude.ShortName,
         ModuleId.Codex => Usage.Codex.ShortName,
         ModuleId.Focus when !Focus.IsActive => "Focus",
@@ -196,6 +201,9 @@ public sealed class IslandViewModel : ObservableObject
 
     /// <summary>False for a featured module that shows only its icon (an awake session without an end).</summary>
     public bool HasCompactPrimaryValue => CompactPrimaryValue.Length > 0;
+
+    /// <summary>Room for the featured value: wider for AI usage, whose figure may carry "incl. cache reads".</summary>
+    public double CompactPrimaryMaxWidth => _compactModule is ModuleId.Claude or ModuleId.Codex ? 200 : 160;
 
     /// <summary>A secondary part after a dot (Git changes). Claude and Codex show no money in the capsule.</summary>
     public string CompactPrimaryDetail => _compactModule switch
@@ -315,6 +323,7 @@ public sealed class IslandViewModel : ObservableObject
             OnPropertyChanged(nameof(HasCompactPrimaryLabel));
             OnPropertyChanged(nameof(CompactPrimaryValue));
             OnPropertyChanged(nameof(HasCompactPrimaryValue));
+            OnPropertyChanged(nameof(CompactPrimaryMaxWidth));
             OnPropertyChanged(nameof(CompactPrimaryDetail));
             OnPropertyChanged(nameof(HasCompactPrimaryDetail));
             OnPropertyChanged(nameof(CompactPrimaryShowsArt));

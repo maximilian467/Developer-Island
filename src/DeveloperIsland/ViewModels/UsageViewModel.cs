@@ -13,6 +13,7 @@ public sealed class UsageViewModel : ObservableObject
     private IReadOnlyList<UsageDay> _days = [];
     private int[] _levels = [];
     private int _inspectedIndex = -1;
+    private TokenMetric _metric = TokenMetric.Fresh;
 
     public UsageViewModel()
     {
@@ -28,6 +29,33 @@ public sealed class UsageViewModel : ObservableObject
     public AiProviderViewModel Codex { get; } = new(AiProviderKind.Codex);
 
     public IReadOnlyList<UsageDay> Days => _days;
+
+    /// <summary>
+    /// The token figure for the capsule, peek, tooltips, graph and inspector, for both providers
+    /// (Settings, Token metric). The breakdown always lists every category.
+    /// </summary>
+    public TokenMetric Metric
+    {
+        get => _metric;
+        set
+        {
+            if (_metric == value)
+            {
+                return;
+            }
+
+            _metric = value;
+            Claude.Metric = value;
+            Codex.Metric = value;
+            SetHistory(_days);
+        }
+    }
+
+    /// <summary>What the figures count: "fresh tokens" or "tokens incl. cache reads".</summary>
+    public string MetricUnit => TokenMetrics.Unit(_metric);
+
+    /// <summary>The footnote under the graph on what the figures count and what the euro estimate is.</summary>
+    public string MetricNote => $"{TokenMetrics.Note(_metric)} The estimated API equivalent uses list prices; it is not what you pay.";
 
     public IReadOnlyList<int> Levels => _levels;
 
@@ -49,9 +77,12 @@ public sealed class UsageViewModel : ObservableObject
 
     public string InspectedDate => IsInspecting ? DisplayFormat.ShortDay(_days[_inspectedIndex].Day) : string.Empty;
 
-    public string InspectedClaude => IsInspecting ? DisplayFormat.Tokens(_days[_inspectedIndex].Claude.Fresh) : string.Empty;
+    public string InspectedClaude => IsInspecting ? DisplayFormat.Tokens(_days[_inspectedIndex].Claude.Of(_metric)) : string.Empty;
 
-    public string InspectedCodex => IsInspecting ? DisplayFormat.Tokens(_days[_inspectedIndex].Codex.Fresh) : string.Empty;
+    public string InspectedCodex => IsInspecting ? DisplayFormat.Tokens(_days[_inspectedIndex].Codex.Of(_metric)) : string.Empty;
+
+    /// <summary>What the inspected day's figures count, next to them: "fresh tokens" or "incl. cache reads".</summary>
+    public string InspectedUnit => TokenMetrics.ShortUnit(_metric);
 
     /// <summary>Complete breakdown of the inspected day (second readout line).</summary>
     public string InspectedDetail
@@ -90,10 +121,10 @@ public sealed class UsageViewModel : ObservableObject
 
     public bool HasInspectedPlan => InspectedPlan.Length > 0;
 
-    /// <summary>Tooltip: the day's fresh tokens (Claude and Codex together).</summary>
+    /// <summary>Tooltip: the day's tokens by the chosen metric (Claude and Codex together).</summary>
     public string InspectedTooltipTokens => !IsInspecting ? string.Empty
-        : _days[_inspectedIndex].FreshTokens == 0 ? "No usage"
-        : $"{DisplayFormat.Tokens(_days[_inspectedIndex].FreshTokens)} fresh tokens";
+        : !_days[_inspectedIndex].HasUsage ? "No usage"
+        : TokenMetrics.Format(_days[_inspectedIndex].Of(_metric), _metric);
 
     /// <summary>Tooltip: sessions and the estimated API equivalent, when there was usage.</summary>
     public string InspectedTooltipDetail
@@ -122,7 +153,7 @@ public sealed class UsageViewModel : ObservableObject
 
     /// <summary>Spoken description of the inspected day.</summary>
     public string InspectedAccessibleText => IsInspecting
-        ? $"{InspectedDate}: Claude {InspectedClaude} fresh tokens, Codex {InspectedCodex} fresh tokens, estimated API equivalent {InspectedValue}. {InspectedDetail}{(HasInspectedPlan ? ". " + InspectedPlan : string.Empty)}"
+        ? $"{InspectedDate}: Claude {InspectedClaude} {MetricUnit}, Codex {InspectedCodex} {MetricUnit}, estimated API equivalent {InspectedValue}. {InspectedDetail}{(HasInspectedPlan ? ". " + InspectedPlan : string.Empty)}"
         : "Usage history, last 26 weeks. Use the arrow keys to inspect a day.";
 
     public string HistorySummary
@@ -130,7 +161,7 @@ public sealed class UsageViewModel : ObservableObject
         get
         {
             var active = _days.Count(d => d.HasUsage);
-            return active == 0 ? "No usage in the last 26 weeks" : $"{DisplayFormat.Count(active, "active day", "active days")}, shaded by fresh tokens";
+            return active == 0 ? "No usage in the last 26 weeks" : $"{DisplayFormat.Count(active, "active day", "active days")}, shaded by {MetricUnit}";
         }
     }
 
@@ -154,8 +185,8 @@ public sealed class UsageViewModel : ObservableObject
         }
     }
 
-    /// <summary>Mark for the peek: the tool with more fresh tokens today.</summary>
-    public string PeekMark => ShowCodex && Codex.IsReady && (!ShowClaude || !Claude.IsReady || Codex.Snapshot.Today.Fresh > Claude.Snapshot.Today.Fresh) ? "Codex" : "Claude";
+    /// <summary>Mark for the peek: the tool with more tokens today (by the chosen metric).</summary>
+    public string PeekMark => ShowCodex && Codex.IsReady && (!ShowClaude || !Claude.IsReady || Codex.TodayTokens > Claude.TodayTokens) ? "Codex" : "Claude";
 
     public string PeekSubtitle
     {
@@ -188,8 +219,9 @@ public sealed class UsageViewModel : ObservableObject
     public void SetHistory(IReadOnlyList<UsageDay> days)
     {
         _days = days;
-        // Intensity follows fresh tokens: cache reads would let one long session flatten every other day.
-        _levels = UsageAggregator.IntensityLevels(days.Select(d => d.FreshTokens).ToList());
+        // Intensity follows the chosen metric. With fresh tokens (the default) cache reads cannot let
+        // one long session flatten every other day; quartile levels keep that in check either way.
+        _levels = TokenMetrics.IntensityLevels(days, _metric);
         if (_inspectedIndex >= days.Count)
         {
             _inspectedIndex = -1;

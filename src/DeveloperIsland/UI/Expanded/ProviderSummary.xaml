@@ -2,7 +2,7 @@
 <!--
     Today's usage of one AI tool. No card: grouping comes from spacing (Taste 4.4).
     Plan usage first (Claude: reported by Claude Code; Codex: its local limit records), then today's
-    local usage: headline = fresh tokens; the breakdown names every recorded category (see TokenCounts).
+    local usage: headline = the chosen token metric (see TokenMetric); the breakdown names every recorded category (see TokenCounts).
 -->
 <UserControl
     x:Class="DeveloperIsland.UI.Expanded.ProviderSummary"

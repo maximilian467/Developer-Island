@@ -54,7 +54,7 @@
                 <TextBlock Text="{x:Bind ViewModel.CompactPrimaryLabel, Mode=OneWay}" Style="{StaticResource LabelTextStyle}" Foreground="{StaticResource TextSecondaryBrush}"
                            Visibility="{x:Bind ViewModel.HasCompactPrimaryLabel, Mode=OneWay}" VerticalAlignment="Center" />
                 <!-- Width-stable: "CPU 9%" and "CPU 100%" take the same slot; long titles end in an ellipsis. -->
-                <components:StableText Text="{x:Bind ViewModel.CompactPrimaryValue, Mode=OneWay}" MaxWidth="160" VerticalAlignment="Center"
+                <components:StableText Text="{x:Bind ViewModel.CompactPrimaryValue, Mode=OneWay}" MaxWidth="{x:Bind ViewModel.CompactPrimaryMaxWidth, Mode=OneWay}" VerticalAlignment="Center"
                                        Visibility="{x:Bind ViewModel.HasCompactPrimaryValue, Mode=OneWay}" />
                 <TextBlock Text="·" Style="{StaticResource LabelTextStyle}" Foreground="{StaticResource TextTertiaryBrush}"
                            Visibility="{x:Bind ViewModel.HasCompactPrimaryDetail, Mode=OneWay}" VerticalAlignment="Center" />

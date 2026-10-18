@@ -13,6 +13,7 @@ public sealed class AiProviderViewModel : ObservableObject
     private PlanUsage? _plan;
     private PlanConnection _planConnection = PlanConnection.NotConnected;
     private bool _showWeekly;
+    private TokenMetric _metric = TokenMetric.Fresh;
 
     public AiProviderViewModel(AiProviderKind kind)
     {
@@ -23,6 +24,22 @@ public sealed class AiProviderViewModel : ObservableObject
     public AiProviderKind Kind { get; }
 
     public AiUsageSnapshot Snapshot => _snapshot;
+
+    /// <summary>The token figure shown everywhere but the breakdown (Settings, Token metric).</summary>
+    public TokenMetric Metric
+    {
+        get => _metric;
+        set
+        {
+            if (SetProperty(ref _metric, value))
+            {
+                OnAllPropertiesChanged();
+            }
+        }
+    }
+
+    /// <summary>Today's figure by the chosen metric.</summary>
+    public long TodayTokens => _snapshot.Today.Of(_metric);
 
     public string DisplayName => Kind == AiProviderKind.Claude ? "Claude Code" : "Codex";
 
@@ -67,14 +84,14 @@ public sealed class AiProviderViewModel : ObservableObject
 
     /// <summary>
     /// "72%" when the plan's current window is known (Claude: reported by Claude Code; Codex: its
-    /// local rate-limit record), otherwise today's fresh tokens (see TokenCounts). Never a percentage
-    /// derived from token counts.
+    /// local rate-limit record), otherwise today's tokens by the chosen metric ("1.12M", or
+    /// "390M incl. cache reads"). Never a percentage derived from token counts.
     /// </summary>
     public string CompactValue => State switch
     {
         ProviderState.Ready when CurrentWindow is { } w => $"{Math.Round(w.UsedPercent):0}%",
         ProviderState.Ready when _snapshot.LimitPercent is { } p => $"{Math.Round(p):0}%",
-        ProviderState.Ready => DisplayFormat.Tokens(_snapshot.Today.Fresh),
+        ProviderState.Ready => TokenMetrics.Compact(TodayTokens, _metric),
         ProviderState.Error => "Error",
         _ => string.Empty,
     };
@@ -83,20 +100,20 @@ public sealed class AiProviderViewModel : ObservableObject
     public string CompactEuro => IsReady && HasUsageToday && _snapshot.ApiValueEur is { } value ? DisplayFormat.Euro(value) : string.Empty;
 
     /// <summary>
-    /// The featured value in the compact island: today's fresh tokens and, when known, the current
-    /// (5-hour) plan window: "1.12M · 72%", else "1.12M tokens". No money here; the estimated API
-    /// equivalent lives in the expanded view.
+    /// The featured value in the compact island: today's tokens and, when known, the current
+    /// (5-hour) plan window: "1.12M · 72%", else "1.12M fresh tokens" (or "incl. cache reads"). No
+    /// money here; the estimated API equivalent lives in the expanded view.
     /// </summary>
     public string CompactPrimaryValue => !IsReady ? string.Empty
-        : CurrentWindow is { } w ? $"{DisplayFormat.Tokens(_snapshot.Today.Fresh)} · {Math.Round(w.UsedPercent):0}%"
-        : _snapshot.LimitPercent is { } p ? $"{DisplayFormat.Tokens(_snapshot.Today.Fresh)} · {Math.Round(p):0}%"
-        : $"{DisplayFormat.Tokens(_snapshot.Today.Fresh)} tokens";
+        : CurrentWindow is { } w ? $"{TokenMetrics.Compact(TodayTokens, _metric)} · {Math.Round(w.UsedPercent):0}%"
+        : _snapshot.LimitPercent is { } p ? $"{TokenMetrics.Compact(TodayTokens, _metric)} · {Math.Round(p):0}%"
+        : TokenMetrics.Format(TodayTokens, _metric);
 
     /// <summary>Hover peek: today's tokens; the plan window goes to the trailing slot.</summary>
     public string PeekLine => !IsReady ? StatusText
         : CurrentWindow is { } w && w.ResetsAt != DateTimeOffset.MaxValue
-            ? $"{DisplayFormat.Tokens(_snapshot.Today.Fresh)} fresh tokens · {ResetText(w.ResetsAt, DateTimeOffset.UtcNow).ToLowerInvariant()}"
-            : $"{DisplayFormat.Tokens(_snapshot.Today.Fresh)} fresh tokens today";
+            ? $"{TokenMetrics.Format(TodayTokens, _metric)} · {ResetText(w.ResetsAt, DateTimeOffset.UtcNow).ToLowerInvariant()}"
+            : $"{TokenMetrics.Format(TodayTokens, _metric)} today";
 
     public string PlanPeekTrailing => IsReady && (CurrentWindow ?? (_snapshot.LimitPercent is { } p ? new PlanWindow(p, DateTimeOffset.MaxValue) : null)) is { } window
         ? $"{Math.Round(window.UsedPercent):0}%"
@@ -105,13 +122,13 @@ public sealed class AiProviderViewModel : ObservableObject
     public string CompactAccessibleText => State == ProviderState.Ready
         ? _snapshot.LimitPercent is { } p
             ? $"{ShortName} {Math.Round(p):0} percent of limit used"
-            : $"{ShortName} {DisplayFormat.Tokens(_snapshot.Today.Fresh)} fresh tokens today"
+            : $"{ShortName} {TokenMetrics.Format(TodayTokens, _metric)} today"
         : $"{ShortName} {StatusText}";
 
-    /// <summary>Headline figure: fresh tokens (processed without a cache hit).</summary>
-    public string TokensText => DisplayFormat.Tokens(_snapshot.Today.Fresh);
+    /// <summary>Headline figure by the chosen metric; <see cref="TokensUnit"/> says what it counts.</summary>
+    public string TokensText => DisplayFormat.Tokens(TodayTokens);
 
-    public string TokensUnit => "fresh tokens";
+    public string TokensUnit => TokenMetrics.ShortUnit(_metric);
 
     // Breakdown of today's usage. Field meanings are documented on TokenCounts.
     public string InputText => DisplayFormat.Tokens(_snapshot.Today.Input);
@@ -273,7 +290,7 @@ public sealed class AiProviderViewModel : ObservableObject
             string N(long v) => v.ToString("N0", CultureInfo.CurrentCulture);
             var lines = new List<string>
             {
-                $"Today: {N(t.Fresh)} fresh tokens",
+                $"Today: {N(t.Of(_metric))} {TokenMetrics.Unit(_metric)}",
             };
             if (CurrentWindow is { } current)
             {
