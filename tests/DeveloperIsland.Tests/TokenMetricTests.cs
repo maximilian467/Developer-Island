@@ -59,22 +59,11 @@ public class TokenMetricTests
         Assert.Equal("4.58M fresh tokens", TokenMetrics.Format(4_580_000, TokenMetric.Fresh));
         Assert.Equal("390M tokens incl. cache reads", TokenMetrics.Format(390_000_000, TokenMetric.AllProcessed));
         Assert.Equal("390M incl. cache reads", TokenMetrics.Compact(390_000_000, TokenMetric.AllProcessed));
+        Assert.Equal("fresh tokens", TokenMetrics.ShortUnit(TokenMetric.Fresh));
+        Assert.Equal("incl. cache reads", TokenMetrics.ShortUnit(TokenMetric.AllProcessed));
 
         // Fresh stays as the capsule always showed it.
         Assert.Equal("4.58M", TokenMetrics.Compact(4_580_000, TokenMetric.Fresh));
-    }
-
-    [Fact]
-    public void Breakdown_names_whether_cache_reads_are_in_the_figure()
-    {
-        using var _ = new CultureScope("en-US");
-
-        Assert.Equal(
-            "Fresh tokens: input 56, cache write 2.45M, output 30k · cache read 17.7M not counted",
-            TokenMetrics.Breakdown(Claude, TokenMetric.Fresh));
-        Assert.Equal(
-            "Tokens incl. cache reads: input 56, cache write 2.45M, output 30k, cache read 17.7M",
-            TokenMetrics.Breakdown(Claude, TokenMetric.AllProcessed));
     }
 
     [Fact]

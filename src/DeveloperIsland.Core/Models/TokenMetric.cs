@@ -30,11 +30,11 @@ public static class TokenMetrics
     /// <summary>The chosen figure summed over several counts (for example both providers).</summary>
     public static long Sum(IEnumerable<TokenCounts> counts, TokenMetric metric) => counts.Sum(c => c.Of(metric));
 
-    /// <summary>Name of the setting's option: "Fresh" or "All processed".</summary>
-    public static string OptionName(TokenMetric metric) => metric == TokenMetric.AllProcessed ? "All processed" : "Fresh";
-
     /// <summary>What a figure counts: "fresh tokens" or "tokens incl. cache reads".</summary>
     public static string Unit(TokenMetric metric) => metric == TokenMetric.AllProcessed ? "tokens incl. cache reads" : "fresh tokens";
+
+    /// <summary>The label for tight spots (headline, capsule): "fresh tokens" or "incl. cache reads".</summary>
+    public static string ShortUnit(TokenMetric metric) => metric == TokenMetric.AllProcessed ? "incl. cache reads" : "fresh tokens";
 
     /// <summary>"4.58M fresh tokens" or "390M tokens incl. cache reads".</summary>
     public static string Format(long value, TokenMetric metric) => $"{DisplayFormat.Tokens(value)} {Unit(metric)}";
@@ -44,21 +44,8 @@ public static class TokenMetrics
     /// showed them, and "390M incl. cache reads", so the larger figure always says what it contains.
     /// </summary>
     public static string Compact(long value, TokenMetric metric) => metric == TokenMetric.AllProcessed
-        ? $"{DisplayFormat.Tokens(value)} incl. cache reads"
+        ? $"{DisplayFormat.Tokens(value)} {ShortUnit(metric)}"
         : DisplayFormat.Tokens(value);
-
-    /// <summary>
-    /// The full breakdown of a day, led by what the figure counts:
-    /// "Fresh tokens: input 56, cache write 4.5M, output 30k · cache read 385M not counted" or
-    /// "Tokens incl. cache reads: input 56, cache write 4.5M, output 30k, cache read 385M".
-    /// </summary>
-    public static string Breakdown(TokenCounts t, TokenMetric metric)
-    {
-        var parts = $"input {DisplayFormat.Tokens(t.Input)}, cache write {DisplayFormat.Tokens(t.CacheWrite)}, output {DisplayFormat.Tokens(t.Output)}";
-        return metric == TokenMetric.AllProcessed
-            ? $"Tokens incl. cache reads: {parts}, cache read {DisplayFormat.Tokens(t.CacheRead)}"
-            : $"Fresh tokens: {parts} · cache read {DisplayFormat.Tokens(t.CacheRead)} not counted";
-    }
 
     /// <summary>The usage panel's footnote on what the figures count.</summary>
     public static string Note(TokenMetric metric) => metric == TokenMetric.AllProcessed
