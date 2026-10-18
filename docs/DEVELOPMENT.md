@@ -84,7 +84,7 @@ Data flows one way: **Provider, then State, then ViewModel, then View.** See [AR
 
 The tests cover:
 
-- token accounting (fresh versus processed, cache categories, local-day boundaries and daylight saving)
+- token accounting (fresh versus processed, the token metric setting for both providers, cache categories, local-day boundaries and daylight saving)
 - usage aggregation, de-duplication, cost calculation and incremental daily totals
 - malformed log records, persisted Codex limits, cursor upgrades and limit expiry
 - the island state machine (named inputs, lost pointer events, drags, stale timers), hover tracking, click arming and the per-app auto-hide rules

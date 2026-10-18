@@ -51,12 +51,21 @@ Each provider shows its **plan usage** first, when it is known:
 - **Codex:** the 5-hour and weekly windows from its own logs.
 - A **Current / Weekly** switch picks the window. Without data the block says "Unavailable" and why. Percentages are never computed from token counts.
 
-Below it, **Today on this PC** keeps the full local breakdown. The compact island shows today's **fresh** tokens and the plan percentage when known ("Claude 1.12M · 72%", or "Claude 1.12M tokens"); the estimated API equivalent appears only in the expanded view. The expanded view shows the full breakdown, and a tooltip on the figure lists every exact count. Hovering a day in the usage graph shows a small tooltip with its date, fresh tokens, sessions and API equivalent.
+Below it, **Today on this PC** keeps the full local breakdown. The compact island shows today's tokens by the chosen **token metric** (below) and the plan percentage when known ("Claude 1.12M · 72%", or "Claude 1.12M fresh tokens"); the estimated API equivalent appears only in the expanded view. The expanded view shows the full breakdown, and a tooltip on the figure lists every exact count. Hovering a day in the usage graph shows a small tooltip with its date, tokens, sessions and API equivalent.
 
 <p align="center">
   <img src="assets/usage-tooltip.png" alt="The usage graph with a tooltip for one day: date, fresh tokens, sessions and API equivalent" width="440">
 </p>
- Cache reads repeat the whole conversation context on every turn, so in long agent sessions they are often 80–90 % of processed tokens; counting them as "usage" made earlier numbers look inflated. The usage graph is shaded by fresh tokens too.
+ Cache reads repeat the whole conversation context on every turn, so in long agent sessions they are often 80–90 % of processed tokens, and more on long days; counting them as "usage" without saying so made earlier numbers look inflated.
+
+**Token metric.** Settings, Modules, "Token metric" picks the figure shown in the capsule, the peek, the tooltips, the usage graph (its shading and the day inspector), the same for Claude Code and Codex:
+
+| Option | Figure | Label |
+|---|---|---|
+| **Fresh** (default) | Input + cache write + output | "fresh tokens"; the capsule shows the bare number as before ("Claude 1.12M · 72%") |
+| **All processed** | Fresh + cache read | "tokens incl. cache reads"; where space is tight "incl. cache reads" ("2.68M incl. cache reads · 72%" next to the provider's mark) |
+
+A larger figure never appears without saying that it includes cache reads. The breakdown lists every category in both modes. Every API response is counted once (by message id and request id), although Claude Code repeats a response's usage block for each of its content blocks; adding up transcript lines instead would count most responses two or three times.
 
 The **estimated API equivalent today** in euros prices every category at public list prices, including cache writes (1.25× or 2× input) and cache reads (0.1× input unless listed). If you use a subscription, it is not what you pay. Models without a known list price are reported as "partly priced" instead of being guessed. Codex also shows its latest primary rate-limit usage (usually a 5-hour window), with a live activity at 50, 75 and 90 %.
 
@@ -145,7 +154,7 @@ Not a tab, but a drop zone of the island: drop files or folders onto it and they
 |---|---|
 | General | Start with Windows, always on top, launch hidden, keyboard shortcut; Quit Developer Island (ends the app, its tray icon and all background work) |
 | Position | Monitor, anchor, custom position; Auto-hide in apps (on or off, notch or hide, only when maximized, an app list with icons and Add application or Browse) |
-| Modules | Every module on or off and in which order; Claude plan usage (connect or disconnect); Git repositories; calendars |
+| Modules | Every module on or off and in which order; token metric for Claude Code and Codex (`TokenMetric`: `Fresh`, the default, or `AllProcessed`); Claude plan usage (connect or disconnect); Git repositories; calendars |
 | Home Cloud | Home Cloud on or off (`HomeCloudEnabled`, default off), target folder (`HomeCloudTargetPath`, default empty; the zone works only once it is set), side of the drop zone (`HomeCloudDropSide`, Left or Right, default Right) |
 | Appearance | System or Dark (the island itself is always dark) |
 

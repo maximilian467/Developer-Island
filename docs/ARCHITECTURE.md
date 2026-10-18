@@ -60,6 +60,8 @@ SQLite (`Microsoft.Data.Sqlite`) at `%LOCALAPPDATA%\DeveloperIsland\usage.db`, W
 
 `UsageHistoryService` keeps running accumulators for the three most recent days. A write adds only the newly inserted events instead of re-reading the day. A randomized test checks that incremental totals equal a full recompute.
 
+Which figure the island shows is the `TokenMetric` setting (`Fresh` or `AllProcessed`). `TokenMetrics` in Core turns `TokenCounts` and `UsageDay` into the chosen value, its label and the graph levels, so the ViewModels only bind; the breakdown always shows every category.
+
 Settings are JSON (`settings.json`, source-generated serializer) and are written atomically: to a temp file, then renamed. A corrupt file is kept as `settings.corrupt.json` and defaults are used.
 
 ## Pricing

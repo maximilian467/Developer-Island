@@ -25,9 +25,10 @@ AI coding tools spend tokens and plan limits where you can't see them, and the r
 ### AI usage
 
 - **Claude Code and Codex** usage from their local logs: today's fresh and processed tokens with a full breakdown (input, cache write, output, cache read), sessions and model.
+- A **token metric** of your choice in Settings: **fresh** tokens (input, cache writes and output, the default) or **all processed** tokens including cache reads, for the capsule, peek, tooltips and graph. Every figure says which one it is.
 - **Plan usage** where the tool reports it: Claude's 5-hour and weekly windows with reset times, and Codex's windows from its own logs. Never computed from token counts.
 - A **26-week usage graph** with a tooltip per day, and an **estimated API equivalent** at public list prices (in the expanded view only).
-- The compact capsule reads like `Claude 1.12M · 72%`.
+- The compact capsule reads like `Claude 1.12M · 72%`, or `2.68M incl. cache reads · 72%` with all processed tokens.
 - **Claude Code alerts:** a live activity when Claude Code needs your permission, waits for your input or has finished a reply, with the project's folder name, so an agent left running never waits unnoticed. Through Claude Code's hooks, connected once in Settings.
 
 ### Media
