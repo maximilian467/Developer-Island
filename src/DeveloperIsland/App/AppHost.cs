@@ -347,9 +347,35 @@ internal sealed class AppHost : IDisposable
         await Task.Delay(400);
 
         await AwakeSnapshotsAsync(shot);
+        await TokenMetricSnapshotsAsync(shot);
         await DropSnapshotsAsync(shot);
 
         await new SettingsWindow(_settings, _options.IsDemo, () => false, _secrets).SaveSnapshotsAsync(_options.SnapshotDirectory!);
+    }
+
+    /// <summary>The usage states with the "All processed" token metric: the larger figure always names its cache reads.</summary>
+    private async Task TokenMetricSnapshotsAsync(Func<string, Task> shot)
+    {
+        _viewModel.Usage.Metric = TokenMetric.AllProcessed;
+        await shot("80-metric-all-compact");
+        _viewModel.PreparePeek();
+        _state.ShowEvent(TimeSpan.FromMinutes(5));
+        await shot("81-metric-all-peek");
+        _state.Dismiss();
+        _viewModel.SetFavorites([ModuleId.Claude]);
+        await shot("82-metric-all-compact-claude");
+        _viewModel.SetFavorites([]);
+        _viewModel.SetLastActive(null);
+        _viewModel.PrepareExpandTo(IslandTab.Usage);
+        _state.Activate();
+        await shot("83-metric-all-expanded");
+        var busiest = _viewModel.Usage.Days.Select((d, i) => (d.ProcessedTokens, i)).Max().i;
+        _viewModel.Usage.Inspect(busiest);
+        await shot("84-metric-all-tooltip");
+        _viewModel.Usage.Inspect(-1);
+        _state.Dismiss();
+        _viewModel.Usage.Metric = _settings.Current.TokenMetric;
+        await Task.Delay(600);
     }
 
     /// <summary>An awake session (demo power control: nothing on the system changes), timed and indefinite.</summary>
