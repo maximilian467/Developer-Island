@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using DeveloperIsland.Core.HomeCloud;
+using DeveloperIsland.Core.Models;
 using DeveloperIsland.Core.Modules;
 using DeveloperIsland.Core.Placement;
 
@@ -109,6 +110,10 @@ public sealed class AppSettings
     public bool SystemEnabled { get; set; } = true;
 
     public bool AwakeEnabled { get; set; } = true;
+
+    /// <summary>The token figure the island shows for Claude Code and Codex (see <see cref="Models.TokenMetric"/>).</summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<TokenMetric>))]
+    public TokenMetric TokenMetric { get; set; } = TokenMetric.Fresh;
 
     /// <summary>Modules starred in the expanded island; the compact island features them (see CompactSelector).</summary>
     public List<string> FavoriteModules { get; set; } = [];
