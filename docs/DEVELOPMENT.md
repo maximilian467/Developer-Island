@@ -26,7 +26,7 @@ The built app is at `src/DeveloperIsland/bin/x64/Debug/net10.0-windows10.0.22621
 
 | Command | What it does |
 |---|---|
-| `DeveloperIsland.exe --demo` | Invented data only; real usage, tasks and repositories are never read or changed. Preferences are saved separately in `settings.demo.json`. |
+| `DeveloperIsland.exe --demo` | Invented module data; real usage, tasks and repositories are never read or changed. Preferences are saved separately in `settings.demo.json`. The Music panel still lists real audio outputs and can change the Windows default output. |
 | `DeveloperIsland.exe --demo --snapshot=C:	emp\shots --culture=en-US` | Renders every state (compact, peek, activities, notch, each module, empty and error states, privacy marks, Settings) to PNG files offscreen, without touching the desktop, then exits. |
 | `DeveloperIsland.exe --system-report` | Prints what the System module can read on this device (GPU, temperatures, fans, camera and microphone state) and exits. |
 | `DeveloperIsland.exe --settings=modules` | Opens Settings at a section (`general`, `position`, `modules`, `appearance`, `about`). |

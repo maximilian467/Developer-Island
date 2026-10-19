@@ -34,6 +34,7 @@ AI coding tools spend tokens and plan limits where you can't see them, and the r
 ### Media
 
 - **Now playing** from any app that uses Windows media sessions (Spotify, Apple Music, browsers, Media Player): artwork, timeline, play and pause, previous and next, seeking where supported.
+- **Audio output** in the Music panel: choose an active playback device to make it the Windows default for console, media and communications.
 
 ### Focus and productivity
 
@@ -111,7 +112,7 @@ The installer is not code-signed yet, so Windows SmartScreen may ask you to conf
 | Settings, Modules, **Claude Code alerts**, Connect | A peek when Claude Code waits for you or has finished |
 | Settings, Position, **Auto-hide in apps** | Choose which apps make the island step aside |
 
-Want to look around first? Start **Developer Island (Demo)** from the Start menu, or run `DeveloperIsland.exe --demo`. Demo mode uses invented data only: it never reads your Claude or Codex usage, tasks or repositories, and its settings are kept separately.
+Want to look around first? Start **Developer Island (Demo)** from the Start menu, or run `DeveloperIsland.exe --demo`. Demo mode uses invented module data and separate settings; it does not read your Claude or Codex usage, tasks or repositories. The Music panel lists real audio outputs, and choosing one changes the Windows default output.
 
 ## Configuration
 

@@ -24,6 +24,8 @@ public sealed partial class MusicPanel : UserControl
         }
     }
 
+    public void RefreshAudioOutputs() => _ = _viewModel.AudioOutput.RefreshAsync();
+
     public void FocusPrimary() => PlayPauseButton.Focus(FocusState.Keyboard);
 
     private void OnPrevious(object sender, RoutedEventArgs e) => _ = _viewModel.PreviousAsync();
@@ -31,4 +33,8 @@ public sealed partial class MusicPanel : UserControl
     private void OnNext(object sender, RoutedEventArgs e) => _ = _viewModel.NextAsync();
 
     private void OnPlayPause(object sender, RoutedEventArgs e) => _ = _viewModel.TogglePlayPauseAsync();
+
+    private void OnRefreshAudioOutputs(object sender, RoutedEventArgs e) => RefreshAudioOutputs();
+
+    private void OnSwitchAudioOutput(object sender, RoutedEventArgs e) => _ = _viewModel.AudioOutput.SwitchAsync();
 }
