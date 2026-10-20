@@ -166,7 +166,8 @@ public class GitHubModuleTests
     [Fact]
     public async Task Without_gh_the_module_explains_how_to_connect()
     {
-        using var service = new GitHubService(findGh: () => null);
+        // Fake time: a real timer would start its own refresh, and ours would skip while it holds the fetch lock
+        using var service = new GitHubService(findGh: () => null, time: new FakeTimeProvider());
         service.Configure(true);
         await service.RefreshAsync();
 
