@@ -48,9 +48,30 @@ public partial class App : Application
             }
 
             _host.Start();
+            Log.Info("render", "Renderer", new
+            {
+                graphics = PlatformGraphicsName(),
+                session = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE"),
+                desktop = Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP"),
+            });
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>The GPU backend Avalonia picked (GLX, EGL), or Software.</summary>
+    private static string PlatformGraphicsName()
+    {
+        try
+        {
+            var locator = typeof(AvaloniaLocator).GetProperty("Current", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)?.GetValue(null);
+            var service = (locator as IServiceProvider)?.GetService(typeof(Avalonia.Platform.IPlatformGraphics));
+            return service?.GetType().Name ?? "Software";
+        }
+        catch (Exception)
+        {
+            return "unknown";
+        }
     }
 
     /// <summary>

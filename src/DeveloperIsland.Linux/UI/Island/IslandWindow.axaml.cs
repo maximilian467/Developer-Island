@@ -69,6 +69,18 @@ public sealed partial class IslandWindow : Window
 
     // Drag state (physical pixels).
     private bool _pointerDown;
+
+    /// <summary>When the capsule last changed shape (ms, monotonic): a crossing right after is the shape moving, not the user.</summary>
+    private long _shapeChangedAt;
+
+    /// <summary>Last pointer position seen by the hover poll, in screen pixels.</summary>
+    private (int X, int Y)? _polledPointer;
+
+    private readonly DispatcherQueueTimer _hoverPoll = DispatcherQueue.GetForCurrentThread().CreateTimer();
+
+    private const long ShapeSettleMs = 250;
+
+    private bool ShapeIsSettled => Environment.TickCount64 - _shapeChangedAt > ShapeSettleMs;
     private bool _dragging;
     private bool _placementDeferred;
     private (int X, int Y) _dragStartCursor;
@@ -122,6 +134,9 @@ public sealed partial class IslandWindow : Window
         _dragTicker = DispatcherQueue.GetForCurrentThread().CreateTimer();
         _dragTicker.Interval = TimeSpan.FromMilliseconds(15);
         _dragTicker.Tick += (_, _) => OnDragTick();
+
+        _hoverPoll.Interval = TimeSpan.FromMilliseconds(100);
+        _hoverPoll.Tick += (_, _) => OnHoverPoll();
 
         Opened += OnOpened;
         Root.PointerEntered += OnPointerEntered;
@@ -273,6 +288,8 @@ public sealed partial class IslandWindow : Window
             // Rendered offscreen only.
             Show();
         }
+
+        UpdateHoverPoll();
     }
 
     public void HideIsland()
@@ -320,6 +337,7 @@ public sealed partial class IslandWindow : Window
 
         _loaded = true;
         ApplyAnchorLayout();
+        UpdateHoverPoll();
 
         // Nothing is clickable until the first layout sets the real region.
         ApplyWindowRegion(default, force: true);
@@ -355,6 +373,9 @@ public sealed partial class IslandWindow : Window
     private void OnModeChanged(IslandMode oldMode, IslandMode newMode)
     {
         Log.Debug("island", "Mode changed", new { from = oldMode.ToString(), to = newMode.ToString(), source = _state.ActivitySource.ToString() });
+        var timing = System.Diagnostics.Stopwatch.StartNew();
+        var marks = new List<string>();
+        void Mark(string what) => marks.Add($"{what}={timing.ElapsedMilliseconds}");
         try
         {
             switch (newMode)
@@ -368,13 +389,16 @@ public sealed partial class IslandWindow : Window
 
                     HideIsland();
                     UpdateMediaTicker();
+                    UpdateHoverPoll();
                     return;
                 case IslandMode.Activity when _state.ActivitySource == ActivitySource.Hover:
                     _viewModel.PreparePeek();
                     break;
                 case IslandMode.Expanded:
                     _viewModel.SelectTabForExpand();
+                    Mark("select");
                     Expanded.PrepareForShow();
+                    Mark("prepare");
                     break;
             }
 
@@ -389,9 +413,12 @@ public sealed partial class IslandWindow : Window
             }
 
             TransitionTo(ViewFor(newMode), animate: true);
+            Mark("transition");
+            UpdateHoverPoll();
             if (newMode == IslandMode.Expanded)
             {
                 ActivateForKeyboard();
+                Mark("activate");
             }
             else if (oldMode == IslandMode.Expanded)
             {
@@ -400,6 +427,10 @@ public sealed partial class IslandWindow : Window
             }
 
             UpdateMediaTicker();
+            if (timing.ElapsedMilliseconds > 30)
+            {
+                Log.Info("render", "Slow state change", new { to = newMode.ToString(), ms = timing.ElapsedMilliseconds, steps = string.Join(" ", marks) });
+            }
         }
         catch (Exception ex)
         {
@@ -427,6 +458,8 @@ public sealed partial class IslandWindow : Window
         var elevated = ReferenceEquals(target, Expanded);
         var radius = elevated ? ExpandedRadius : rect.Height / 2;
         var finalRegion = RegionFor(target, rect, elevated);
+
+        _shapeChangedAt = Environment.TickCount64;
 
         // While morphing, the region covers both shapes; it shrinks to the final shape once settled.
         ApplyRegion(_regionRect.Width <= 0 ? finalRegion : Union(_regionRect, finalRegion));
@@ -472,6 +505,7 @@ public sealed partial class IslandWindow : Window
 
         var elevated = ReferenceEquals(_current, Expanded);
         var finalRegion = RegionFor(_current, rect, elevated);
+        _shapeChangedAt = Environment.TickCount64;
         ApplyRegion(Union(_regionRect, finalRegion));
         _morph.MorphTo(rect, elevated ? ExpandedRadius : rect.Height / 2, elevated, animate, () => OnMorphSettled(finalRegion));
     }
@@ -601,6 +635,7 @@ public sealed partial class IslandWindow : Window
 
     private void OnMorphSettled(Rect finalRegion)
     {
+        _shapeChangedAt = Environment.TickCount64;
         ApplyRegion(finalRegion);
         RevalidatePointer();
     }
@@ -660,7 +695,50 @@ public sealed partial class IslandWindow : Window
         if (!_dragging && !_pointerDown)
         {
             var p = e.GetPosition(Root);
-            ApplyHover(_hover.PointerAt(p.X, p.Y, Capsule));
+            ApplyHover(ShapeIsSettled ? _hover.PointerArrived(p.X, p.Y, Capsule) : _hover.PointerAt(p.X, p.Y, Capsule));
+        }
+    }
+
+    /// <summary>
+    /// Safety net for hover: X servers (XWayland in particular) do not always deliver a motion event
+    /// after the crossing into a shaped window, so a pointer that moved in and stopped would never
+    /// count as hovering. Every 100 ms the pointer position is read from the server; movement into
+    /// or out of the capsule is fed to the hover tracker like a motion event.
+    /// </summary>
+    private void OnHoverPoll()
+    {
+        if (_dragging || _pointerDown || _x?.Pointer() is not { } cursor)
+        {
+            return;
+        }
+
+        var previous = _polledPointer;
+        _polledPointer = (cursor.X, cursor.Y);
+        if (previous is not { } last || (last.X == cursor.X && last.Y == cursor.Y))
+        {
+            return; // no movement, no intent
+        }
+
+        var x = (cursor.X - Position.X) / Scale;
+        var y = (cursor.Y - Position.Y) / Scale;
+        var inside = Capsule.Contains(x, y);
+        if (inside != _hover.IsInside && (ShapeIsSettled || !inside))
+        {
+            ApplyHover(_hover.PointerArrived(x, y, Capsule));
+        }
+    }
+
+    private void UpdateHoverPoll()
+    {
+        var wanted = IsIslandVisible && _state.Mode is IslandMode.Compact or IslandMode.Retracted or IslandMode.Activity;
+        if (wanted && !_hoverPoll.IsRunning)
+        {
+            _polledPointer = null;
+            _hoverPoll.Start();
+        }
+        else if (!wanted && _hoverPoll.IsRunning)
+        {
+            _hoverPoll.Stop();
         }
     }
 
@@ -693,7 +771,13 @@ public sealed partial class IslandWindow : Window
             return;
         }
 
-        // A capsule that just grew under a resting mouse (an event, a peek) is not a target yet.
+        // A capsule that just grew under a resting mouse (an event, a peek) is not a target yet. Once
+        // the shape has been still for a moment, a press on it is plainly meant for it.
+        if (e.Pointer.Type == PointerType.Mouse && !_hover.IsInside && ShapeIsSettled)
+        {
+            ApplyHover(_hover.PointerArrived(point.Position.X, point.Position.Y, Capsule));
+        }
+
         if (e.Pointer.Type == PointerType.Mouse && !_hover.IsInside)
         {
             Log.Debug("island", "Unarmed click ignored");

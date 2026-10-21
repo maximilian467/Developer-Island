@@ -80,6 +80,12 @@ internal sealed class IslandMorph
     private long _generation;
     private Action? _completed;
 
+    // Frame pacing of the running morph, logged when it settles (diagnoses stutter on a given desktop).
+    private readonly System.Diagnostics.Stopwatch _clock = new();
+    private long _frameCount;
+    private double _worstGapMs;
+    private double _lastFrameMs;
+
     public IslandMorph(CapsuleSurface surface, Control content, TopLevel top)
     {
         _surface = surface;
@@ -141,6 +147,10 @@ internal sealed class IslandMorph
         {
             _running = true;
             _lastFrame = null;
+            _frameCount = 0;
+            _worstGapMs = 0;
+            _clock.Restart();
+            _lastFrameMs = 0;
             _top.RequestAnimationFrame(OnFrame);
         }
     }
@@ -152,7 +162,13 @@ internal sealed class IslandMorph
             return;
         }
 
-        var dt = _lastFrame is { } last ? Math.Clamp((time - last).TotalSeconds, 0, 0.05) : 1 / 60.0;
+        var now = _clock.Elapsed.TotalMilliseconds;
+        _worstGapMs = Math.Max(_worstGapMs, now - _lastFrameMs);
+        _lastFrameMs = now;
+        _frameCount++;
+
+        // Real elapsed time (up to 100 ms per frame): slow frames shorten the motion instead of stretching it.
+        var dt = _lastFrame is { } last ? Math.Clamp((time - last).TotalSeconds, 0, 0.1) : 1 / 60.0;
         _lastFrame = time;
         if (_shadowStart == TimeSpan.MinValue)
         {
@@ -183,6 +199,13 @@ internal sealed class IslandMorph
             _shadow = _shadowTo;
             _running = false;
             Apply();
+            var total = _clock.Elapsed.TotalMilliseconds;
+            var level = _worstGapMs > 50 || total > 700 ? Core.Diagnostics.LogLevel.Info : Core.Diagnostics.LogLevel.Debug;
+            if (level >= Core.Diagnostics.Log.MinimumLevel)
+            {
+                Core.Diagnostics.Log.Info("render", "Morph", new { ms = Math.Round(total), frames = _frameCount, fps = Math.Round(_frameCount * 1000 / Math.Max(1, total)), worstGapMs = Math.Round(_worstGapMs) });
+            }
+
             var done = _completed;
             _completed = null;
             done?.Invoke();

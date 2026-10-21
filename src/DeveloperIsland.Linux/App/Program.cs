@@ -5,9 +5,26 @@ namespace DeveloperIsland;
 
 public static class Program
 {
+    /// <summary>
+    /// GPU first (GLX, then EGL), software as the fallback. DI_RENDER=software|glx|egl forces one,
+    /// for drivers where the GPU path stutters.
+    /// </summary>
+    private static X11RenderingMode[] RenderingModes() => Environment.GetEnvironmentVariable("DI_RENDER")?.ToLowerInvariant() switch
+    {
+        "software" => [X11RenderingMode.Software],
+        "egl" => [X11RenderingMode.Egl, X11RenderingMode.Software],
+        "glx" => [X11RenderingMode.Glx, X11RenderingMode.Software],
+        _ => [X11RenderingMode.Glx, X11RenderingMode.Egl, X11RenderingMode.Software],
+    };
+
     [STAThread]
     public static int Main(string[] args)
     {
+        if (Environment.GetEnvironmentVariable("DI_LOG") is "debug")
+        {
+            Log.MinimumLevel = LogLevel.Debug;
+        }
+
         // Claude Code status line bridge: no UI, no single-instance check, done in milliseconds.
         if (StatusLineBridge.IsRequested(args))
         {
@@ -119,6 +136,7 @@ public static class Program
                 WmClass = "developer-island",
                 EnableSessionManagement = false,
                 EnableIme = true,
+                RenderingMode = RenderingModes(),
             })
             .WithInterFont()
             .LogToTrace();
