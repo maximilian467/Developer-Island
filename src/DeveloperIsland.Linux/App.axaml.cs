@@ -65,7 +65,8 @@ public partial class App : Application
         try
         {
             var locator = typeof(AvaloniaLocator).GetProperty("Current", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)?.GetValue(null);
-            var service = (locator as IServiceProvider)?.GetService(typeof(Avalonia.Platform.IPlatformGraphics));
+            var getService = locator?.GetType().GetMethod("GetService", [typeof(Type)]);
+            var service = getService?.Invoke(locator, [typeof(Avalonia.Platform.IPlatformGraphics)]);
             return service?.GetType().Name ?? "Software";
         }
         catch (Exception)

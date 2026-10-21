@@ -7,8 +7,8 @@
              x:DataType="vm:UsageViewModel">
     <StackPanel>
         <Grid Name="ProvidersGrid" ColumnDefinitions="*,*" ColumnSpacing="24">
-            <local:ProviderSummary Name="ClaudeSummary" IsVisible="{Binding ShowClaude}" />
-            <local:ProviderSummary Name="CodexSummary" Grid.Column="1" IsVisible="{Binding ShowCodex}" />
+            <Panel Name="ClaudeSlot" IsVisible="{Binding ShowClaude}"><local:ProviderSummary Name="ClaudeSummary" DataContext="{Binding Claude}" /></Panel>
+            <Panel Name="CodexSlot" Grid.Column="1" IsVisible="{Binding ShowCodex}"><local:ProviderSummary Name="CodexSummary" DataContext="{Binding Codex}" /></Panel>
         </Grid>
 
         <c:UsageHeatmap Name="Heatmap" Margin="0,22,0,0" HorizontalAlignment="Left" />

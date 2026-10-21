@@ -44,6 +44,6 @@ public sealed partial class UsagePanel : UserControl
         var single = !_viewModel.ShowBoth;
         ProvidersGrid.ColumnDefinitions[1].Width = single ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
         ProvidersGrid.ColumnSpacing = single ? 0 : 24;
-        Grid.SetColumn(CodexSummary, single && !_viewModel.ShowClaude ? 0 : 1);
+        Grid.SetColumn(CodexSlot, single && !_viewModel.ShowClaude ? 0 : 1);
     }
 }

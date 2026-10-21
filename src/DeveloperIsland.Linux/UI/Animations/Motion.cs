@@ -53,9 +53,9 @@ internal static class Motion
     /// <summary>Small UI elements (tab indicator).</summary>
     public static readonly Spring SnappySpring = new(0.9, TimeSpan.FromMilliseconds(45));
 
-    public static readonly TimeSpan FadeOutDuration = TimeSpan.FromMilliseconds(110);
-    public static readonly TimeSpan FadeInDuration = TimeSpan.FromMilliseconds(240);
-    public static readonly TimeSpan FadeInDelay = TimeSpan.FromMilliseconds(70);
+    public static readonly TimeSpan FadeOutDuration = TimeSpan.FromMilliseconds(90);
+    public static readonly TimeSpan FadeInDuration = TimeSpan.FromMilliseconds(180);
+    public static readonly TimeSpan FadeInDelay = TimeSpan.FromMilliseconds(30);
 
     /// <summary>Ease-out (0.16, 1, 0.3, 1): fast start, long soft landing.</summary>
     public static readonly Easing EaseOut = new SplineEasing(0.16, 1, 0.3, 1);

@@ -139,8 +139,45 @@ public static class Program
                 RenderingMode = RenderingModes(),
             })
             .WithInterFont()
-            .LogToTrace();
+            .AfterSetup(_ => Avalonia.Logging.Logger.Sink = new AvaloniaLogSink());
 
     // For the Avalonia XAML previewer.
     public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>().UsePlatformDetect().WithInterFont();
+}
+
+/// <summary>Avalonia's own warnings (renderer fallbacks, platform errors) in the app log.</summary>
+internal sealed class AvaloniaLogSink : Avalonia.Logging.ILogSink
+{
+    public bool IsEnabled(Avalonia.Logging.LogEventLevel level, string area) =>
+        level >= Avalonia.Logging.LogEventLevel.Warning || (level >= Avalonia.Logging.LogEventLevel.Information && area is "Platform" or "OpenGL");
+
+    public void Log(Avalonia.Logging.LogEventLevel level, string area, object? source, string messageTemplate) =>
+        Write(level, area, messageTemplate);
+
+    public void Log(Avalonia.Logging.LogEventLevel level, string area, object? source, string messageTemplate, params object?[] propertyValues)
+    {
+        var text = messageTemplate;
+        try
+        {
+            var i = 0;
+            text = System.Text.RegularExpressions.Regex.Replace(messageTemplate, @"\{[^}]+\}", _ => i < propertyValues.Length ? propertyValues[i++]?.ToString() ?? "null" : "?");
+        }
+        catch (Exception)
+        {
+        }
+
+        Write(level, area, text);
+    }
+
+    private static void Write(Avalonia.Logging.LogEventLevel level, string area, string text)
+    {
+        if (level >= Avalonia.Logging.LogEventLevel.Warning)
+        {
+            Core.Diagnostics.Log.Warn("avalonia", text, new { area });
+        }
+        else
+        {
+            Core.Diagnostics.Log.Info("avalonia", text, new { area });
+        }
+    }
 }

@@ -101,6 +101,12 @@ public sealed class IslandStateMachine : IDisposable
 
     /// <summary>The notch sits where the pointer passes on its way to browser tabs: ask for a longer, deliberate dwell.</summary>
     public static readonly TimeSpan NotchDwell = TimeSpan.FromMilliseconds(450);
+
+    /// <summary>How long the pointer rests on the capsule before it peeks (default <see cref="HoverDwell"/>).</summary>
+    public TimeSpan HoverDelay { get; set; } = HoverDwell;
+
+    /// <summary>How long the pointer rests on the notch before it opens (default <see cref="NotchDwell"/>).</summary>
+    public TimeSpan NotchHoverDelay { get; set; } = NotchDwell;
     public static readonly TimeSpan HoverLinger = TimeSpan.FromMilliseconds(450);
     public static readonly TimeSpan DefaultEventDuration = TimeSpan.FromSeconds(4.5);
     public static readonly TimeSpan MinimumAfterHover = TimeSpan.FromSeconds(1.2);
@@ -243,7 +249,7 @@ public sealed class IslandStateMachine : IDisposable
             case IslandMode.Compact:
             case IslandMode.Retracted:
                 var from = Mode;
-                Schedule(from == IslandMode.Retracted ? NotchDwell : HoverDwell, () => OnHoverDelayElapsed(from));
+                Schedule(from == IslandMode.Retracted ? NotchHoverDelay : HoverDelay, () => OnHoverDelayElapsed(from));
                 break;
             case IslandMode.Activity:
                 // Hovering keeps it open; the exit (or the next check) decides when it closes.

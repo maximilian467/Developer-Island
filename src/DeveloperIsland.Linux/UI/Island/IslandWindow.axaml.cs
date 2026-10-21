@@ -678,8 +678,13 @@ public sealed partial class IslandWindow : Window
         ApplyHover(_hover.Revalidate(p.X, p.Y, Capsule));
     }
 
-    private void ApplyHover(HoverChange change)
+    private void ApplyHover(HoverChange change, [System.Runtime.CompilerServices.CallerMemberName] string via = "")
     {
+        if (change != HoverChange.None)
+        {
+            Log.Debug("island", "Hover", new { change = change.ToString(), via, mode = _state.Mode.ToString() });
+        }
+
         if (change == HoverChange.Entered)
         {
             _state.PointerEntered();

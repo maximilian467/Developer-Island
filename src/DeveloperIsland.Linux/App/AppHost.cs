@@ -165,7 +165,12 @@ internal sealed class AppHost : IDisposable
         _viewModel.SetLastActive(_uiState.LastActiveModule);
         ApplyFavorites(settings);
 
-        _state = new IslandStateMachine(TimeProvider.System, action => _dispatcher.TryEnqueue(() => action()));
+        _state = new IslandStateMachine(TimeProvider.System, action => _dispatcher.TryEnqueue(() => action()))
+        {
+            // Snappier than the Windows defaults: the peek should feel like it follows the pointer.
+            HoverDelay = TimeSpan.FromMilliseconds(120),
+            NotchHoverDelay = TimeSpan.FromMilliseconds(200),
+        };
         _autoHide = new Core.Island.AutoHideCoordinator(
             TimeProvider.System,
             action => _dispatcher.TryEnqueue(() => action()),
@@ -507,7 +512,12 @@ internal sealed class AppHost : IDisposable
         var focus = new FocusViewModel(_focusTimer, _focusHistory, settings.CustomFocusMinutes, _ => { });
         var audioOutput = new AudioOutputViewModel(null);
         _viewModel = new IslandViewModel(new UsageViewModel(), new MusicViewModel(_media, audioOutput), focus, ModuleViewModels.Create(), _options.IsDemo);
-        _state = new IslandStateMachine(TimeProvider.System, action => _dispatcher.TryEnqueue(() => action()));
+        _state = new IslandStateMachine(TimeProvider.System, action => _dispatcher.TryEnqueue(() => action()))
+        {
+            // Snappier than the Windows defaults: the peek should feel like it follows the pointer.
+            HoverDelay = TimeSpan.FromMilliseconds(120),
+            NotchHoverDelay = TimeSpan.FromMilliseconds(200),
+        };
         _window = new IslandWindow(_viewModel, _state, settings.AlwaysOnTop);
         _window.PlacementInvalidated += () => _dispatcher.TryEnqueue(PlaceIsland);
         _window.ConfigureHomeCloud(settings.HomeCloudActive, settings.HomeCloudTargetPath, settings.HomeCloudDropSide);
