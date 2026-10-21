@@ -20,6 +20,27 @@ public static class Program
             return SystemReport.Run(args);
         }
 
+        // Updates without reinstalling: queue a build or patch for the running (or next) island.
+        if (args.Length >= 2 && args[0] == "--update")
+        {
+            return Platform.Updates.Updater.QueueFromCommandLine(args[1]);
+        }
+
+        // Music troubleshooting: prints what every MPRIS player reports, then exits.
+        if (args.Contains("--media-report", StringComparer.Ordinal))
+        {
+            try
+            {
+                Console.WriteLine(Platform.Media.MprisMediaSource.ReportAsync().GetAwaiter().GetResult());
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Session bus unavailable: {ex.Message}");
+                return 1;
+            }
+        }
+
         if (args.Contains("--version", StringComparer.Ordinal))
         {
             Console.WriteLine($"Developer Island {typeof(Program).Assembly.GetName().Version?.ToString(3)} (Linux)");
@@ -58,6 +79,13 @@ public static class Program
             Console.Error.WriteLine("Developer Island needs an X server (X11, or XWayland on a Wayland session): DISPLAY is not set.");
             instance.Dispose();
             return 2;
+        }
+
+        // Apply updates waiting in ~/.local/share/developer-island/updates and run the newest build
+        // (replaces this process when a newer per-user build exists).
+        if (!options.IsDemo && options.SnapshotDirectory is null && options.HomeCloudUploadPath is null)
+        {
+            Platform.Updates.Updater.EnsureNewest(args);
         }
 
         using (instance)

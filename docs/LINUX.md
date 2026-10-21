@@ -35,6 +35,19 @@ tar xzf DeveloperIsland-<version>-linux-x64.tar.gz
 | `git`, `gh` | Git and GitHub modules |
 | `gnome-shell-extension-appindicator` | The status-area icon on GNOME (preinstalled on Ubuntu) |
 
+## Updating
+
+Updates install without reinstalling and without root. Drop a release tarball (or a smaller patch
+tarball holding only changed files) into `~/.local/share/developer-island/updates/`, or run:
+
+```bash
+developer-island --update DeveloperIsland-<version>-linux-x64.tar.gz
+```
+
+The running island picks it up within seconds, lays it over a copy of the current build in
+`~/.local/share/developer-island/app/` (the previous build stays in `app.old/`) and restarts into it.
+The packaged launcher always starts the newest build, and installing a newer `.deb` later takes over again.
+
 ## Wayland and X11
 
 The island window uses X11, so on a Wayland session it runs through **XWayland** (preinstalled on

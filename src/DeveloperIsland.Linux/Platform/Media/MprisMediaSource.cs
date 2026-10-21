@@ -71,8 +71,9 @@ internal sealed class MprisMediaSource : IMediaSource
                 }
             }
 
-            Log.Info("media", "MPRIS media players available", new { players = _players.Count });
+            Log.Info("media", "MPRIS media players available", new { players = _players.Count, apps = string.Join(", ", PlayerNames()) });
             ScheduleRefresh();
+            StartPolling();
         }
         catch (Exception ex)
         {
@@ -153,6 +154,8 @@ internal sealed class MprisMediaSource : IMediaSource
             {
                 if (ex is not null)
                 {
+                    // The typed signal reader rejected an unusual value; the lenient read still works.
+                    ScheduleRefresh();
                     return;
                 }
 
@@ -238,16 +241,23 @@ internal sealed class MprisMediaSource : IMediaSource
                 players = [.. _players.Values];
             }
 
-            var states = new List<(Player Player, OrgMprisMediaPlayer2PlayerProxy.OrgMprisMediaPlayer2PlayerProperties Props)>();
+            var states = new List<(Player Player, PlayerProperties Props)>();
             foreach (var player in players)
             {
                 try
                 {
-                    states.Add((player, await player.Proxy.GetAllPropertiesAsync()));
+                    states.Add((player, await ReadPropertiesAsync(player)));
+                    player.ReadFailureLogged = false;
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // A player that quit between the event and the read is not a candidate.
+                    // A player that quit between the event and the read is not a candidate. Anything
+                    // else is worth one line in the log: it is why a player would never show up.
+                    if (!player.ReadFailureLogged)
+                    {
+                        player.ReadFailureLogged = true;
+                        Log.Warn("media", "Player state could not be read", new { app = player.AppName, error = ex.GetType().Name, ex.Message });
+                    }
                 }
             }
 
@@ -276,7 +286,65 @@ internal sealed class MprisMediaSource : IMediaSource
         }
     }
 
-    private async Task<MediaSnapshot> ReadAsync(Player player, OrgMprisMediaPlayer2PlayerProxy.OrgMprisMediaPlayer2PlayerProperties props)
+    /// <summary>
+    /// Properties.GetAll, read leniently: every value as a variant, converted by what it actually is.
+    /// Players do not all follow the MPRIS types to the letter (Spotify, Electron and browser players
+    /// differ in small ways), and a strict reader would drop the whole player over one odd property.
+    /// </summary>
+    private async Task<PlayerProperties> ReadPropertiesAsync(Player player)
+    {
+        var connection = _connection ?? throw new InvalidOperationException("No session bus");
+        var values = await connection.CallMethodAsync(CreateGetAll(connection, player.Name), static (Message message, object? _) =>
+        {
+            var reader = message.GetBodyReader();
+            return reader.ReadDictionary_aesv();
+        });
+        return PlayerProperties.From(values);
+    }
+
+    private static MessageBuffer CreateGetAll(Connection connection, string destination)
+    {
+        using var writer = connection.GetMessageWriter();
+        writer.WriteMethodCallHeader(destination, ObjectPath, "org.freedesktop.DBus.Properties", "GetAll", "s");
+        writer.WriteString("org.mpris.MediaPlayer2.Player");
+        return writer.CreateMessage();
+    }
+
+    /// <summary>Raw MPRIS player properties of every player on the bus, for <c>--media-report</c>.</summary>
+    public static async Task<string> ReportAsync()
+    {
+        var text = new System.Text.StringBuilder();
+        using var connection = new Connection(Address.Session!);
+        await connection.ConnectAsync();
+        var bus = new OrgFreedesktopDBusProxy(connection, "org.freedesktop.DBus", "/org/freedesktop/DBus");
+        foreach (var name in (await bus.ListNamesAsync()).Where(n => n.StartsWith(Prefix, StringComparison.Ordinal)))
+        {
+            text.AppendLine(name);
+            try
+            {
+                var values = await connection.CallMethodAsync(CreateGetAll(connection, name), static (Message message, object? _) =>
+                {
+                    var reader = message.GetBodyReader();
+                    return reader.ReadDictionary_aesv();
+                });
+                foreach (var (key, value) in values.OrderBy(v => v.Key, StringComparer.Ordinal))
+                {
+                    text.AppendLine($"  {key} = {value}");
+                }
+
+                var props = PlayerProperties.From(values);
+                text.AppendLine($"  -> status {props.PlaybackStatus ?? "(none)"}, title {Text(props.Metadata, "xesam:title") ?? "(none)"}");
+            }
+            catch (Exception ex)
+            {
+                text.AppendLine($"  error: {ex.GetType().Name}: {ex.Message}");
+            }
+        }
+
+        return text.Length == 0 ? "No MPRIS players on the session bus." : text.ToString();
+    }
+
+    private async Task<MediaSnapshot> ReadAsync(Player player, PlayerProperties props)
     {
         var metadata = props.Metadata ?? [];
         player.TrackId = metadata.TryGetValue("mpris:trackid", out var track) ? ObjectPathOf(track) : null;
@@ -446,6 +514,98 @@ internal sealed class MprisMediaSource : IMediaSource
         }
     }
 
+    private string[] PlayerNames()
+    {
+        lock (_gate)
+        {
+            return [.. _players.Values.Select(p => p.AppName)];
+        }
+    }
+
+    /// <summary>
+    /// A slow safety net next to the signals: some players skip PropertiesChanged for metadata or
+    /// state (or send it in a form the signal reader rejects). Cheap: one GetAll per player.
+    /// </summary>
+    private void StartPolling()
+    {
+        _ = Task.Run(async () =>
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3));
+            while (!_disposed && await timer.WaitForNextTickAsync())
+            {
+                bool any;
+                lock (_gate)
+                {
+                    any = _players.Count > 0;
+                }
+
+                if (any || _snapshot.State != MediaPlaybackState.None)
+                {
+                    await RefreshAsync();
+                }
+            }
+        });
+    }
+
+    /// <summary>MPRIS player properties, converted from whatever variant types the player sent.</summary>
+    private sealed class PlayerProperties
+    {
+        public string? PlaybackStatus { get; private init; }
+
+        public Dictionary<string, VariantValue> Metadata { get; private init; } = [];
+
+        public long Position { get; private init; }
+
+        public bool CanGoNext { get; private init; }
+
+        public bool CanGoPrevious { get; private init; }
+
+        public bool CanPlay { get; private init; }
+
+        public bool CanPause { get; private init; }
+
+        public bool CanSeek { get; private init; }
+
+        public bool CanControl { get; private init; } = true;
+
+        public static PlayerProperties From(Dictionary<string, VariantValue> values) => new()
+        {
+            PlaybackStatus = values.TryGetValue("PlaybackStatus", out var status) && status.Type == VariantValueType.String ? status.GetString() : null,
+            Metadata = values.TryGetValue("Metadata", out var metadata) ? MetadataOf(metadata) : [],
+            Position = values.TryGetValue("Position", out var position) ? (long)(Microseconds(position).Ticks / 10) : 0,
+            CanGoNext = Bool(values, "CanGoNext", false),
+            CanGoPrevious = Bool(values, "CanGoPrevious", false),
+            CanPlay = Bool(values, "CanPlay", true),
+            CanPause = Bool(values, "CanPause", true),
+            CanSeek = Bool(values, "CanSeek", false),
+            CanControl = Bool(values, "CanControl", true),
+        };
+
+        private static bool Bool(Dictionary<string, VariantValue> values, string key, bool fallback)
+        {
+            try
+            {
+                return values.TryGetValue(key, out var value) && value.Type == VariantValueType.Bool ? value.GetBool() : fallback;
+            }
+            catch
+            {
+                return fallback;
+            }
+        }
+
+        private static Dictionary<string, VariantValue> MetadataOf(VariantValue value)
+        {
+            try
+            {
+                return value.Type == VariantValueType.Dictionary ? value.GetDictionary<string, VariantValue>() : [];
+            }
+            catch
+            {
+                return [];
+            }
+        }
+    }
+
     private sealed class Player(string name, string owner, OrgMprisMediaPlayer2PlayerProxy proxy) : IDisposable
     {
         public string Name { get; } = name;
@@ -459,6 +619,8 @@ internal sealed class MprisMediaSource : IMediaSource
         public string? Identity { get; set; }
 
         public string? TrackId { get; set; }
+
+        public bool ReadFailureLogged { get; set; }
 
         public string AppName => FriendlyAppName(Identity, Name);
 

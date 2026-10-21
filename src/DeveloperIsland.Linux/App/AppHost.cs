@@ -96,6 +96,15 @@ internal sealed class AppHost : IDisposable
 
     public event Action? QuitRequested;
 
+    private IDisposable? _updates;
+
+    /// <summary>A new build was swapped in: quit, and start it once this process is gone.</summary>
+    private void RestartForUpdate()
+    {
+        Platform.Updates.Updater.RestartAfterExit(Environment.GetCommandLineArgs().Skip(1).ToArray());
+        QuitRequested?.Invoke();
+    }
+
     public void Start()
     {
         if (_options.HomeCloudUploadPath is { } uploadPath)
@@ -188,6 +197,11 @@ internal sealed class AppHost : IDisposable
             _state.ModeChanged += (_, _) => _tray.Refresh();
             StartWindowWatchers();
             _privacy = new PrivacyWatcher(state => _dispatcher.TryEnqueue(() => OnPrivacyChanged(state)));
+            if (!_options.IsDemo)
+            {
+                _updates = Platform.Updates.Updater.Watch(() => _dispatcher.TryEnqueue(RestartForUpdate));
+            }
+
             _hotkey = new GlobalHotKey();
             _hotkey.Pressed += OnShortcut;
             _hotkey.Apply(settings.GlobalShortcutEnabled, ShortcutGesture.FromText(settings.GlobalShortcut));
@@ -603,6 +617,7 @@ internal sealed class AppHost : IDisposable
 
     public void Dispose()
     {
+        _updates?.Dispose();
         // Quit ends an awake session: sleep and the lid work as usual again once the app is gone.
         if (_awake is { Snapshot.IsActive: true })
         {

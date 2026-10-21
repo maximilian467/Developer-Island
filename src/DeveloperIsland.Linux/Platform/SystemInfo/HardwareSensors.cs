@@ -62,7 +62,7 @@ internal sealed partial class HardwareSensors : IDisposable
 
                 Log.Info("system", "Hardware sensors ready", new
                 {
-                    chips = chips.Select(c => c.Driver).ToArray(),
+                    chips = string.Join(", ", chips.Select(c => c.Driver)),
                     amdGpus = busy.Count,
                     nvidiaGpus = nvml?.Count ?? 0,
                 });

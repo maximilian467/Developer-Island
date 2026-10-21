@@ -111,6 +111,10 @@
     </Style>
 
     <!-- Sidebar navigation -->
+    <Style Selector="Button.sNav StackPanel > :is(Control)">
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
     <Style Selector="Button.sNav">
         <Setter Property="Height" Value="36" />
         <Setter Property="HorizontalAlignment" Value="Stretch" />
