@@ -65,7 +65,7 @@ public sealed class GitService : IDisposable
 
                 if (_git is null)
                 {
-                    return new ModuleStatus(ModuleState.Unavailable, "Git is not installed. Install Git for Windows to see branches and changes here.");
+                    return new ModuleStatus(ModuleState.Unavailable, (OperatingSystem.IsWindows() ? "Git is not installed. Install Git for Windows to see branches and changes here." : "Git is not installed. Install git (sudo apt install git) to see branches and changes here."));
                 }
 
                 var roots = RootsLocked();

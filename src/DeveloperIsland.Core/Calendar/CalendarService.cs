@@ -83,7 +83,7 @@ public sealed class IcsCalendarSource(string location, HttpClient http) : ICalen
             };
         }
 
-        return Path.GetFileNameWithoutExtension(location);
+        return DeveloperIsland.Core.Formatting.PathNames.LastSegmentWithoutExtension(location);
     }
 
     /// <summary>Accepts https, http and webcal links and existing .ics files.</summary>

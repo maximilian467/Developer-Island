@@ -90,7 +90,7 @@ public sealed class AwakeViewModel : ObservableObject
     public bool LidProtected => _snapshot.IsActive && _snapshot.Lid == AwakeLid.Protected;
 
     public string LidText => LidFailed
-        ? "Closing the lid will still sleep this PC: Windows refused the lid setting."
+        ? (OperatingSystem.IsWindows() ? "Closing the lid will still sleep this PC: Windows refused the lid setting." : "Closing the lid will still suspend this PC: the system refused the lid inhibitor.")
         : "Close the lid: agents keep working.";
 
     public string SafetyText => _batteryFloor > 0

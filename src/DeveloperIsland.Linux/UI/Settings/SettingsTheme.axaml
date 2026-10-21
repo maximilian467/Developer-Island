@@ -1,0 +1,174 @@
+<!-- Settings window tokens (Linux port of UI/Theme/SettingsTheme.xaml): light and dark, one accent. -->
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Styles.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <Color x:Key="SystemAccentColor">#FF0066CC</Color>
+                    <Color x:Key="SystemAccentColorLight1">#FF1A7AD9</Color>
+                    <Color x:Key="SystemAccentColorLight2">#FF4D97E6</Color>
+                    <Color x:Key="SystemAccentColorLight3">#FF80B5F0</Color>
+                    <Color x:Key="SystemAccentColorDark1">#FF0059B3</Color>
+                    <Color x:Key="SystemAccentColorDark2">#FF004C99</Color>
+                    <Color x:Key="SystemAccentColorDark3">#FF003F80</Color>
+                    <SolidColorBrush x:Key="SettingsWindowBrush" Color="#FFF3F3F5" />
+                    <SolidColorBrush x:Key="SettingsSidebarBrush" Color="#FFEAEAED" />
+                    <SolidColorBrush x:Key="SettingsSegmentBrush" Color="#0F000000" />
+                    <SolidColorBrush x:Key="SettingsSegmentSelectedBrush" Color="#FFFFFFFF" />
+                    <SolidColorBrush x:Key="SettingsAccentBrush" Color="#FF0066CC" />
+                    <SolidColorBrush x:Key="SettingsCardBrush" Color="#B3FFFFFF" />
+                    <SolidColorBrush x:Key="SettingsCardStrokeBrush" Color="#14000000" />
+                    <SolidColorBrush x:Key="SettingsDividerBrush" Color="#0F000000" />
+                    <SolidColorBrush x:Key="SettingsTextPrimaryBrush" Color="#FF1D1D1F" />
+                    <SolidColorBrush x:Key="SettingsTextSecondaryBrush" Color="#FF6E6E73" />
+                    <SolidColorBrush x:Key="SettingsNavSelectedBrush" Color="#14000000" />
+                    <SolidColorBrush x:Key="SettingsNavHoverBrush" Color="#0A000000" />
+                    <SolidColorBrush x:Key="SettingsScreenBrush" Color="#0D000000" />
+                    <SolidColorBrush x:Key="SettingsScreenStrokeBrush" Color="#26000000" />
+                    <SolidColorBrush x:Key="SettingsPillBrush" Color="#33000000" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <Color x:Key="SystemAccentColor">#FF2997FF</Color>
+                    <Color x:Key="SystemAccentColorLight1">#FF4DA9FF</Color>
+                    <Color x:Key="SystemAccentColorLight2">#FF73BCFF</Color>
+                    <Color x:Key="SystemAccentColorLight3">#FF99CEFF</Color>
+                    <Color x:Key="SystemAccentColorDark1">#FF1F85E6</Color>
+                    <Color x:Key="SystemAccentColorDark2">#FF1A73CC</Color>
+                    <Color x:Key="SystemAccentColorDark3">#FF1561B3</Color>
+                    <SolidColorBrush x:Key="SettingsWindowBrush" Color="#FF202022" />
+                    <SolidColorBrush x:Key="SettingsSidebarBrush" Color="#FF1A1A1C" />
+                    <SolidColorBrush x:Key="SettingsSegmentBrush" Color="#14FFFFFF" />
+                    <SolidColorBrush x:Key="SettingsSegmentSelectedBrush" Color="#2EFFFFFF" />
+                    <SolidColorBrush x:Key="SettingsAccentBrush" Color="#FF2997FF" />
+                    <SolidColorBrush x:Key="SettingsCardBrush" Color="#0DFFFFFF" />
+                    <SolidColorBrush x:Key="SettingsCardStrokeBrush" Color="#12FFFFFF" />
+                    <SolidColorBrush x:Key="SettingsDividerBrush" Color="#10FFFFFF" />
+                    <SolidColorBrush x:Key="SettingsTextPrimaryBrush" Color="#FFF5F5F7" />
+                    <SolidColorBrush x:Key="SettingsTextSecondaryBrush" Color="#FFA1A1A6" />
+                    <SolidColorBrush x:Key="SettingsNavSelectedBrush" Color="#1AFFFFFF" />
+                    <SolidColorBrush x:Key="SettingsNavHoverBrush" Color="#0DFFFFFF" />
+                    <SolidColorBrush x:Key="SettingsScreenBrush" Color="#0AFFFFFF" />
+                    <SolidColorBrush x:Key="SettingsScreenStrokeBrush" Color="#26FFFFFF" />
+                    <SolidColorBrush x:Key="SettingsPillBrush" Color="#40FFFFFF" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Styles.Resources>
+
+    <Style Selector="Window.settings">
+        <Setter Property="Background" Value="{DynamicResource SettingsWindowBrush}" />
+        <Setter Property="FontFamily" Value="{StaticResource TextFont}" />
+    </Style>
+    <Style Selector="TextBlock.sTitle">
+        <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+        <Setter Property="FontSize" Value="26" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="LetterSpacing" Value="-0.26" />
+        <Setter Property="Foreground" Value="{DynamicResource SettingsTextPrimaryBrush}" />
+    </Style>
+    <Style Selector="TextBlock.sGroup">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource SettingsTextSecondaryBrush}" />
+        <Setter Property="Margin" Value="4,20,0,4" />
+    </Style>
+    <Style Selector="TextBlock.sRowTitle">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Foreground" Value="{DynamicResource SettingsTextPrimaryBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="TextBlock.sRowText">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource SettingsTextSecondaryBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Margin" Value="0,2,0,0" />
+    </Style>
+    <Style Selector="Border.sCard">
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Background" Value="{DynamicResource SettingsCardBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SettingsCardStrokeBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Border.sRow">
+        <Setter Property="Padding" Value="16,12,12,12" />
+        <Setter Property="MinHeight" Value="56" />
+    </Style>
+    <Style Selector="Rectangle.sDivider">
+        <Setter Property="Height" Value="1" />
+        <Setter Property="Margin" Value="16,0,0,0" />
+        <Setter Property="Fill" Value="{DynamicResource SettingsDividerBrush}" />
+    </Style>
+    <Style Selector="ToggleSwitch.sToggle">
+        <Setter Property="OnContent" Value="" />
+        <Setter Property="OffContent" Value="" />
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="HorizontalAlignment" Value="Right" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="ToggleSwitch.sToggle /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
+
+    <!-- Sidebar navigation -->
+    <Style Selector="Button.sNav">
+        <Setter Property="Height" Value="36" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{DynamicResource SettingsTextPrimaryBrush}" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="FontSize" Value="14" />
+    </Style>
+    <Style Selector="Button.sNav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource SettingsNavHoverBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource SettingsTextPrimaryBrush}" />
+    </Style>
+    <Style Selector="Button.sNav.selected /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource SettingsNavSelectedBrush}" />
+    </Style>
+
+    <!-- A segmented option (two or three choices). -->
+    <Style Selector="RadioButton.segment">
+        <Setter Property="MinWidth" Value="64" />
+        <Setter Property="Height" Value="28" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Name="Pill" Background="Transparent" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                    <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                      Foreground="{DynamicResource SettingsTextPrimaryBrush}" />
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="RadioButton.segment:checked /template/ Border#Pill">
+        <Setter Property="Background" Value="{DynamicResource SettingsSegmentSelectedBrush}" />
+        <Setter Property="BoxShadow" Value="0 1 2 0 #1F000000" />
+    </Style>
+    <Style Selector="RadioButton.segment:disabled">
+        <Setter Property="Opacity" Value="0.4" />
+    </Style>
+
+    <!-- The six anchors on the miniature screen. -->
+    <Style Selector="RadioButton.anchor">
+        <Setter Property="Width" Value="44" />
+        <Setter Property="Height" Value="16" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Panel Background="Transparent">
+                    <Border Name="Pill" Width="34" Height="9" CornerRadius="4.5" Background="{DynamicResource SettingsPillBrush}" />
+                </Panel>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="RadioButton.anchor:pointerover /template/ Border#Pill">
+        <Setter Property="Opacity" Value="0.8" />
+    </Style>
+    <Style Selector="RadioButton.anchor:checked /template/ Border#Pill">
+        <Setter Property="Background" Value="{DynamicResource SettingsAccentBrush}" />
+    </Style>
+</Styles>

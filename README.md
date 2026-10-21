@@ -8,6 +8,7 @@ Developer Island is a native, floating capsule at the top of your Windows screen
 [![Latest release](https://img.shields.io/github/v/release/maximilian467/Developer-Island?include_prereleases&label=release)](https://github.com/maximilian467/Developer-Island/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Windows 10 and 11, x64](https://img.shields.io/badge/Windows-10%20%7C%2011%20x64-0078D4.svg)
+![Linux (Ubuntu 24.04)](https://img.shields.io/badge/Linux-Ubuntu%2024.04-E95420.svg)
 ![.NET 10, WinUI 3](https://img.shields.io/badge/.NET%2010-WinUI%203-512BD4.svg)
 
 <p align="center">
@@ -98,6 +99,8 @@ Full details: [docs/PRIVACY.md](docs/PRIVACY.md) and [SECURITY.md](SECURITY.md).
 
 The installer is not code-signed yet, so Windows SmartScreen may ask you to confirm ("More info", then "Run anyway"). A portable zip is attached to each release as well: extract it completely and run `DeveloperIsland.exe`.
 
+**Linux:** Ubuntu 24.04 and other Linux desktops are supported by a native port. Install `developer-island_<version>_amd64.deb` with `sudo apt install ./developer-island_<version>_amd64.deb`, or use the portable tarball. Setup, Wayland notes and build steps: [docs/LINUX.md](docs/LINUX.md).
+
 **Requirements:** Windows 11 x64 (tested). Windows 10 version 2004 or later is supported by the build but not yet tested. The Git module needs [Git for Windows](https://git-scm.com/download/win), the GitHub module the [GitHub CLI](https://cli.github.com/).
 
 ## Quick start
@@ -168,6 +171,8 @@ powershell -ExecutionPolicy Bypass -File tools/build-release.ps1
 ```
 
 More, including offscreen snapshots and the hardware report: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
+On Linux: `dotnet run --project src/DeveloperIsland.Linux -- --demo`, and `tools/build-deb.sh` for the .deb and tarball. See [docs/LINUX.md](docs/LINUX.md).
 
 ## Accessibility
 

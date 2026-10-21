@@ -7,7 +7,7 @@ public sealed record GitRepoStatus
 {
     public required string Root { get; init; }
 
-    public string Name => Path.GetFileName(Root.TrimEnd('\\', '/'));
+    public string Name => DeveloperIsland.Core.Formatting.PathNames.LastSegment(Root);
 
     /// <summary>Branch name, or null when HEAD is detached.</summary>
     public string? Branch { get; init; }

@@ -1,0 +1,8 @@
+{
+  "uuid": "developer-island@maximilian467.github.io",
+  "name": "Developer Island helper",
+  "description": "Tells Developer Island which app is in front (its name, and whether it is maximized or fullscreen), so the island can step aside for browsers and fullscreen apps on Wayland. Nothing else is shared, and only with Developer Island on this computer.",
+  "shell-version": ["45", "46", "47", "48", "49"],
+  "url": "https://github.com/maximilian467/Developer-Island",
+  "version": 1
+}

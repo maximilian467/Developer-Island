@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DeveloperIsland.ViewModels"
+             xmlns:local="using:DeveloperIsland.UI.Expanded"
+             xmlns:c="using:DeveloperIsland.UI.Components"
+             x:Class="DeveloperIsland.UI.Expanded.UsagePanel"
+             x:DataType="vm:UsageViewModel">
+    <StackPanel>
+        <Grid Name="ProvidersGrid" ColumnDefinitions="*,*" ColumnSpacing="24">
+            <local:ProviderSummary Name="ClaudeSummary" IsVisible="{Binding ShowClaude}" />
+            <local:ProviderSummary Name="CodexSummary" Grid.Column="1" IsVisible="{Binding ShowCodex}" />
+        </Grid>
+
+        <c:UsageHeatmap Name="Heatmap" Margin="0,22,0,0" HorizontalAlignment="Left" />
+
+        <!-- Readout: summary and legend at rest, the inspected day on hover or keyboard focus. -->
+        <Panel Height="{Binding ReadoutHeight}" Margin="0,10,0,0">
+            <Grid IsVisible="{Binding IsNotInspecting}" Height="18" VerticalAlignment="Top">
+                <TextBlock Classes="fine" Text="{Binding HistorySummary}" VerticalAlignment="Center" />
+                <StackPanel Orientation="Horizontal" Spacing="3" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock Classes="fine" Text="Less" Margin="0,0,4,0" />
+                    <Rectangle Width="9" Height="9" RadiusX="2" RadiusY="2" Fill="#16FFFFFF" />
+                    <Rectangle Width="9" Height="9" RadiusX="2" RadiusY="2" Fill="#4D2997FF" />
+                    <Rectangle Width="9" Height="9" RadiusX="2" RadiusY="2" Fill="#802997FF" />
+                    <Rectangle Width="9" Height="9" RadiusX="2" RadiusY="2" Fill="#B82997FF" />
+                    <Rectangle Width="9" Height="9" RadiusX="2" RadiusY="2" Fill="#FF2997FF" />
+                    <TextBlock Classes="fine" Text="More" Margin="4,0,0,0" />
+                </StackPanel>
+            </Grid>
+            <Grid IsVisible="{Binding IsInspecting}" ColumnDefinitions="Auto,Auto,Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="2">
+                <TextBlock Classes="caption" Text="{Binding InspectedDate}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                <TextBlock Classes="caption" Grid.Column="1" IsVisible="{Binding ShowClaude}">
+                    <Run Text="Claude" /><Run Text=" " /><Run Text="{Binding InspectedClaude}" Foreground="{StaticResource TextPrimaryBrush}" />
+                </TextBlock>
+                <TextBlock Classes="caption" Grid.Column="2" IsVisible="{Binding ShowCodex}">
+                    <Run Text="Codex" /><Run Text=" " /><Run Text="{Binding InspectedCodex}" Foreground="{StaticResource TextPrimaryBrush}" />
+                </TextBlock>
+                <TextBlock Classes="caption" Grid.Column="3" Text="{Binding InspectedUnit}" />
+                <TextBlock Classes="caption" Grid.Column="3" HorizontalAlignment="Right">
+                    <Run Text="{Binding InspectedValue}" Foreground="{StaticResource TextPrimaryBrush}" /><Run Text=" API" />
+                </TextBlock>
+                <TextBlock Classes="fine" Grid.Row="1" Grid.ColumnSpan="4" Text="{Binding InspectedDetail}" />
+                <TextBlock Classes="fine" Grid.Row="2" Grid.ColumnSpan="4" Text="{Binding InspectedPlan}" IsVisible="{Binding HasInspectedPlan}" />
+            </Grid>
+        </Panel>
+
+        <TextBlock Classes="fine wrap" Margin="0,12,0,0" Text="{Binding MetricNote}" />
+    </StackPanel>
+</UserControl>

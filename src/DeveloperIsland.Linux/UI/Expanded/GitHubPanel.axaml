@@ -1,0 +1,53 @@
+<!-- GitHub: three counts as tiles, the active repository, and its latest CI run. Read-only. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DeveloperIsland.ViewModels"
+             xmlns:local="using:DeveloperIsland.UI.Expanded"
+             x:Class="DeveloperIsland.UI.Expanded.GitHubPanel"
+             x:DataType="vm:GitHubViewModel">
+    <Panel>
+        <local:ModuleStateView IsVisible="{Binding ShowState}" />
+
+        <StackPanel IsVisible="{Binding IsReady}">
+            <TextBlock Classes="caption" Text="{Binding AccountText}" />
+
+            <Grid Margin="0,10,0,0" ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                <Border Classes="tile">
+                    <StackPanel>
+                        <TextBlock Classes="figure" Text="{Binding NotificationsFigure}" />
+                        <TextBlock Classes="fine" Text="{Binding NotificationsCaption}" />
+                    </StackPanel>
+                </Border>
+                <Border Classes="tile" Grid.Column="1">
+                    <StackPanel>
+                        <TextBlock Classes="figure" Text="{Binding PullRequestsFigure}" />
+                        <TextBlock Classes="fine" Text="{Binding PullRequestsCaption}" />
+                    </StackPanel>
+                </Border>
+                <Border Classes="tile" Grid.Column="2">
+                    <StackPanel>
+                        <TextBlock Classes="figure" Text="{Binding ReviewsFigure}" />
+                        <TextBlock Classes="fine" Text="{Binding ReviewsCaption}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <StackPanel IsVisible="{Binding HasRepository}" Margin="0,14,0,0">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                    <TextBlock Classes="label" Text="{Binding RepositoryName}" MaxWidth="210" />
+                    <TextBlock Classes="fine" Grid.Column="1" Text="{Binding RepositoryDetail}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                </Grid>
+
+                <Grid Margin="0,8,0,0" ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8" IsVisible="{Binding HasCi}">
+                    <Panel Width="8" Height="8" VerticalAlignment="Center">
+                        <Ellipse Fill="{StaticResource SuccessBrush}" IsVisible="{Binding CiPassed}" />
+                        <Ellipse Fill="{StaticResource CriticalBrush}" IsVisible="{Binding CiFailed}" />
+                        <Ellipse Fill="{StaticResource WarningBrush}" IsVisible="{Binding CiRunning}" />
+                    </Panel>
+                    <TextBlock Classes="caption" Grid.Column="1" Text="{Binding CiText}" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <TextBlock Classes="fine" Grid.Column="2" Text="{Binding CiDetail}" VerticalAlignment="Center" />
+                </Grid>
+            </StackPanel>
+        </StackPanel>
+    </Panel>
+</UserControl>
