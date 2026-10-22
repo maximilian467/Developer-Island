@@ -137,6 +137,41 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- Updates: the one network request of the app's own, off until the user turns it on. -->
+                        <Border Style="{StaticResource SettingsCardStyle}" Margin="0,12,0,0">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <TextBlock Text="Check for updates" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Text="Once a day, asks GitHub whether a newer version exists. Sends only the app's version; nothing is installed without your click."
+                                                   Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="UpdatesToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
+                                                  AutomationProperties.Name="Check for updates" Toggled="OnToggle" Tag="CheckForUpdates" />
+                                </Grid>
+                                <Rectangle Style="{StaticResource SettingsDividerStyle}" />
+                                <Grid Style="{StaticResource SettingsRowStyle}" ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,8,0">
+                                        <TextBlock x:Name="UpdateStatusTitle" Style="{StaticResource SettingsRowTitleStyle}" TextWrapping="Wrap"
+                                                   AutomationProperties.LiveSetting="Polite" />
+                                        <TextBlock x:Name="UpdateStatusText" Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <Button x:Name="UpdateInstallButton" Grid.Column="1" Content="Install…" VerticalAlignment="Center" Visibility="Collapsed"
+                                            Style="{StaticResource AccentButtonStyle}" Click="OnOpenUpdate" AutomationProperties.Name="Install the available update" />
+                                    <Button x:Name="UpdateCheckButton" Grid.Column="2" Content="Check now" VerticalAlignment="Center" Click="OnCheckForUpdates" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Quit the whole app. Two steps (button, then Quit in the flyout), so it never happens by accident. -->
                         <Border Style="{StaticResource SettingsCardStyle}" Margin="0,12,0,0">
                             <Grid Style="{StaticResource SettingsRowStyle}">
@@ -534,7 +569,7 @@
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="Local-first" Style="{StaticResource SettingsRowTitleStyle}" />
                                         <TextBlock Style="{StaticResource SettingsRowDescriptionStyle}"
-                                                   Text="Your prompts never leave your device. Developer Island reads only usage metadata (tokens, model, time) from local logs and stores daily totals on this PC. It makes no network requests." />
+                                                   Text="Your prompts never leave your device. Developer Island reads only usage metadata (tokens, model, time) from local logs and stores daily totals on this PC. It makes no network requests of its own, except the update check when you turn it on." />
                                     </StackPanel>
                                 </Grid>
                                 <Rectangle Style="{StaticResource SettingsDividerStyle}" />

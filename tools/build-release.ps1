@@ -1,14 +1,32 @@
-# Builds a Developer Island release: tests, self-contained publish, portable zip and installer.
-#   powershell -ExecutionPolicy Bypass -File tools/build-release.ps1 [-Version 0.1.0] [-Runtime win-x64] [-SkipTests] [-SkipInstaller]
+# Builds a Developer Island release: tests, self-contained publish, portable zip, installer,
+# checksums and their signature.
+#   powershell -ExecutionPolicy Bypass -File tools/build-release.ps1 [-Version 0.1.0] [-Runtime win-x64] [-SkipTests] [-SkipInstaller] [-SkipSigning]
 # Requirements: .NET 10 SDK. Installer: Inno Setup 6 (ISCC.exe), e.g. `winget install JRSoftware.InnoSetup`.
+# Signing: DI_RELEASE_SIGNING_KEY names the private key file (outside the repository, see docs/RELEASING.md).
+# The app installs an update only when SHA256SUMS-<version>.txt.sig verifies; -SkipSigning is for test builds.
 param(
     [string]$Version,
     [ValidateSet("win-x64", "win-arm64")][string]$Runtime = "win-x64",
     [switch]$SkipTests,
-    [switch]$SkipInstaller
+    [switch]$SkipInstaller,
+    [switch]$SkipSigning
 )
 $ErrorActionPreference = "Stop"
 $root = Resolve-Path "$PSScriptRoot\.."
+
+# Checked before the long build: a release without a signature cannot be installed by the app's update.
+$signingKey = $env:DI_RELEASE_SIGNING_KEY
+if (-not $SkipSigning) {
+    if (-not $signingKey) { throw 'Set DI_RELEASE_SIGNING_KEY to the release signing key file (docs/RELEASING.md), or pass -SkipSigning for a test build.' }
+    if (-not (Test-Path -LiteralPath $signingKey -PathType Leaf)) { throw "The signing key file in DI_RELEASE_SIGNING_KEY does not exist." }
+    $signingKey = [IO.Path]::GetFullPath($signingKey)
+    if ($signingKey.StartsWith([IO.Path]::GetFullPath($root).TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'The signing key must not live inside the repository.'
+    }
+    if (-not (Test-Path -LiteralPath "$root\src\DeveloperIsland.Core\Updates\release-signing-public-key.pem")) {
+        throw 'The public key is missing from src/DeveloperIsland.Core/Updates; the app would refuse every update (docs/RELEASING.md).'
+    }
+}
 if ($Runtime -ne 'win-x64' -and -not $SkipInstaller) {
     throw 'The V1 installer supports x64 only. Use -SkipInstaller for experimental ARM64 publishing.'
 }
@@ -83,3 +101,12 @@ $files = @($zip) + @(Get-ChildItem $artifacts -Filter "DeveloperIsland-Setup-$Ve
 $sums = Join-Path $artifacts "SHA256SUMS-$Version.txt"
 $files | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_ -Algorithm SHA256).Hash.ToLowerInvariant(), (Split-Path $_ -Leaf) } | Set-Content -Encoding ascii $sums
 Write-Host "Checksums: $sums"
+
+# The setup is not code-signed, so the app trusts an update only through this signature of the checksums.
+if ($SkipSigning) {
+    Write-Warning 'Not signed (-SkipSigning): the app will refuse to install this release as an update.'
+} else {
+    & $dotnet run "$PSScriptRoot\release-signing.cs" -- sign $signingKey $sums
+    if ($LASTEXITCODE -ne 0) { throw "Signing the checksums failed" }
+    Write-Host "Signature: $sums.sig"
+}

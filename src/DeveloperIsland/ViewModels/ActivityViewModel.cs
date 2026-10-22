@@ -11,6 +11,12 @@ public enum ActivityKind
     System,
     Awake,
     Info,
+
+    /// <summary>A newer release exists; a click opens the update dialog instead of the island.</summary>
+    UpdateAvailable,
+
+    /// <summary>The one-time question whether to check for updates; a click opens it.</summary>
+    UpdateQuestion,
 }
 
 /// <summary>Content of the medium ("live activity") state.</summary>
@@ -30,6 +36,9 @@ public sealed class ActivityViewModel : ObservableObject
     private DeveloperIsland.Core.Modules.ModuleId? _module;
 
     public ActivityKind Kind => _kind;
+
+    /// <summary>A notice that opens its own dialog when clicked, rather than the expanded island.</summary>
+    public bool IsNotice => _kind is ActivityKind.UpdateAvailable or ActivityKind.UpdateQuestion;
 
     public string Title => _title;
 

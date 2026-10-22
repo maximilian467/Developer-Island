@@ -69,6 +69,16 @@ public sealed class AppSettings
 
     public bool LaunchHidden { get; set; }
 
+    // Updates
+    /// <summary>Ask GitHub once a day for a newer release (Updates.UpdateService). Off until the user agrees.</summary>
+    public bool CheckForUpdates { get; set; }
+
+    /// <summary>The island has asked once whether to check for updates; it does not ask again.</summary>
+    public bool UpdateCheckAsked { get; set; }
+
+    /// <summary>"Skip this version": a release the island and the tray no longer announce ("0.5.0").</summary>
+    public string? SkippedUpdateVersion { get; set; }
+
     // Position
     /// <summary>Device name of the monitor (for example <c>\.\DISPLAY2</c>); null means the primary monitor.</summary>
     public string? MonitorDevice { get; set; }
