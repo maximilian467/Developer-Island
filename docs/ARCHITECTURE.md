@@ -4,9 +4,9 @@ Developer Island is two projects plus tests:
 
 | Project | Target | Contents |
 |---|---|---|
-| `DeveloperIsland.Core` | `net10.0` | Everything that does not need Windows UI: models, parsers, providers, pricing, SQLite storage, settings, placement math, focus timer, island state machine, module logic (Git, GitHub, calendar, tasks, system, plan usage, favorites), demo data. Fully unit-tested. |
+| `DeveloperIsland.Core` | `net10.0` | Everything that does not need Windows UI: models, parsers, providers, pricing, SQLite storage, settings, placement math, focus timer, island state machine, module logic (Git, GitHub, calendar, tasks, system, plan usage, favorites), the update check and its verification, demo data. Fully unit-tested. |
 | `DeveloperIsland` | `net10.0-windows10.0.22621.0`, WinUI 3 | The app: composition root, view models, views, motion, and platform integration (windowing, tray, autostart, media sessions, monitors, hardware sensors, hotkey). |
-| `DeveloperIsland.Tests` | `net10.0`, xUnit v3 | 382 tests against Core, including a real `git` repository and a Windows Credential Manager round trip. |
+| `DeveloperIsland.Tests` | `net10.0`, xUnit v3 | 559 tests against Core, including a real `git` repository and a Windows Credential Manager round trip. |
 
 ## Data flow
 
@@ -170,6 +170,20 @@ Claude plan usage comes from Claude Code's documented status line input (`rate_l
 ## Auto-hide in apps
 
 `AutoHideApps` (settings) lists apps with their own switches; the older `SmartHideProcesses` list is kept in sync for compatibility. `ForegroundWatcher` (WinEvent hooks, no polling) reports the foreground app; `SmartHidePolicy` decides Compact, Retracted or Hidden from the rules, the anchor (top center only) and, optionally, whether the window is maximized. `ForegroundWatcher` judges the root owner of the window actually in front (`GetForegroundWindow` when an event is processed), so a queued event from a fast switch or a browser popup cannot decide. `AutoHideCoordinator` (Core, tested) numbers every change: stepping aside applies at once, a return to the capsule waits 80 ms and is verified against the real foreground, and only the newest version may apply. A 750 ms check, running only while auto-hide can apply, re-reads the foreground and catches an event Windows never delivered.
+
+## Updates
+
+The optional update check and one-click install. The services live in Core (`Updates/`, tested on fake time with a fake HTTP handler); the app adds the dialog, the tray item and the setup launch.
+
+| Piece | Where | Does |
+|---|---|---|
+| `UpdateService` | Core | Off until "Check for updates" is on. One anonymous `GET .../releases/latest` (plain `HttpClient`, `User-Agent: DeveloperIsland/<version>`, no token): 30 s after the start, then a day after the last answered check; an unanswered one is retried after an hour (`DueIn`). "Check now" asks at once. `update-state.json` (`UpdateStateStore`) keeps the last check and the release found, so a restart within the day neither asks again nor loses the notice. Failures are logged by error type only. |
+| `ReleaseJson`, `ReleaseVersion` | Core | Parse the release: drafts, prereleases and tags that are no version are skipped; the setup, `SHA256SUMS-<version>.txt` and its `.sig` are picked by name, and only from `https://github.com/maximilian467/Developer-Island/releases/`. Semantic version precedence. |
+| `UpdateDownloader`, `UpdateSignature`, `ChecksumFile` | Core | Into `%LOCALAPPDATA%\DeveloperIsland\updates`: the checksums and their signature first, verified (ECDSA P-256, SHA-256, DER) against the public key embedded from `Updates/release-signing-public-key.pem`; then the setup, hashed while it streams to a `.part` file that becomes the setup only if it matches the signed SHA-256. A build without the key, an unsigned release, a bad signature or a mismatch installs nothing. |
+| `UpdateWindow`, `SetupLauncher` | App | The dialog (question; Install now, Release notes, Later, Skip this version; progress and failures). The setup runs with `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /RESTARTAPP` and the app quits; only a copy the setup installed (its uninstall entry's `InstallLocation`) updates in place, a portable one is sent to the release page. |
+| Installer | `installer/DeveloperIsland.iss` | `UsePreviousTasks` keeps the autostart choice; a `[Run]` entry with `skipifnotsilent` and the `RestartAppRequested` check starts the new version after a `/RESTARTAPP` run. |
+
+The island announces a release once per run as a live activity (`ActivityKind.UpdateAvailable`) and asks the one-time question the same way (`UpdateQuestion`); a click on such a notice opens the dialog instead of expanding the island. A skipped version (`SkippedUpdateVersion`) is no longer announced, in the island or the tray. Demo mode makes no request; the snapshot run renders the notices and the dialog with a pretend release.
 
 ## Secrets
 

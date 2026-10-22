@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The small update dialog: the one-time "Check for updates?" question, and an available release
+    with Install now, Release notes, Later and Skip this version, then download and verification.
+-->
+<Window
+    x:Class="DeveloperIsland.UI.Update.UpdateWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Developer Island Update">
+
+    <Grid x:Name="Root">
+        <Grid.Resources>
+            <ResourceDictionary Source="ms-appx:///UI/Theme/SettingsTheme.xaml" />
+        </Grid.Resources>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="32" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid x:Name="DragArea" Background="Transparent" />
+
+        <StackPanel Grid.Row="1" Padding="28,8,28,0" Spacing="14">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <Image Source="ms-appx:///Assets/DeveloperIsland-256.png" Width="32" Height="32" VerticalAlignment="Center"
+                       AutomationProperties.AccessibilityView="Raw" />
+                <TextBlock x:Name="TitleText" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap"
+                           Foreground="{ThemeResource SettingsTextPrimaryBrush}" AutomationProperties.HeadingLevel="Level1" />
+            </StackPanel>
+            <TextBlock x:Name="BodyText" Style="{StaticResource SettingsRowDescriptionStyle}" FontSize="13" TextWrapping="Wrap"
+                       AutomationProperties.LiveSetting="Polite" />
+            <ProgressBar x:Name="Progress" Visibility="Collapsed" Minimum="0" Maximum="1" Foreground="{ThemeResource SettingsAccentBrush}"
+                         AutomationProperties.Name="Download progress" />
+        </StackPanel>
+
+        <Grid Grid.Row="2" Padding="28,16,28,24" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <HyperlinkButton x:Name="SkipButton" Content="Skip this version" Padding="0" VerticalAlignment="Center" Click="OnSkip"
+                             Foreground="{ThemeResource SettingsTextSecondaryBrush}" />
+            <Button x:Name="NotesButton" Grid.Column="1" Content="Release notes" MinWidth="96" Click="OnNotes" />
+            <Button x:Name="SecondaryButton" Grid.Column="2" Content="Later" MinWidth="88" Click="OnSecondary" />
+            <Button x:Name="PrimaryButton" Grid.Column="3" Content="Install now" MinWidth="104" Click="OnPrimary"
+                    Style="{StaticResource AccentButtonStyle}" />
+        </Grid>
+    </Grid>
+</Window>

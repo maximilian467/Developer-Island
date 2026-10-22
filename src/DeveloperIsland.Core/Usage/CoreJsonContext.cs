@@ -13,4 +13,5 @@ namespace DeveloperIsland.Core.Usage;
 [JsonSerializable(typeof(List<string>))]
 [JsonSerializable(typeof(DeveloperIsland.Core.Settings.UiState))]
 [JsonSerializable(typeof(DeveloperIsland.Core.Plan.PlanUsage))]
+[JsonSerializable(typeof(DeveloperIsland.Core.Updates.UpdateState))]
 internal sealed partial class CoreJsonContext : JsonSerializerContext;

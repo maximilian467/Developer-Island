@@ -22,6 +22,8 @@ skills-lock.json
 *.pfx
 *.p12
 *.pem
+# The release signing public key is the one key file that belongs in the repository.
+!src/DeveloperIsland.Core/Updates/release-signing-public-key.pem
 *.key
 *.snk
 

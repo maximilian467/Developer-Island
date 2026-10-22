@@ -18,7 +18,8 @@ Never include secrets in a report or an issue: no calendar links, tokens, prompt
 Developer Island is a local, single-user desktop app.
 
 - It runs without administrator rights and opens no network ports.
-- It makes network requests only for what you set up: the calendar links you add (HTTPS or webcal), and the GitHub CLI's read-only requests when the GitHub module is on. Links in the panels open in your browser.
+- It makes network requests only for what you set up: the calendar links you add (HTTPS or webcal), the GitHub CLI's read-only requests when the GitHub module is on, and the optional update check. Links in the panels open in your browser.
+- Updates install only after a check: the release's `SHA256SUMS` file must carry a valid ECDSA P-256 signature by the project's release key (its public key is built into the app), and the downloaded setup must match the signed SHA-256. Anything else is deleted and nothing runs. The installer itself is not code-signed yet.
 - It reads local files of other tools (Claude Code transcripts, Codex rollout files) and extracts only usage metadata; it does not upload them.
 - Private calendar links are stored in Windows Credential Manager for your user account, never in settings files or logs.
 - "Claude plan usage" adds Developer Island as Claude Code's status line command in `~/.claude/settings.json` only when you click Connect, with a backup first, and never replaces a status line you already have. Disconnect removes it.
