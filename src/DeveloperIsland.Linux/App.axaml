@@ -1,0 +1,16 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="DeveloperIsland.App"
+             Name="Developer Island">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://developer-island/UI/Theme/IslandTheme.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://developer-island/UI/Theme/IslandStyles.axaml" />
+    </Application.Styles>
+</Application>

@@ -77,7 +77,7 @@ public sealed class AudioOutputViewModel : ObservableObject
             SelectedDeviceId = currentOutput?.Id ?? outputs.FirstOrDefault()?.Id;
             StatusText = currentOutput is not null
                 ? $"Current output: {currentOutput.Name}"
-                : outputs.Count == 0 ? "No active playback devices found." : "Windows has no default output. Choose a device.";
+                : outputs.Count == 0 ? "No active playback devices found." : (OperatingSystem.IsWindows() ? "Windows has no default output. Choose a device." : "No default output is set. Choose a device.");
         }
         catch (Exception ex)
         {

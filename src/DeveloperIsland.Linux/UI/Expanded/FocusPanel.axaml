@@ -1,0 +1,56 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DeveloperIsland.ViewModels"
+             xmlns:c="using:DeveloperIsland.UI.Components"
+             x:Class="DeveloperIsland.UI.Expanded.FocusPanel"
+             x:DataType="vm:FocusViewModel">
+    <Panel>
+        <!-- Idle: presets -->
+        <StackPanel IsVisible="{Binding IsIdle}">
+            <TextBlock Classes="title" Text="{Binding StatusText}" />
+            <TextBlock Classes="caption" Text="{Binding TodayText}" Margin="0,2,0,0" />
+            <TextBlock Classes="fine" Text="{Binding WeekText}" Margin="0,2,0,0" />
+
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,16,0,2" IsVisible="{Binding IsPresetRowVisible}">
+                <Button Name="Preset25" Theme="{StaticResource IslandPillButton}" Content="25 min" Tag="25" Click="OnPreset" />
+                <Button Theme="{StaticResource IslandPillButton}" Content="50 min" Tag="50" Click="OnPreset" />
+                <Button Theme="{StaticResource IslandPillButton}" Content="90 min" Tag="90" Click="OnPreset" />
+                <Button Theme="{StaticResource IslandPillButton}" Content="Custom…" Click="OnOpenCustom" />
+            </StackPanel>
+
+            <Grid Margin="0,16,0,2" ColumnDefinitions="Auto,64,Auto,*,Auto,Auto" ColumnSpacing="8" IsVisible="{Binding IsCustomRowVisible}">
+                <Button Name="MinusButton" Theme="{StaticResource IslandIconButton}" Width="32" Height="32" CornerRadius="16"
+                        Background="{StaticResource SurfaceRaisedBrush}" Tag="-5" Click="OnAdjust" ToolTip.Tip="5 minutes less">
+                    <c:GlyphIcon Glyph="&#xE738;" Size="12" />
+                </Button>
+                <TextBlock Classes="label" Grid.Column="1" Text="{Binding CustomMinutesText}" HorizontalAlignment="Center" />
+                <Button Grid.Column="2" Theme="{StaticResource IslandIconButton}" Width="32" Height="32" CornerRadius="16"
+                        Background="{StaticResource SurfaceRaisedBrush}" Tag="5" Click="OnAdjust" ToolTip.Tip="5 minutes more">
+                    <c:GlyphIcon Glyph="&#xE710;" Size="12" />
+                </Button>
+                <Button Grid.Column="4" Theme="{StaticResource IslandPillButton}" Content="Cancel" Click="OnCloseCustom" />
+                <Button Grid.Column="5" Theme="{StaticResource IslandAccentPillButton}" Content="Start" Click="OnStartCustom" />
+            </Grid>
+        </StackPanel>
+
+        <!-- Running or paused -->
+        <StackPanel IsVisible="{Binding IsActive}">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+                <Ellipse Width="6" Height="6" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding IsRunning}" />
+                <TextBlock Classes="caption" Text="Focus" FontWeight="SemiBold" />
+                <TextBlock Classes="caption" Text="{Binding StatusText}" />
+            </StackPanel>
+
+            <TextBlock Classes="hero tnum" Text="{Binding RemainingText}" Margin="0,4,0,0" />
+            <c:Meter Fraction="{Binding Progress}" Margin="0,10,0,0" />
+
+            <Grid Margin="0,16,0,2">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Name="PauseButton" Theme="{StaticResource IslandPillButton}" Content="{Binding PauseResumeLabel}" Click="OnTogglePause" />
+                    <Button Theme="{StaticResource IslandPillButton}" Content="Stop" Click="OnStop" />
+                </StackPanel>
+                <TextBlock Classes="fine" Text="{Binding TodayText}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+            </Grid>
+        </StackPanel>
+    </Panel>
+</UserControl>

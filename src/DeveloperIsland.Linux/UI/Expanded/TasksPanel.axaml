@@ -1,0 +1,71 @@
+<!--
+    Tasks: quick capture on top (type, Enter), the list below. Click the circle to complete; hover a
+    row for delete; Alt+Up/Down (or the context menu) reorders.
+-->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DeveloperIsland.ViewModels"
+             xmlns:local="using:DeveloperIsland.UI.Expanded"
+             xmlns:c="using:DeveloperIsland.UI.Components"
+             x:Class="DeveloperIsland.UI.Expanded.TasksPanel"
+             x:DataType="vm:TasksViewModel">
+    <UserControl.Styles>
+        <Style Selector="Grid.taskRow Button.delete">
+            <Setter Property="Opacity" Value="0" />
+        </Style>
+        <Style Selector="Grid.taskRow:pointerover Button.delete">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+    </UserControl.Styles>
+
+    <Panel>
+        <local:ModuleStateView IsVisible="{Binding ShowState}" />
+
+        <StackPanel IsVisible="{Binding IsReady}">
+            <TextBox Name="Capture" Theme="{StaticResource IslandTextBox}" Watermark="Add a task" MaxLength="200" KeyDown="OnCaptureKeyDown" />
+
+            <TextBlock Classes="fine" Text="Type a task and press Enter." Margin="2,10,0,0" IsVisible="{Binding HasNoItems}" />
+
+            <ScrollViewer MaxHeight="196" Margin="0,8,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                          IsVisible="{Binding HasItems}">
+                <ItemsControl Name="List" ItemsSource="{Binding Items}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TaskRowViewModel">
+                            <Grid Classes="taskRow" Height="36" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Background="Transparent">
+                                <Grid.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Move up" Tag="{Binding Id}" Click="OnMoveUp" />
+                                        <MenuItem Header="Move down" Tag="{Binding Id}" Click="OnMoveDown" />
+                                        <Separator />
+                                        <MenuItem Header="Delete" Tag="{Binding Id}" Click="OnDelete" />
+                                    </ContextMenu>
+                                </Grid.ContextMenu>
+                                <Button Theme="{StaticResource IslandIconButton}" Width="32" Height="32" CornerRadius="16" Tag="{Binding Id}"
+                                        Click="OnToggle" KeyDown="OnRowKeyDown" ToolTip.Tip="{Binding AccessibleName}">
+                                    <Panel Width="18" Height="18">
+                                        <Ellipse Stroke="{StaticResource TextTertiaryBrush}" StrokeThickness="1.4" />
+                                        <Ellipse Fill="{StaticResource AccentBrush}" Opacity="{Binding CheckOpacity}" />
+                                        <c:GlyphIcon Glyph="{Binding CheckGlyph}" Size="10" Foreground="#FF0A0A0B" />
+                                    </Panel>
+                                </Button>
+                                <TextBlock Classes="caption" Grid.Column="1" Text="{Binding Title}" FontSize="13"
+                                           Foreground="{StaticResource TextPrimaryBrush}" Opacity="{Binding TitleOpacity}" VerticalAlignment="Center" />
+                                <Button Classes="delete" Grid.Column="2" Theme="{StaticResource IslandIconButton}" Width="32" Height="32" CornerRadius="16"
+                                        Tag="{Binding Id}" Click="OnDelete" Focusable="False" ToolTip.Tip="Delete task"
+                                        Foreground="{StaticResource TextSecondaryBrush}">
+                                    <c:GlyphIcon Glyph="&#xE711;" Size="10" />
+                                </Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <Grid Margin="0,10,0,0" MinHeight="32" IsVisible="{Binding HasItems}">
+                <TextBlock Classes="fine" Text="{Binding SummaryText}" VerticalAlignment="Center" Margin="2,0,0,0" />
+                <Button Theme="{StaticResource IslandPillButton}" Content="Clear completed" HorizontalAlignment="Right"
+                        IsVisible="{Binding HasCompleted}" Click="OnClearCompleted" />
+            </Grid>
+        </StackPanel>
+    </Panel>
+</UserControl>

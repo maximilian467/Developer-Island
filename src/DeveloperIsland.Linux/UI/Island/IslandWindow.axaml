@@ -1,0 +1,36 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:island="using:DeveloperIsland.UI.Island"
+        xmlns:expanded="using:DeveloperIsland.UI.Expanded"
+        xmlns:c="using:DeveloperIsland.UI.Components"
+        x:Class="DeveloperIsland.UI.Island.IslandWindow"
+        Classes="island"
+        Title="Developer Island"
+        SystemDecorations="None"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        CanResize="False"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        WindowStartupLocation="Manual"
+        RequestedThemeVariant="Dark"
+        FontFamily="{StaticResource TextFont}">
+
+    <Panel Name="Root" Background="Transparent">
+        <!-- Capsule shape and shadow (IslandMorph). -->
+        <Canvas Name="SurfaceHost" IsHitTestVisible="False" />
+
+        <!-- Content, clipped to the animated capsule. -->
+        <Panel Name="ContentHost">
+            <!-- Smart Auto-Hide notch: the island retracted against the top edge. Camera or microphone in use: tiny dots in the visible 5 DIP. -->
+            <Panel Name="Notch" Width="48" Height="10" IsVisible="False" Background="Transparent">
+                <c:PrivacyDots Name="NotchPrivacy" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,0.5" />
+            </Panel>
+            <island:CompactView Name="Compact" />
+            <island:ActivityView Name="Activity" IsVisible="False" />
+            <expanded:ExpandedView Name="Expanded" IsVisible="False" />
+            <!-- Home Cloud: files dragged onto the island. -->
+            <island:DropView Name="DropZone" IsVisible="False" />
+        </Panel>
+    </Panel>
+</Window>

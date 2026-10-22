@@ -1,0 +1,60 @@
+<!--
+    Expanded island: 420 wide, radius 28. Header with icon tabs in the user's module order (the
+    selection pill slides between them; the selected tab's name sits beside the tabs), the tab's
+    favorite star and a settings button; one module at a time below.
+-->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:DeveloperIsland.UI.Expanded"
+             xmlns:c="using:DeveloperIsland.UI.Components"
+             x:Class="DeveloperIsland.UI.Expanded.ExpandedView">
+    <Grid Name="Root" Width="420" Margin="0" RowDefinitions="Auto,Auto" RowSpacing="16">
+        <Grid.Styles>
+            <Style Selector="Grid#Root">
+                <Setter Property="Background" Value="Transparent" />
+            </Style>
+        </Grid.Styles>
+        <Border Padding="16,14,16,0">
+            <Panel>
+                <!-- Camera and microphone marks: centered at the top edge, like a phone status light. -->
+                <c:PrivacyIndicators Name="PrivacyMarks" IconSize="10" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-11,0,0" />
+
+                <Grid Height="32" ColumnDefinitions="Auto,*,Auto">
+                    <Panel Name="TabHost" HorizontalAlignment="Left" VerticalAlignment="Center">
+                        <Border Name="TabIndicator" Width="32" Height="32" CornerRadius="16" Background="{StaticResource SurfaceRaisedBrush}"
+                                HorizontalAlignment="Left" VerticalAlignment="Center" IsHitTestVisible="False" />
+                        <StackPanel Name="Tabs" Orientation="Horizontal" Spacing="1" />
+                    </Panel>
+
+                    <TextBlock Name="SectionName" Grid.Column="1" Classes="label" Margin="10,0,0,0" />
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Name="StarButton" Theme="{StaticResource IslandStarButton}" Width="28" Click="OnStar">
+                            <c:GlyphIcon Name="StarGlyph" Glyph="&#xE734;" Size="12" />
+                        </Button>
+                        <Button Name="SettingsButton" Theme="{StaticResource IslandIconButton}" Width="32" Height="32" CornerRadius="16"
+                                Click="OnSettings" ToolTip.Tip="Open Settings">
+                            <c:GlyphIcon Glyph="&#xE713;" Size="14" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Panel>
+        </Border>
+
+        <!-- Panels scroll instead of being clipped if one ever outgrows the island (max 700 DIP minus the header). -->
+        <ScrollViewer Name="PanelScroll" Grid.Row="1" MaxHeight="620" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <Panel Name="PanelHost" Margin="20,0,20,18">
+                <local:UsagePanel Name="UsageView" IsVisible="False" />
+                <local:MusicPanel Name="MusicView" IsVisible="False" />
+                <local:GitPanel Name="GitView" IsVisible="False" />
+                <local:GitHubPanel Name="GitHubView" IsVisible="False" />
+                <local:FocusPanel Name="FocusView" IsVisible="False" />
+                <local:CalendarPanel Name="CalendarView" IsVisible="False" />
+                <local:TasksPanel Name="TasksView" IsVisible="False" />
+                <local:SystemPanel Name="SystemView" IsVisible="False" />
+                <local:AwakePanel Name="AwakeView" IsVisible="False" />
+                <TextBlock Name="NoTabsText" Classes="caption" Text="All modules are turned off. Turn one on in Settings." IsVisible="False" />
+            </Panel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

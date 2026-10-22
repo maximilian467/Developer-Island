@@ -1,0 +1,103 @@
+// Linux copy of DeveloperIsland/ViewModels/ActivityViewModel.cs: Avalonia image and brush types.
+using Avalonia.Media;
+using ImageSource = Avalonia.Media.IImage;
+
+namespace DeveloperIsland.ViewModels;
+
+public enum ActivityKind
+{
+    Music,
+    Focus,
+    Usage,
+    Calendar,
+    System,
+    Awake,
+    Info,
+}
+
+/// <summary>Content of the medium ("live activity") state.</summary>
+public sealed class ActivityViewModel : ObservableObject
+{
+    /// <summary>The island-wide camera and microphone state (the same instance as the island view model).</summary>
+    public PrivacyViewModel Privacy { get; internal set; } = new();
+
+    private ActivityKind _kind = ActivityKind.Info;
+    private string _title = string.Empty;
+    private string _subtitle = string.Empty;
+    private string _trailing = string.Empty;
+    private string _glyph = "";
+    private ImageSource? _art;
+    private bool _accentGlyph;
+    private string? _mark;
+    private DeveloperIsland.Core.Modules.ModuleId? _module;
+
+    public ActivityKind Kind => _kind;
+
+    public string Title => _title;
+
+    public string Subtitle => _subtitle;
+
+    public string Trailing => _trailing;
+
+    public bool HasTrailing => _trailing.Length > 0;
+
+    public string Glyph => _glyph;
+
+    public ImageSource? Art => _art;
+
+    public bool ShowArt => _art is not null;
+
+    /// <summary>Provider mark ("Claude" or "Codex") shown instead of a glyph for AI activities.</summary>
+    public string Mark => _mark ?? "Claude";
+
+    public bool ShowMark => _art is null && _mark is not null;
+
+    /// <summary>A module icon (Git, GitHub, Tasks, ...) instead of a glyph.</summary>
+    public DeveloperIsland.Core.Modules.ModuleId ModuleIcon => _module ?? DeveloperIsland.Core.Modules.ModuleId.System;
+
+    public bool ShowModuleIcon => _art is null && _mark is null && _module is not null;
+
+    public bool ShowGlyph => _art is null && _mark is null && _module is null;
+
+    /// <summary>Accent is reserved for a live state (a running focus session).</summary>
+    public IBrush GlyphBrush => Avalonia.Application.Current!.TryGetResource(_accentGlyph ? "AccentBrush" : "TextPrimaryBrush", null, out var brush) && brush is IBrush b ? b : Brushes.White;
+
+    public string AccessibleText => string.IsNullOrEmpty(_subtitle) ? _title : $"{_title}, {_subtitle}";
+
+    public void Set(ActivityKind kind, string title, string subtitle, string trailing = "", string glyph = "", ImageSource? art = null, bool accentGlyph = false, string? mark = null, DeveloperIsland.Core.Modules.ModuleId? module = null)
+    {
+        _mark = mark;
+        _module = module;
+        _kind = kind;
+        _title = title;
+        _subtitle = subtitle;
+        _trailing = trailing;
+        _glyph = glyph;
+        _art = art;
+        _accentGlyph = accentGlyph;
+        OnAllPropertiesChanged();
+    }
+
+    public void SetArt(ImageSource? art)
+    {
+        if (!ReferenceEquals(_art, art))
+        {
+            _art = art;
+            OnPropertyChanged(nameof(Art));
+            OnPropertyChanged(nameof(ShowArt));
+            OnPropertyChanged(nameof(ShowGlyph));
+            OnPropertyChanged(nameof(ShowMark));
+            OnPropertyChanged(nameof(ShowModuleIcon));
+        }
+    }
+
+    public void SetTrailing(string trailing)
+    {
+        if (_trailing != trailing)
+        {
+            _trailing = trailing;
+            OnPropertyChanged(nameof(Trailing));
+            OnPropertyChanged(nameof(HasTrailing));
+        }
+    }
+}

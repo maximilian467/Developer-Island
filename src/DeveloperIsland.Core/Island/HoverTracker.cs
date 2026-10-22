@@ -53,6 +53,24 @@ public sealed class HoverTracker
         return HoverChange.None;
     }
 
+    /// <summary>
+    /// The pointer is known to have travelled here (for example it crossed into the window while the
+    /// capsule kept its shape), so being inside counts as intent even without a second position.
+    /// </summary>
+    public HoverChange PointerArrived(double x, double y, CapsuleBounds capsule)
+    {
+        _lastX = x;
+        _lastY = y;
+        var inside = capsule.Contains(x, y);
+        if (inside != IsInside)
+        {
+            IsInside = inside;
+            return inside ? HoverChange.Entered : HoverChange.Exited;
+        }
+
+        return HoverChange.None;
+    }
+
     /// <summary>The window no longer receives the pointer.</summary>
     public HoverChange PointerLeftWindow()
     {

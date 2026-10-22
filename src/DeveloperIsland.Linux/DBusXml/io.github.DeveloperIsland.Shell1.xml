@@ -1,0 +1,19 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN" "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<!-- Served by the Developer Island GNOME Shell extension (gnome-extension/): what GNOME Shell knows
+     about the focused window, which X11 cannot see on a Wayland session. -->
+<node>
+  <interface name="io.github.DeveloperIsland.Shell1">
+    <method name="GetFocus">
+      <arg direction="out" type="s" name="app" />
+      <arg direction="out" type="i" name="pid" />
+      <arg direction="out" type="b" name="maximized" />
+      <arg direction="out" type="b" name="fullscreen" />
+      <arg direction="out" type="i" name="x" />
+      <arg direction="out" type="i" name="y" />
+      <arg direction="out" type="i" name="width" />
+      <arg direction="out" type="i" name="height" />
+    </method>
+    <signal name="FocusChanged" />
+    <property name="Version" type="u" access="read" />
+  </interface>
+</node>

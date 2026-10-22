@@ -1,0 +1,17 @@
+Package: developer-island
+Version: @VERSION@
+Architecture: @ARCH@
+Maintainer: Developer Island contributors <https://github.com/maximilian467/Developer-Island>
+Installed-Size: @SIZE@
+Depends: libc6, libstdc++6, libgcc-s1, zlib1g, libicu78 | libicu76 | libicu74 | libicu72 | libicu70, libssl3 | libssl3t64, libx11-6, libxext6, libxrandr2, libxi6, libxcursor1, libfontconfig1, libice6, libsm6
+Recommends: pulseaudio-utils, libsecret-tools, git
+Suggests: gh, gnome-shell-extension-appindicator
+Section: devel
+Priority: optional
+Homepage: https://github.com/maximilian467/Developer-Island
+Description: Dynamic-Island-style status bar for developers
+ A small floating island at the top of the screen that shows Claude Code and
+ Codex usage, what is playing (MPRIS), a focus timer, your next calendar event,
+ tasks, Git and GitHub status, system load, privacy indicators and a keep-awake
+ switch. Expands on click or with a global shortcut. Local-first: prompts never
+ leave the device.

@@ -1,0 +1,248 @@
+<!--
+    Developer Island design tokens (Linux port of UI/Theme/IslandTheme.xaml; see docs/design/DESIGN-PRINCIPLES.md).
+    The island is always dark (like the Dynamic Island); one accent; weights 400/600 only.
+    Segoe UI Variable is Windows-only: Inter (bundled, OFL) takes its place, then the desktop's UI font.
+    WinUI's CharacterSpacing (1/1000 em) is converted to Avalonia's LetterSpacing (DIPs).
+-->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Colors -->
+    <Color x:Key="IslandFillColor">#FF0A0A0B</Color>
+    <Color x:Key="IslandHairlineColor">#17FFFFFF</Color>
+    <Color x:Key="SurfaceRaisedColor">#10FFFFFF</Color>
+    <Color x:Key="SurfaceHoverColor">#1CFFFFFF</Color>
+    <Color x:Key="SurfacePressedColor">#26FFFFFF</Color>
+    <Color x:Key="TextPrimaryColor">#FFF5F5F7</Color>
+    <Color x:Key="TextSecondaryColor">#FFA1A1A6</Color>
+    <Color x:Key="TextTertiaryColor">#FF7A7A7A</Color>
+    <Color x:Key="AccentColor">#FF2997FF</Color>
+
+    <SolidColorBrush x:Key="IslandFillBrush" Color="{StaticResource IslandFillColor}" />
+    <SolidColorBrush x:Key="IslandHairlineBrush" Color="{StaticResource IslandHairlineColor}" />
+    <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="{StaticResource SurfaceRaisedColor}" />
+    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="{StaticResource SurfaceHoverColor}" />
+    <SolidColorBrush x:Key="SurfacePressedBrush" Color="{StaticResource SurfacePressedColor}" />
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}" />
+    <SolidColorBrush x:Key="TextTertiaryBrush" Color="{StaticResource TextTertiaryColor}" />
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
+    <SolidColorBrush x:Key="ProgressTrackBrush" Color="#33F5F5F7" />
+    <SolidColorBrush x:Key="TransparentBrush" Color="Transparent" />
+
+    <!-- Status colors: semantic only, used as small dots and icons, never as fills. -->
+    <SolidColorBrush x:Key="SuccessBrush" Color="#FF30D158" />
+    <SolidColorBrush x:Key="WarningBrush" Color="#FFFFD60A" />
+    <SolidColorBrush x:Key="CriticalBrush" Color="#FFFF453A" />
+    <SolidColorBrush x:Key="DividerBrush" Color="#14FFFFFF" />
+
+    <!-- Hardware levels (good, warning, critical): only on a graph line, a thin bar or a temperature. -->
+    <Color x:Key="StatusGoodColor">#FF30D158</Color>
+    <Color x:Key="StatusWarningColor">#FFFF9F0A</Color>
+    <Color x:Key="StatusCriticalColor">#FFFF453A</Color>
+
+    <!-- Type -->
+    <FontFamily x:Key="DisplayFont">fonts:Inter#Inter, Ubuntu, Cantarell, Noto Sans, sans-serif</FontFamily>
+    <FontFamily x:Key="TextFont">fonts:Inter#Inter, Ubuntu, Cantarell, Noto Sans, sans-serif</FontFamily>
+    <FontFamily x:Key="SmallFont">fonts:Inter#Inter, Ubuntu, Cantarell, Noto Sans, sans-serif</FontFamily>
+
+    <!-- Circular icon button: transparent at rest, raised fill on hover, press scales to 0.94. -->
+    <ControlTheme x:Key="IslandIconButton" TargetType="Button">
+        <Setter Property="Width" Value="36" />
+        <Setter Property="Height" Value="36" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="CornerRadius" Value="18" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.08" />
+            </Transitions>
+        </Setter>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Panel>
+                    <Border Name="Fill" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}"
+                            BorderThickness="0" BorderBrush="{StaticResource AccentBrush}">
+                        <Border.Transitions>
+                            <Transitions>
+                                <BrushTransition Property="Background" Duration="0:0:0.12" />
+                            </Transitions>
+                        </Border.Transitions>
+                    </Border>
+                    <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"
+                                      Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}" />
+                </Panel>
+            </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Border#Fill">
+            <Setter Property="Background" Value="{StaticResource SurfaceHoverBrush}" />
+        </Style>
+        <Style Selector="^:pressed /template/ Border#Fill">
+            <Setter Property="Background" Value="{StaticResource SurfacePressedBrush}" />
+        </Style>
+        <Style Selector="^:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.94)" />
+        </Style>
+        <Style Selector="^:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Opacity" Value="0.32" />
+        </Style>
+        <Style Selector="^:focus-visible /template/ Border#Fill">
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+    </ControlTheme>
+
+    <!-- The primary transport control sits on a raised disc. -->
+    <ControlTheme x:Key="IslandPrimaryIconButton" TargetType="Button" BasedOn="{StaticResource IslandIconButton}">
+        <Setter Property="Width" Value="48" />
+        <Setter Property="Height" Value="48" />
+        <Setter Property="CornerRadius" Value="24" />
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
+    </ControlTheme>
+
+    <!-- Favorite star: small, quiet; it never competes with the content it sits next to. -->
+    <ControlTheme x:Key="IslandStarButton" TargetType="Button" BasedOn="{StaticResource IslandIconButton}">
+        <Setter Property="Width" Value="32" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{StaticResource TextTertiaryBrush}" />
+    </ControlTheme>
+
+    <!-- Pill text button (Pause, Stop, presets). -->
+    <ControlTheme x:Key="IslandPillButton" TargetType="Button">
+        <Setter Property="Height" Value="32" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="MinWidth" Value="64" />
+        <Setter Property="Padding" Value="14,0" />
+        <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="FontFamily" Value="{StaticResource TextFont}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.08" />
+            </Transitions>
+        </Setter>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Panel>
+                    <Border Name="Fill" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}"
+                            BorderThickness="0" BorderBrush="{StaticResource AccentBrush}">
+                        <Border.Transitions>
+                            <Transitions>
+                                <BrushTransition Property="Background" Duration="0:0:0.12" />
+                            </Transitions>
+                        </Border.Transitions>
+                    </Border>
+                    <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalAlignment="Center" Foreground="{TemplateBinding Foreground}" FontFamily="{TemplateBinding FontFamily}"
+                                      FontSize="{TemplateBinding FontSize}" FontWeight="{TemplateBinding FontWeight}" />
+                </Panel>
+            </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Border#Fill">
+            <Setter Property="Background" Value="{StaticResource SurfaceHoverBrush}" />
+        </Style>
+        <Style Selector="^:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        </Style>
+        <Style Selector="^:pressed /template/ Border#Fill">
+            <Setter Property="Background" Value="{StaticResource SurfacePressedBrush}" />
+        </Style>
+        <Style Selector="^:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.96)" />
+        </Style>
+        <Style Selector="^:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Opacity" Value="0.32" />
+        </Style>
+        <Style Selector="^:focus-visible /template/ Border#Fill">
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+    </ControlTheme>
+
+    <!-- Accent pill for the one primary action in a view (Start). -->
+    <ControlTheme x:Key="IslandAccentPillButton" TargetType="Button" BasedOn="{StaticResource IslandPillButton}">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+        <Setter Property="Foreground" Value="#FF0A0A0B" />
+        <Style Selector="^:pointerover /template/ Border#Fill">
+            <Setter Property="Background" Value="#FF4DA9FF" />
+        </Style>
+        <Style Selector="^:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Foreground" Value="#FF0A0A0B" />
+        </Style>
+        <Style Selector="^:pressed /template/ Border#Fill">
+            <Setter Property="Background" Value="#FF1F86E6" />
+        </Style>
+    </ControlTheme>
+
+    <!-- A segment of a small segmented control (Plan usage: Current / Weekly). -->
+    <ControlTheme x:Key="IslandSegmentButton" TargetType="Button" BasedOn="{StaticResource IslandPillButton}">
+        <Setter Property="Height" Value="24" />
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="Padding" Value="8,0" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+    </ControlTheme>
+
+    <!-- A full-width row button (repository list, agenda); hover shows a raised fill. -->
+    <ControlTheme x:Key="IslandRowButton" TargetType="Button" BasedOn="{StaticResource IslandPillButton}">
+        <Setter Property="Height" Value="36" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="FontWeight" Value="Normal" />
+        <Setter Property="MinWidth" Value="0" />
+    </ControlTheme>
+
+    <!-- A text input on the island (task capture, custom minutes). -->
+    <ControlTheme x:Key="IslandTextBox" TargetType="TextBox">
+        <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="CaretBrush" Value="{StaticResource AccentBrush}" />
+        <Setter Property="SelectionBrush" Value="#662997FF" />
+        <Setter Property="FontFamily" Value="{StaticResource TextFont}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Name="Fill" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}"
+                        BorderThickness="1" BorderBrush="Transparent">
+                    <Panel Margin="{TemplateBinding Padding}">
+                        <TextBlock Name="PART_Watermark" Text="{TemplateBinding Watermark}" Foreground="{StaticResource TextTertiaryBrush}"
+                                   VerticalAlignment="Center" IsHitTestVisible="False"
+                                   IsVisible="{TemplateBinding Text, Converter={x:Static StringConverters.IsNullOrEmpty}}"
+                                   FontFamily="{TemplateBinding FontFamily}" FontSize="{TemplateBinding FontSize}" />
+                        <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" VerticalAlignment="Center">
+                            <TextPresenter Name="PART_TextPresenter" Text="{TemplateBinding Text, Mode=TwoWay}" CaretIndex="{TemplateBinding CaretIndex}"
+                                           SelectionStart="{TemplateBinding SelectionStart}" SelectionEnd="{TemplateBinding SelectionEnd}"
+                                           TextAlignment="{TemplateBinding TextAlignment}" TextWrapping="NoWrap" PasswordChar="{TemplateBinding PasswordChar}"
+                                           RevealPassword="{TemplateBinding RevealPassword}" SelectionBrush="{TemplateBinding SelectionBrush}"
+                                           SelectionForegroundBrush="{TemplateBinding SelectionForegroundBrush}" CaretBrush="{TemplateBinding CaretBrush}" />
+                        </ScrollViewer>
+                    </Panel>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+        <Style Selector="^:focus /template/ Border#Fill">
+            <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+        </Style>
+    </ControlTheme>
+</ResourceDictionary>

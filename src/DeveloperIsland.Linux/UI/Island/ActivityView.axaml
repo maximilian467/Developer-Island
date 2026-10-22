@@ -1,0 +1,39 @@
+<!--
+    Medium state ("live activity"): 360 x 56 pill (radius 28).
+    Leading visual sits at a 10 DIP inset; album art uses radius 10; glyph discs are concentric circles.
+-->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DeveloperIsland.ViewModels"
+             xmlns:c="using:DeveloperIsland.UI.Components"
+             x:Class="DeveloperIsland.UI.Island.ActivityView"
+             x:DataType="vm:ActivityViewModel">
+    <Border Width="360" Height="56" Padding="10,0,20,0" Background="Transparent">
+        <Grid ColumnDefinitions="36,*,Auto" ColumnSpacing="12">
+            <Panel Width="36" Height="36" VerticalAlignment="Center">
+                <Border CornerRadius="18" Background="{StaticResource SurfaceRaisedBrush}" IsVisible="{Binding ShowGlyph}">
+                    <c:GlyphIcon Glyph="{Binding Glyph}" Size="15" Foreground="{Binding GlyphBrush}" />
+                </Border>
+                <Border CornerRadius="18" Background="{StaticResource SurfaceRaisedBrush}" IsVisible="{Binding ShowMark}">
+                    <c:ProviderMark Kind="{Binding Mark}" Width="15" Height="15" Foreground="{StaticResource TextPrimaryBrush}" />
+                </Border>
+                <Border CornerRadius="18" Background="{StaticResource SurfaceRaisedBrush}" IsVisible="{Binding ShowModuleIcon}">
+                    <c:ModuleIcon Module="{Binding ModuleIcon}" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <Border CornerRadius="10" ClipToBounds="True" IsVisible="{Binding ShowArt}">
+                    <Image Source="{Binding Art}" Stretch="UniformToFill" />
+                </Border>
+            </Panel>
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                <TextBlock Classes="label" Text="{Binding Title}" HorizontalAlignment="Left" />
+                <TextBlock Classes="caption" Text="{Binding Subtitle}" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <c:StableText AlignRight="True" Text="{Binding Trailing}" Foreground="{StaticResource TextSecondaryBrush}" MaxWidth="140" IsVisible="{Binding HasTrailing}" />
+                <c:PrivacyIndicators Source="{Binding Privacy}" VerticalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

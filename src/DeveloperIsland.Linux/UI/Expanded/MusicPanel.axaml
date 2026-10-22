@@ -1,0 +1,76 @@
+<!-- Deliberately reduced: artwork, title, artist, timeline, three controls. Not a music app. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DeveloperIsland.ViewModels"
+             xmlns:core="using:DeveloperIsland.Core.Audio"
+             xmlns:c="using:DeveloperIsland.UI.Components"
+             x:Class="DeveloperIsland.UI.Expanded.MusicPanel"
+             x:DataType="vm:MusicViewModel">
+    <Grid RowDefinitions="Auto,Auto" RowSpacing="18">
+        <StackPanel IsVisible="{Binding HasTrack}">
+            <Grid ColumnDefinitions="72,*" ColumnSpacing="16">
+                <Panel Width="72" Height="72">
+                    <Border CornerRadius="12" Background="{StaticResource SurfaceRaisedBrush}" IsVisible="{Binding HasNoArt}">
+                        <c:GlyphIcon Glyph="&#xE8D6;" Size="22" Foreground="{StaticResource TextSecondaryBrush}" />
+                    </Border>
+                    <Border CornerRadius="12" ClipToBounds="True" IsVisible="{Binding HasArt}">
+                        <Image Source="{Binding Art}" Stretch="UniformToFill" />
+                    </Border>
+                </Panel>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Classes="title" Text="{Binding Title}" />
+                    <TextBlock Classes="body" Text="{Binding Artist}" />
+                    <TextBlock Classes="fine" Text="{Binding SourceText}" Margin="0,4,0,0" IsVisible="{Binding HasSource}" />
+                </StackPanel>
+            </Grid>
+
+            <StackPanel Margin="0,18,0,0" IsVisible="{Binding HasTimeline}">
+                <c:MediaTimeline Name="Timeline" Progress="{Binding Progress}" CanSeek="{Binding CanSeek}" />
+                <Grid Margin="0,2,0,0">
+                    <TextBlock Classes="fine tnum" Text="{Binding PositionText}" />
+                    <TextBlock Classes="fine tnum" Text="{Binding DurationText}" HorizontalAlignment="Right" />
+                </Grid>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="24" HorizontalAlignment="Center" Margin="0,10,0,0">
+                <Button Theme="{StaticResource IslandIconButton}" Width="44" Height="44" CornerRadius="22"
+                        IsEnabled="{Binding CanPrevious}" Click="OnPrevious" ToolTip.Tip="Previous track">
+                    <c:GlyphIcon Glyph="&#xE892;" Size="16" />
+                </Button>
+                <Button Name="PlayPauseButton" Theme="{StaticResource IslandPrimaryIconButton}"
+                        IsEnabled="{Binding CanPlayPause}" Click="OnPlayPause" ToolTip.Tip="{Binding PlayPauseLabel}">
+                    <c:GlyphIcon Glyph="{Binding PlayPauseGlyph}" Size="20" />
+                </Button>
+                <Button Theme="{StaticResource IslandIconButton}" Width="44" Height="44" CornerRadius="22"
+                        IsEnabled="{Binding CanNext}" Click="OnNext" ToolTip.Tip="Next track">
+                    <c:GlyphIcon Glyph="&#xE893;" Size="16" />
+                </Button>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Empty state -->
+        <Grid IsVisible="{Binding HasNoTrack}" ColumnDefinitions="48,*" ColumnSpacing="16" Margin="0,4,0,8">
+            <Border Width="48" Height="48" CornerRadius="24" Background="{StaticResource SurfaceRaisedBrush}" VerticalAlignment="Top">
+                <c:GlyphIcon Glyph="&#xE8D6;" Size="18" Foreground="{StaticResource TextSecondaryBrush}" />
+            </Border>
+            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                <TextBlock Classes="title" Text="Nothing playing" />
+                <TextBlock Classes="caption wrap" Text="Play something in Spotify, a browser or any media app. It shows up here." />
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Grid.Row="1" Spacing="8">
+            <TextBlock Classes="label" Text="Audio output" HorizontalAlignment="Left" />
+            <ComboBox Name="Outputs" ItemsSource="{Binding AudioOutput.Devices}" HorizontalAlignment="Stretch"
+                      SelectedValueBinding="{Binding Id, x:DataType=core:AudioOutputDevice}"
+                      SelectedValue="{Binding AudioOutput.SelectedDeviceId, Mode=TwoWay}"
+                      DisplayMemberBinding="{Binding Name, x:DataType=core:AudioOutputDevice}"
+                      IsEnabled="{Binding AudioOutput.CanRefresh}" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Theme="{StaticResource IslandPillButton}" Content="Switch output" Click="OnSwitchAudioOutput" IsEnabled="{Binding AudioOutput.CanSwitch}" />
+                <Button Theme="{StaticResource IslandPillButton}" Content="Refresh" Click="OnRefreshAudioOutputs" IsEnabled="{Binding AudioOutput.CanRefresh}" />
+            </StackPanel>
+            <TextBlock Classes="fine wrap" Text="{Binding AudioOutput.StatusText}" />
+        </StackPanel>
+    </Grid>
+</UserControl>

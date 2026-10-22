@@ -1,0 +1,78 @@
+<!-- Compact capsule: 36 DIP tall, width follows content. Time-critical signals (focus, an awake session, next event, system alert, failing CI), then the featured module, or the classic summary (AI usage, music art) when nothing is featured. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DeveloperIsland.ViewModels"
+             xmlns:c="using:DeveloperIsland.UI.Components"
+             x:Class="DeveloperIsland.UI.Island.CompactView"
+             x:DataType="vm:IslandViewModel">
+    <Panel Height="36" MinWidth="112" Background="Transparent">
+        <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16,0">
+
+            <StackPanel Orientation="Horizontal" Spacing="7" IsVisible="{Binding CompactShowFocus}">
+                <Ellipse Width="6" Height="6" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                <c:StableText Text="{Binding Focus.RemainingText}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding CompactShowAwake}">
+                <c:ModuleIcon Module="Awake" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                <c:StableText Text="{Binding Awake.CompactText}" IsVisible="{Binding Awake.IsTimed}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding CompactShowCalendar}">
+                <c:GlyphIcon Glyph="&#xE787;" Size="12" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                <c:StableText Text="{Binding Calendar.CompactText}" MaxWidth="170" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding CompactShowSystem}">
+                <c:GlyphIcon Glyph="{Binding System.CompactGlyph}" Size="12" Foreground="{StaticResource CriticalBrush}" VerticalAlignment="Center" />
+                <c:StableText Text="{Binding System.CompactText}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="7" IsVisible="{Binding CompactShowGitHub}">
+                <Ellipse Width="6" Height="6" Fill="{StaticResource CriticalBrush}" VerticalAlignment="Center" />
+                <TextBlock Classes="label" Text="{Binding GitHub.CompactText}" />
+            </StackPanel>
+
+            <!-- Featured module (a favorite, or the module opened last). -->
+            <StackPanel Name="Featured" Orientation="Horizontal" Spacing="7" IsVisible="{Binding IsFeaturing}">
+                <Panel Width="20" Height="20" VerticalAlignment="Center">
+                    <Ellipse Width="6" Height="6" Fill="{StaticResource AccentBrush}" IsVisible="{Binding CompactPrimaryShowsDot}" />
+                    <Border CornerRadius="6" ClipToBounds="True" IsVisible="{Binding CompactPrimaryShowsArt}">
+                        <Image Source="{Binding Music.Art}" Stretch="UniformToFill" />
+                    </Border>
+                    <Panel IsVisible="{Binding CompactPrimaryShowsIcon}">
+                        <c:ModuleIcon Name="FeaturedIcon" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Panel>
+                </Panel>
+                <TextBlock Classes="label" Text="{Binding CompactPrimaryLabel}" Foreground="{StaticResource TextSecondaryBrush}" IsVisible="{Binding HasCompactPrimaryLabel}" />
+                <!-- Width-stable: "CPU 9%" and "CPU 100%" take the same slot; long titles end in an ellipsis. -->
+                <c:StableText Text="{Binding CompactPrimaryValue}" MaxWidth="{Binding CompactPrimaryMaxWidth}" IsVisible="{Binding HasCompactPrimaryValue}" />
+                <TextBlock Classes="label" Text="·" Foreground="{StaticResource TextTertiaryBrush}" IsVisible="{Binding HasCompactPrimaryDetail}" />
+                <TextBlock Classes="label" Text="{Binding CompactPrimaryDetail}" Foreground="{StaticResource TextSecondaryBrush}" IsVisible="{Binding HasCompactPrimaryDetail}" />
+            </StackPanel>
+
+            <!-- Classic summary when nothing is featured. -->
+            <StackPanel Orientation="Horizontal" Spacing="5" IsVisible="{Binding CompactShowClaude}">
+                <TextBlock Classes="label" Text="Claude" Foreground="{StaticResource TextSecondaryBrush}" />
+                <c:StableText Text="{Binding Usage.Claude.CompactValue}" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="5" IsVisible="{Binding CompactShowCodex}">
+                <TextBlock Classes="label" Text="Codex" Foreground="{StaticResource TextSecondaryBrush}" />
+                <c:StableText Text="{Binding Usage.Codex.CompactValue}" />
+            </StackPanel>
+
+            <Panel Width="20" Height="20" VerticalAlignment="Center" IsVisible="{Binding CompactShowMusic}">
+                <Border CornerRadius="6" Background="{StaticResource SurfaceRaisedBrush}" IsVisible="{Binding Music.HasNoArt}">
+                    <c:GlyphIcon Glyph="&#xE8D6;" Size="11" Foreground="{StaticResource TextPrimaryBrush}" />
+                </Border>
+                <Border CornerRadius="6" ClipToBounds="True" IsVisible="{Binding Music.HasArt}">
+                    <Image Source="{Binding Music.Art}" Stretch="UniformToFill" />
+                </Border>
+            </Panel>
+
+            <!-- Camera and microphone in use: always last, whatever the capsule shows. -->
+            <c:PrivacyIndicators Source="{Binding Privacy}" VerticalAlignment="Center" />
+        </StackPanel>
+    </Panel>
+</UserControl>

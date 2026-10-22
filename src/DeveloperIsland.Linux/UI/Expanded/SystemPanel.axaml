@@ -1,0 +1,71 @@
+<!--
+    System: CPU, memory, GPU and battery as quiet tiles with a 60-second history, and only the
+    sensors this device has (temperatures, fans) as fine rows below. Hardware that does not exist
+    is not shown at all; the tiles re-flow (up to three in a row, four as two by two).
+-->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DeveloperIsland.ViewModels"
+             xmlns:local="using:DeveloperIsland.UI.Expanded"
+             xmlns:c="using:DeveloperIsland.UI.Components"
+             x:Class="DeveloperIsland.UI.Expanded.SystemPanel"
+             x:DataType="vm:SystemViewModel">
+    <Panel>
+        <local:ModuleStateView IsVisible="{Binding ShowState}" />
+
+        <StackPanel IsVisible="{Binding IsReady}">
+            <Grid Name="Tiles" ColumnSpacing="8" RowSpacing="8">
+                <Border Name="CpuTile" Classes="tile">
+                    <StackPanel>
+                        <TextBlock Classes="fine" Text="CPU" />
+                        <TextBlock Classes="figure" Text="{Binding CpuFigure}" Margin="0,2,0,0" />
+                        <c:Sparkline Name="CpuSpark" Margin="0,6,0,0" />
+                        <c:Meter Name="CpuBar" Fraction="{Binding CpuFraction}" Margin="0,4,0,0" />
+                        <TextBlock Name="CpuCaptionText" Classes="fine" Text="{Binding CpuCaption}" Margin="0,6,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <Border Name="MemoryTile" Classes="tile">
+                    <StackPanel>
+                        <TextBlock Classes="fine" Text="Memory" />
+                        <TextBlock Classes="figure" Text="{Binding MemoryFigure}" Margin="0,2,0,0" />
+                        <c:Sparkline Name="MemorySpark" Margin="0,6,0,0" />
+                        <c:Meter Name="MemoryBar" Fraction="{Binding MemoryFraction}" Margin="0,4,0,0" />
+                        <TextBlock Classes="fine" Text="{Binding MemoryDetail}" Margin="0,6,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <Border Name="GpuTile" Classes="tile" IsVisible="False">
+                    <StackPanel>
+                        <TextBlock Classes="fine" Text="GPU" />
+                        <TextBlock Classes="figure" Text="{Binding GpuFigure}" Margin="0,2,0,0" />
+                        <c:Sparkline Name="GpuSpark" Margin="0,6,0,0" />
+                        <c:Meter Name="GpuBar" Fraction="{Binding GpuFraction}" Margin="0,4,0,0" />
+                        <TextBlock Name="GpuCaptionText" Classes="fine" Text="{Binding GpuCaption}" Margin="0,6,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <Border Name="BatteryTile" Classes="tile" IsVisible="False">
+                    <StackPanel>
+                        <TextBlock Classes="fine" Text="Battery" />
+                        <TextBlock Classes="figure" Text="{Binding BatteryFigure}" Margin="0,2,0,0" />
+                        <c:Meter Name="BatteryBar" Fraction="{Binding BatteryFraction}" Margin="0,8,0,0" />
+                        <TextBlock Classes="fine" Text="{Binding BatteryDetail}" Margin="0,6,0,0" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <ItemsControl Name="Sensors" ItemsSource="{Binding SensorRows}" Margin="2,12,2,0" IsVisible="{Binding HasSensorRows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SensorRow">
+                        <Grid Height="22">
+                            <TextBlock Classes="fine" Text="{Binding Label}" VerticalAlignment="Center" />
+                            <TextBlock Classes="caption" Text="{Binding Value}" Foreground="{Binding Level, Converter={x:Static c:LevelToTextBrush.Primary}}"
+                                       HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </Panel>
+</UserControl>

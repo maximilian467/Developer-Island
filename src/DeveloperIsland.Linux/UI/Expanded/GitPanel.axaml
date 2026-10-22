@@ -1,0 +1,55 @@
+<!-- Git: the active project's branch, uncommitted changes, sync state and last commit; a few recent repositories below. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DeveloperIsland.ViewModels"
+             xmlns:local="using:DeveloperIsland.UI.Expanded"
+             xmlns:c="using:DeveloperIsland.UI.Components"
+             x:Class="DeveloperIsland.UI.Expanded.GitPanel"
+             x:DataType="vm:GitViewModel">
+    <Panel>
+        <local:ModuleStateView IsVisible="{Binding ShowState}" />
+
+        <StackPanel IsVisible="{Binding IsReady}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock Classes="title" Text="{Binding RepoName}" VerticalAlignment="Center" />
+                <Border Grid.Column="1" Height="24" Padding="10,0" CornerRadius="12" Background="{StaticResource SurfaceRaisedBrush}" MaxWidth="180">
+                    <TextBlock Classes="caption" Text="{Binding BranchText}" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
+                </Border>
+            </Grid>
+
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
+                <TextBlock Classes="figure" Text="{Binding ChangesFigure}" />
+                <TextBlock Classes="caption" Text="{Binding ChangesCaption}" VerticalAlignment="Bottom" Margin="0,0,0,5" />
+            </StackPanel>
+            <TextBlock Classes="fine" Text="{Binding ChangesDetail}" Margin="0,1,0,0" />
+
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
+                <c:GlyphIcon Glyph="{Binding SyncGlyph}" Size="12" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                <TextBlock Classes="caption" Text="{Binding SyncText}" />
+            </StackPanel>
+
+            <Grid Margin="0,6,0,0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                <c:GlyphIcon Glyph="&#xE81C;" Size="12" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                <TextBlock Classes="caption" Grid.Column="1" Text="{Binding LastCommitSubject}" Foreground="{StaticResource TextPrimaryBrush}" />
+                <TextBlock Classes="fine" Grid.Column="2" Text="{Binding LastCommitAgo}" VerticalAlignment="Center" />
+            </Grid>
+
+            <StackPanel IsVisible="{Binding HasOthers}" Margin="0,14,0,0">
+                <Rectangle Height="1" Fill="{StaticResource DividerBrush}" Margin="0,0,0,6" />
+                <ItemsControl ItemsSource="{Binding Others}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:GitRepoRow">
+                            <Button Theme="{StaticResource IslandRowButton}" Margin="-10,0" Tag="{Binding Root}" Click="OnSelectRepo">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                    <TextBlock Classes="caption" Text="{Binding Name}" Foreground="{StaticResource TextPrimaryBrush}" MaxWidth="170" VerticalAlignment="Center" />
+                                    <TextBlock Classes="fine" Grid.Column="1" Text="{Binding Branch}" VerticalAlignment="Center" />
+                                    <TextBlock Classes="fine" Grid.Column="2" Text="{Binding Changes}" VerticalAlignment="Center" />
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </StackPanel>
+    </Panel>
+</UserControl>
