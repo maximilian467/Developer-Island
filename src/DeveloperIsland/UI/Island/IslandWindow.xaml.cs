@@ -51,6 +51,7 @@ public sealed partial class IslandWindow : Window
     private IslandAnchor _anchor = IslandAnchor.TopCenter;
     private (MonitorInfo Monitor, double OffsetX, double OffsetY)? _placement;
     private readonly DpiChangeHook _dpiHook;
+    private readonly ClearBackgroundHook _backgroundHook;
     private FrameworkElement? _current;
     private Rect _regionRect;
     private (int L, int T, int R, int B) _appliedRegion;
@@ -84,6 +85,7 @@ public sealed partial class IslandWindow : Window
         _hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         IslandWindowChrome.Apply(_hwnd, AppWindow, alwaysOnTop);
         _dpiHook = new DpiChangeHook(_hwnd, RectForScale);
+        _backgroundHook = new ClearBackgroundHook(_hwnd);
 
         // Nothing is visible until the first layout sets the real region; this avoids a black
         // frame on the first composition pass.
@@ -266,6 +268,7 @@ public sealed partial class IslandWindow : Window
     {
         _exiting = true;
         _dpiHook.Dispose();
+        _backgroundHook.Dispose();
         _outsideClicks.Stop();
         _mediaTicker.Stop();
         StopDropTarget();
