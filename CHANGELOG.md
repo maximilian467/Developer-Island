@@ -9,6 +9,10 @@ All notable changes to Developer Island are documented here. The format follows 
 - **Token metric** in Settings, Modules: show **fresh** tokens (input, cache writes and output; the default, as before) or **all processed** tokens including cache reads in the capsule, peek, tooltips, usage graph and day inspector, for Claude Code and Codex alike. Every figure is labelled ("fresh tokens", "tokens incl. cache reads"); the breakdown still lists every category, and each API response still counts once.
 - Choose the active Windows playback output from the Music panel.
 
+### Fixed
+
+- In Windows light mode, the island no longer sits in a white rectangle: the window background stays transparent whatever the app theme ([#11](https://github.com/maximilian467/Developer-Island/issues/11)).
+
 ## [0.3.0] - 2026-10-15
 
 ### Added
