@@ -4,6 +4,7 @@ using DeveloperIsland.Core.Git;
 using DeveloperIsland.Core.Modules;
 using DeveloperIsland.Core.Plan;
 using DeveloperIsland.Core.Settings;
+using DeveloperIsland.Core.Wsl;
 using DeveloperIsland.UI.Components;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -200,7 +201,8 @@ public sealed partial class SettingsWindow
                 return;
             }
 
-            var root = GitStatusParser.FindRepositoryRoot(folder.Path);
+            // A folder inside WSL is running now (the picker just showed it), so looking for .git is fine.
+            var root = GitStatusParser.FindRepositoryRoot(folder.Path) is { } found ? WslPath.Normalize(found) : null;
             if (root is null)
             {
                 await ShowMessageAsync("Not a Git repository", "Choose the folder of a Git repository (it contains a .git folder), or a folder inside one.");
@@ -218,6 +220,67 @@ public sealed partial class SettingsWindow
         catch (Exception ex)
         {
             Log.Warn("settings", "Repository could not be added", new { error = ex.GetType().Name });
+        }
+    }
+
+    // WSL ------------------------------------------------------------------------------------------
+
+    /// <summary>Reads the distro list (registry; starts nothing), then shows it.</summary>
+    private async Task DiscoverWslAsync()
+    {
+        try
+        {
+            await _wsl.DiscoverAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Debug("settings", "WSL distros not listed", new { error = ex.GetType().Name });
+        }
+
+        _wslDiscovered = true;
+        OnWslChanged();
+    }
+
+    /// <summary>One row per distro under Include WSL; each can be left out. Off: listed, but switched off.</summary>
+    private void BuildWslRows(AppSettings s)
+    {
+        WslRows.Children.Clear();
+        var distros = _wsl.Distros;
+        if (distros.Count == 0)
+        {
+            WslRows.Children.Add(Divider());
+            var text = !_wslDiscovered ? "Looking for WSL distros…"
+                : _wsl.Executable is null && !_isDemo ? "WSL is not installed on this PC."
+                : "No WSL distros found.";
+            var row = new Grid { Style = Res("SettingsRowStyle") };
+            row.Children.Add(new TextBlock { Text = text, Style = Res("SettingsRowDescriptionStyle") });
+            WslRows.Children.Add(row);
+            return;
+        }
+
+        foreach (var distro in distros)
+        {
+            WslRows.Children.Add(Divider());
+            var row = new Grid { Style = Res("SettingsRowStyle"), ColumnSpacing = 12 };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            text.Children.Add(new TextBlock { Text = distro.Name, Style = Res("SettingsRowTitleStyle") });
+            text.Children.Add(new TextBlock { Text = (distro.IsDefault ? "Default distro, " : string.Empty) + $"WSL {distro.Version}", Style = Res("SettingsRowDescriptionStyle") });
+            row.Children.Add(text);
+
+            var toggle = new ToggleSwitch
+            {
+                Style = Res("SettingsToggleStyle"),
+                IsOn = s.WslEnabled && !s.WslExcludedDistros.Contains(distro.Name, StringComparer.OrdinalIgnoreCase),
+                IsEnabled = s.WslEnabled,
+                Tag = "Distro:" + distro.Name,
+            };
+            AutomationProperties.SetName(toggle, $"Include {distro.Name}");
+            toggle.Toggled += OnToggle;
+            Grid.SetColumn(toggle, 1);
+            row.Children.Add(toggle);
+            WslRows.Children.Add(row);
         }
     }
 

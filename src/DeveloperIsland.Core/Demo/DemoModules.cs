@@ -3,6 +3,7 @@ using DeveloperIsland.Core.Git;
 using DeveloperIsland.Core.GitHub;
 using DeveloperIsland.Core.SystemInfo;
 using DeveloperIsland.Core.Tasks;
+using DeveloperIsland.Core.Wsl;
 
 namespace DeveloperIsland.Core.Demo;
 
@@ -29,6 +30,15 @@ public static class DemoModules
         },
         new GitRepoStatus { Root = @"C:\code\robotics-lab", Branch = "main", HasUpstream = true, UpdatedAt = now },
         new GitRepoStatus { Root = @"C:\code\thesis", Branch = "draft", HasUpstream = true, Modified = 5, Staged = 2, UpdatedAt = now },
+        new GitRepoStatus { Root = @"\\wsl.localhost\Ubuntu-24.04\home\dev\api-server", Branch = "main", HasUpstream = true, Behind = 1, Modified = 1, UpdatedAt = now },
+    ];
+
+    /// <summary>Sample distros for the Include WSL setting (demo mode never reads the registry or starts wsl.exe).</summary>
+    public static IReadOnlyList<WslDistro> WslDistros() =>
+    [
+        new WslDistro("Ubuntu-24.04", IsDefault: true, Version: 2, DefaultUid: 1000),
+        new WslDistro("Debian", IsDefault: false, Version: 2, DefaultUid: 1000),
+        new WslDistro("docker-desktop", IsDefault: false, Version: 2, DefaultUid: 0),
     ];
 
     public static GitHubSnapshot GitHub(DateTimeOffset now) => new()

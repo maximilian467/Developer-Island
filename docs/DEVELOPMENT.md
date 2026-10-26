@@ -98,6 +98,7 @@ The tests cover:
 - module order and settings persistence, including corrupt-file recovery
 - monitor placement, provider error isolation, SQLite persistence and display formatting
 - foreground auto-hide under fast app switching (latest event wins), camera and microphone indicators, compact width reserves, hardware levels and the usage-graph layout
+- WSL without WSL installed: path translation both ways, `wsl.exe` list output (UTF-16, localized, default marker), `/etc/passwd` homes, git command lines, stopped distros and polling of WSL folders and repositories. With `DI_WSL_DISTRO` set to a running distro that has git, one more test reads a real repository and a Claude Code folder under `/tmp` inside it (skipped otherwise; it never starts a distro)
 
 ## Design
 

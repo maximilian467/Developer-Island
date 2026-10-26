@@ -17,6 +17,7 @@ using DeveloperIsland.Core.Providers.Codex;
 using DeveloperIsland.Core.Settings;
 using DeveloperIsland.Core.Storage;
 using DeveloperIsland.Core.Usage;
+using DeveloperIsland.Core.Wsl;
 using DeveloperIsland.Platform.Media;
 using DeveloperIsland.Platform.Audio;
 using DeveloperIsland.Platform.Monitors;
@@ -60,6 +61,7 @@ internal sealed class AppHost : IDisposable
     private SettingsWindow? _settingsWindow;
     private ModuleHost _modules = null!;
     private ISecretStore _secrets = null!;
+    private WslService _wsl = null!;
     private UiStateStore _uiState = null!;
     private DispatcherQueueTimer? _rotation;
     private PlanUsageService? _plan;
@@ -132,7 +134,10 @@ internal sealed class AppHost : IDisposable
         _secrets = _options.IsDemo ? new MemorySecretStore() : new CredentialManagerSecretStore();
         MigrateCalendarLinks();
         settings = _settings.Current;
-        _modules = new ModuleHost(_dispatcher, modules, _viewModel, _settings, _options.IsDemo, _secrets) { OpenSettings = OpenSettings };
+        // Demo mode shows sample distros and never runs wsl.exe.
+        _wsl = _options.IsDemo ? new WslService(findWsl: () => null, readRegistry: DemoModules.WslDistros) : new WslService();
+        _wsl.Configure(settings.WslEnabled, settings.WslExcludedDistros);
+        _modules = new ModuleHost(_dispatcher, modules, _viewModel, _settings, _options.IsDemo, _secrets, _wsl) { OpenSettings = OpenSettings };
         ApplyModuleFlags(settings);
         _modules.Apply(settings);
         _uiState = new UiStateStore(_options.IsDemo ? null : AppPaths.UiState);
@@ -329,6 +334,19 @@ internal sealed class AppHost : IDisposable
             await shot("40-state-" + name);
         }
 
+        // Repositories inside WSL: a stopped distro, a distro without git, and a WSL repository next to a stopped one.
+        const string WslRepo = @"\\wsl.localhost\Ubuntu-24.04\home\dev\api-server";
+        _viewModel.SelectedTab = IslandTab.Git;
+        foreach (var (failure, name) in new[] { (Core.Git.GitReadFailure.DistroStopped, "git-wsl-stopped"), (Core.Git.GitReadFailure.GitMissingInDistro, "git-wsl-no-git") })
+        {
+            _viewModel.Git.Update(Core.Git.GitService.FailureStatus(WslRepo, failure), [], now);
+            await shot("40-state-" + name);
+        }
+
+        var wslRepositories = DemoModules.Repositories(now).OrderByDescending(r => Core.Wsl.WslPath.IsWslPath(r.Root)).ToList();
+        _viewModel.Git.Update(Core.Modules.ModuleStatus.Ready, wslRepositories, now, Core.Git.GitService.StoppedNote(["Debian"]));
+        await shot("41-git-wsl");
+
         _state.Dismiss();
         await Task.Delay(600);
 
@@ -353,7 +371,7 @@ internal sealed class AppHost : IDisposable
         await TokenMetricSnapshotsAsync(shot);
         await DropSnapshotsAsync(shot);
 
-        await new SettingsWindow(_settings, _options.IsDemo, () => false, _secrets).SaveSnapshotsAsync(_options.SnapshotDirectory!);
+        await new SettingsWindow(_settings, _options.IsDemo, () => false, _secrets, _wsl).SaveSnapshotsAsync(_options.SnapshotDirectory!);
     }
 
     /// <summary>The usage states with the "All processed" token metric: the larger figure always names its cache reads.</summary>
@@ -859,6 +877,7 @@ internal sealed class AppHost : IDisposable
         // A changed battery floor applies at once.
         CheckAwakeBattery();
 
+        _wsl.Configure(settings.WslEnabled, settings.WslExcludedDistros);
         if (!_options.IsDemo)
         {
             _ = SyncProvidersAsync(settings);
@@ -979,15 +998,35 @@ internal sealed class AppHost : IDisposable
         {
             if (enabled && !running.Contains(kind))
             {
-                IAiUsageProvider provider = kind == AiProviderKind.Claude
+                LogFileUsageProvider provider = kind == AiProviderKind.Claude
                     ? new ClaudeUsageProvider(ClaudeUsageProvider.DefaultRoot(), _history, _database)
                     : new CodexUsageProvider(CodexUsageProvider.DefaultRoot(), _history, _database);
+                ApplyWsl(provider, settings);
                 await _providers.AddAsync(provider, _shutdown.Token);
             }
             else if (!enabled && running.Contains(kind))
             {
                 _providers.Remove(kind);
             }
+        }
+
+        foreach (var provider in _providers.Providers.OfType<LogFileUsageProvider>())
+        {
+            ApplyWsl(provider, settings);
+        }
+    }
+
+    /// <summary>
+    /// With Include WSL on, a provider also polls the tool's folders inside running distros; off, it
+    /// reads nothing there and runs no timer for it.
+    /// </summary>
+    private void ApplyWsl(LogFileUsageProvider provider, AppSettings settings)
+    {
+        var folder = provider.Kind == AiProviderKind.Claude ? ClaudeUsageProvider.HomeFolderName : CodexUsageProvider.HomeFolderName;
+        provider.SetWslFolders(settings.WslEnabled ? ct => _wsl.GetToolFoldersAsync(folder, ct) : null);
+        if (settings.WslEnabled && _wsl.Distros.Count == 0)
+        {
+            _ = _wsl.DiscoverAsync();
         }
     }
 
@@ -1239,7 +1278,7 @@ internal sealed class AppHost : IDisposable
     {
         if (_settingsWindow is null)
         {
-            _settingsWindow = new SettingsWindow(_settings, _options.IsDemo, () => _hotkey?.IsInUse ?? false, _secrets);
+            _settingsWindow = new SettingsWindow(_settings, _options.IsDemo, () => _hotkey?.IsInUse ?? false, _secrets, _wsl);
             _settingsWindow.Closed += (_, _) => _settingsWindow = null;
             _settingsWindow.QuitRequested += OnQuitFromSettings;
         }

@@ -25,7 +25,10 @@ public sealed class ClaudeUsageProvider : LogFileUsageProvider
     {
     }
 
-    protected override string LogDirectory => Path.Combine(RootDirectory, "projects");
+    /// <summary>Claude Code's folder in a Linux home, for copies inside WSL.</summary>
+    public const string HomeFolderName = ".claude";
+
+    protected override string LogFolderName => "projects";
 
     private string SessionsDirectory => Path.Combine(RootDirectory, "sessions");
 

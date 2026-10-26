@@ -25,7 +25,10 @@ public sealed class CodexUsageProvider : LogFileUsageProvider
     {
     }
 
-    protected override string LogDirectory => Path.Combine(RootDirectory, "sessions");
+    /// <summary>Codex's folder in a Linux home, for copies inside WSL.</summary>
+    public const string HomeFolderName = ".codex";
+
+    protected override string LogFolderName => "sessions";
 
     public static string DefaultRoot()
     {

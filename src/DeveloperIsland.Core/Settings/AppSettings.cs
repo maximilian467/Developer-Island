@@ -128,6 +128,15 @@ public sealed class AppSettings
     public List<string> GitRecentRepositories { get; set; } = [];
 
     /// <summary>
+    /// Read Claude Code, Codex and Git inside WSL distros too. Off by default: reading a distro's
+    /// files would start its VM, so this happens only when asked (and only for running distros).
+    /// </summary>
+    public bool WslEnabled { get; set; }
+
+    /// <summary>Distros switched off under Include WSL; distros found later are included.</summary>
+    public List<string> WslExcludedDistros { get; set; } = [];
+
+    /// <summary>
     /// Calendar links or .ics paths saved in plain text by earlier versions. Moved into
     /// <see cref="CalendarFeeds"/> (links into the secret store) on start; empty afterwards.
     /// </summary>
@@ -242,6 +251,7 @@ public sealed class AppSettings
         copy.FavoriteModules = [.. FavoriteModules];
         copy.GitRepositories = [.. GitRepositories];
         copy.GitRecentRepositories = [.. GitRecentRepositories];
+        copy.WslExcludedDistros = [.. WslExcludedDistros];
         copy.CalendarSources = [.. CalendarSources];
         copy.CalendarFeeds = CalendarFeeds.Select(f => f.Clone()).ToList();
         return copy;

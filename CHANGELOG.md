@@ -8,6 +8,15 @@ All notable changes to Developer Island are documented here. The format follows 
 
 - **Token metric** in Settings, Modules: show **fresh** tokens (input, cache writes and output; the default, as before) or **all processed** tokens including cache reads in the capsule, peek, tooltips, usage graph and day inspector, for Claude Code and Codex alike. Every figure is labelled ("fresh tokens", "tokens incl. cache reads"); the breakdown still lists every category, and each API response still counts once.
 - Choose the active Windows playback output from the Music panel.
+- **WSL support** ([#9](https://github.com/maximilian467/Developer-Island/issues/9)). Settings, Modules, **Include WSL** (off by default) lists the installed distros (read from the registry, so nothing starts) and adds, for each one left on:
+  - Claude Code and Codex usage from `~/.claude` and `~/.codex` inside the distro, counted into the same totals. The WSL share sends no reliable change notifications, so these folders are polled (recent files every 5 s, the whole folder every minute); every response is still counted once.
+  - Their project folders: Linux paths (`/home/you/proj`) become `\\wsl.localhost\<distro>\home\you\proj` for the Git module; `/mnt/c/...` becomes `C:\...` again.
+  - Git for repositories inside WSL runs the distro's own git through `wsl.exe` (no "dubious ownership", no slow share), re-read every 10 s while the Git panel is open. `\\wsl$\...` and `\\wsl.localhost\...` repositories can also be added in Settings, Git repositories.
+  - Only running distros are read: Developer Island never starts one. A stopped distro, a distro without git and a PC without WSL each get their own message in the Git panel.
+
+### Fixed
+
+- The first usage of a day kept no working folder until the next reply, so the Git module could miss the session's repository.
 
 ## [0.3.0] - 2026-10-15
 

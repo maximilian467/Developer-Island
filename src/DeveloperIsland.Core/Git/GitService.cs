@@ -1,7 +1,17 @@
 using DeveloperIsland.Core.Diagnostics;
 using DeveloperIsland.Core.Modules;
+using DeveloperIsland.Core.Wsl;
 
 namespace DeveloperIsland.Core.Git;
+
+/// <summary>Why a repository has no status.</summary>
+public enum GitReadFailure
+{
+    Unreadable,
+    WslMissing,
+    DistroStopped,
+    GitMissingInDistro,
+}
 
 /// <summary>
 /// Local Git status for a handful of known repositories: the ones added in Settings and the project
@@ -14,6 +24,10 @@ namespace DeveloperIsland.Core.Git;
 /// no Git data, so a hidden panel costs no git processes.</item>
 /// <item>Reads use <c>--no-optional-locks</c>, so git never rewrites the index on our behalf (which
 /// would also retrigger the watcher).</item>
+/// <item>Repositories inside WSL (<c>\\wsl.localhost\…</c>) run the distro's git through
+/// <c>wsl.exe</c> and only while the distro runs, so reading never boots one. The WSL share sends no
+/// reliable change notifications, so instead of a watcher they are re-read every 10 s while the panel
+/// is on screen.</item>
 /// </list>
 /// </summary>
 public sealed class GitService : IDisposable
@@ -25,25 +39,35 @@ public sealed class GitService : IDisposable
 
     private readonly Func<string?> _findGit;
     private readonly TimeProvider _time;
+    private readonly IWslRuntime? _wsl;
+    private readonly Func<string, IReadOnlyList<string>, TimeSpan, Task<ProcessResult>> _run;
     private readonly object _gate = new();
     private readonly SemaphoreSlim _readLock = new(1, 1);
     private readonly Dictionary<string, GitRepoStatus> _status = new(PathComparer);
-    private readonly Dictionary<string, string> _errors = new(PathComparer);
+    private readonly Dictionary<string, GitReadFailure> _errors = new(PathComparer);
     private readonly Dictionary<string, FileSystemWatcher> _watchers = new(PathComparer);
     private readonly Dictionary<string, CancellationTokenSource> _pending = new(PathComparer);
     private readonly Dictionary<string, DateTimeOffset> _lastRead = new(PathComparer);
+    private readonly Dictionary<string, string?> _wslRoots = new(PathComparer);
     private List<string> _configured = [];
     private List<string> _recent = [];
     private string? _active;
     private string? _git;
+    private ITimer? _wslPoll;
     private bool _enabled;
     private bool _visible;
     private bool _disposed;
 
-    public GitService(Func<string?>? findGit = null, TimeProvider? time = null)
+    public GitService(
+        Func<string?>? findGit = null,
+        TimeProvider? time = null,
+        IWslRuntime? wsl = null,
+        Func<string, IReadOnlyList<string>, TimeSpan, Task<ProcessResult>>? run = null)
     {
         _findGit = findGit ?? (() => ProcessRunner.FindExecutable("git", @"%ProgramFiles%\Git\cmd\git.exe"));
         _time = time ?? TimeProvider.System;
+        _wsl = wsl;
+        _run = run ?? ((file, args, timeout) => ProcessRunner.RunAsync(file, args, timeout: timeout));
     }
 
     /// <summary>Raised on a background thread when any repository's status changed.</summary>
@@ -63,12 +87,12 @@ public sealed class GitService : IDisposable
                     return ModuleStatus.Disabled;
                 }
 
-                if (_git is null)
+                var roots = ReadableRootsLocked();
+                if (_git is null && roots.Count == 0)
                 {
                     return new ModuleStatus(ModuleState.Unavailable, "Git is not installed. Install Git for Windows to see branches and changes here.");
                 }
 
-                var roots = RootsLocked();
                 if (roots.Count == 0)
                 {
                     return new ModuleStatus(ModuleState.Empty, "Start Claude Code or Codex in a repository, or add one in Settings.");
@@ -79,9 +103,27 @@ public sealed class GitService : IDisposable
                     return ModuleStatus.Ready;
                 }
 
-                return roots.All(_errors.ContainsKey)
-                    ? new ModuleStatus(ModuleState.Error, "Git could not read these repositories.")
-                    : ModuleStatus.Loading;
+                return roots.All(_errors.ContainsKey) ? FailureStatus(roots[0], _errors[roots[0]]) : ModuleStatus.Loading;
+            }
+        }
+    }
+
+    /// <summary>
+    /// A line under the panel's content when some repositories are missing for a known reason (a
+    /// stopped distro); null otherwise.
+    /// </summary>
+    public string? Note
+    {
+        get
+        {
+            lock (_gate)
+            {
+                var stopped = ReadableRootsLocked()
+                    .Where(r => _errors.TryGetValue(r, out var failure) && failure == GitReadFailure.DistroStopped)
+                    .Select(r => WslPath.DistroOf(r)!)
+                    .Distinct(PathComparer)
+                    .ToList();
+                return StoppedNote(stopped);
             }
         }
     }
@@ -119,13 +161,13 @@ public sealed class GitService : IDisposable
         {
             _enabled = enabled && !_disposed;
             _git = _enabled ? _findGit() : null;
-            _configured = Distinct(configured.Select(GitStatusParser.FindRepositoryRoot)).ToList();
+            _configured = Distinct(configured.Select(KnownRoot)).ToList();
             if (_recent.Count == 0)
             {
-                _recent = Distinct(recent.Select(GitStatusParser.FindRepositoryRoot)).Take(MaxRecent).ToList();
+                _recent = Distinct(recent.Select(KnownRoot)).Take(MaxRecent).ToList();
             }
 
-            var roots = _enabled && _git is not null ? RootsLocked() : [];
+            var roots = _enabled ? ReadableRootsLocked() : [];
             foreach (var stale in _watchers.Keys.Where(k => !roots.Contains(k, PathComparer)).ToList())
             {
                 _watchers[stale].Dispose();
@@ -138,6 +180,7 @@ public sealed class GitService : IDisposable
             }
 
             toRead = roots.Where(r => !_status.ContainsKey(r)).ToList();
+            UpdateWslPollLocked();
         }
 
         foreach (var root in toRead)
@@ -154,48 +197,38 @@ public sealed class GitService : IDisposable
     /// </summary>
     public void NoteProjectPath(string? path)
     {
-        var root = GitStatusParser.FindRepositoryRoot(path);
-        if (root is null)
+        if (string.IsNullOrWhiteSpace(path))
         {
             return;
         }
 
-        bool listChanged;
-        bool read;
-        List<string> recent;
+        if (!WslPath.IsWslPath(path))
+        {
+            NoteRoot(GitStatusParser.FindRepositoryRoot(path));
+            return;
+        }
+
+        // Inside WSL the walk up to .git goes over the WSL share: done once per folder, off the UI thread.
+        var folder = WslPath.Normalize(path);
         lock (_gate)
         {
-            if (!_enabled || _git is null)
+            if (_wslRoots.TryGetValue(folder, out var known))
             {
+                NoteRoot(known);
                 return;
             }
+        }
 
-            listChanged = _recent.Count == 0 || !PathComparer.Equals(_recent[0], root);
-            _recent.RemoveAll(r => PathComparer.Equals(r, root));
-            _recent.Insert(0, root);
-            if (_recent.Count > MaxRecent)
+        _ = Task.Run(() =>
+        {
+            var root = GitStatusParser.FindRepositoryRoot(folder) is { } found ? WslPath.Normalize(found) : null;
+            lock (_gate)
             {
-                _recent.RemoveRange(MaxRecent, _recent.Count - MaxRecent);
+                _wslRoots[folder] = root;
             }
 
-            _active = root;
-            recent = _recent.ToList();
-            Watch(root);
-            // First sight of a repository: read once (branch and remote feed GitHub). Afterwards only
-            // while the panel is on screen.
-            read = !_lastRead.TryGetValue(root, out var last) || (_visible && _time.GetUtcNow() - last >= ActivityThrottle);
-        }
-
-        if (listChanged)
-        {
-            RecentChanged?.Invoke(recent);
-            Changed?.Invoke();
-        }
-
-        if (read)
-        {
-            _ = ReadAsync(root);
-        }
+            NoteRoot(root);
+        });
     }
 
     /// <summary>The Git panel is (or is no longer) on screen.</summary>
@@ -204,6 +237,7 @@ public sealed class GitService : IDisposable
         lock (_gate)
         {
             _visible = visible;
+            UpdateWslPollLocked();
         }
     }
 
@@ -231,7 +265,7 @@ public sealed class GitService : IDisposable
 
             _git ??= _findGit();
             var now = _time.GetUtcNow();
-            roots = RootsLocked().Where(r => !_lastRead.TryGetValue(r, out var last) || now - last > TimeSpan.FromSeconds(3)).ToList();
+            roots = ReadableRootsLocked().Where(r => !_lastRead.TryGetValue(r, out var last) || now - last > TimeSpan.FromSeconds(3)).ToList();
         }
 
         foreach (var root in roots)
@@ -258,6 +292,61 @@ public sealed class GitService : IDisposable
             }
 
             _pending.Clear();
+            _wslPoll?.Dispose();
+            _wslPoll = null;
+        }
+    }
+
+    /// <summary>
+    /// A saved repository path as a root. Windows folders are looked up on disk; WSL paths are taken as
+    /// saved, since looking at them would start a stopped distro.
+    /// </summary>
+    private static string? KnownRoot(string? path) =>
+        WslPath.IsWslPath(path) ? WslPath.Normalize(path!) : GitStatusParser.FindRepositoryRoot(path);
+
+    private void NoteRoot(string? root)
+    {
+        if (root is null)
+        {
+            return;
+        }
+
+        bool listChanged;
+        bool read;
+        List<string> recent;
+        lock (_gate)
+        {
+            if (!_enabled || !CanReadLocked(root))
+            {
+                return;
+            }
+
+            listChanged = _recent.Count == 0 || !PathComparer.Equals(_recent[0], root);
+            _recent.RemoveAll(r => PathComparer.Equals(r, root));
+            _recent.Insert(0, root);
+            if (_recent.Count > MaxRecent)
+            {
+                _recent.RemoveRange(MaxRecent, _recent.Count - MaxRecent);
+            }
+
+            _active = root;
+            recent = _recent.ToList();
+            Watch(root);
+            UpdateWslPollLocked();
+            // First sight of a repository: read once (branch and remote feed GitHub). Afterwards only
+            // while the panel is on screen.
+            read = !_lastRead.TryGetValue(root, out var last) || (_visible && _time.GetUtcNow() - last >= ActivityThrottle);
+        }
+
+        if (listChanged)
+        {
+            RecentChanged?.Invoke(recent);
+            Changed?.Invoke();
+        }
+
+        if (read)
+        {
+            _ = ReadAsync(root);
         }
     }
 
@@ -274,12 +363,79 @@ public sealed class GitService : IDisposable
         return Distinct(roots).ToList();
     }
 
+    /// <summary>Roots a program exists for: Windows ones need Git for Windows, WSL ones are tried with wsl.exe.</summary>
+    private List<string> ReadableRootsLocked() => RootsLocked().Where(CanReadLocked).ToList();
+
+    private bool CanReadLocked(string root) => _git is not null || WslPath.IsWslPath(root);
+
     private static IEnumerable<string> Distinct(IEnumerable<string?> roots) =>
         roots.Where(r => r is not null).Select(r => r!).Distinct(PathComparer);
 
+    /// <summary>The module state when no repository could be read, worded for why the first one failed.</summary>
+    public static ModuleStatus FailureStatus(string root, GitReadFailure failure)
+    {
+        var distro = WslPath.DistroOf(root) ?? "WSL";
+        return failure switch
+        {
+            GitReadFailure.WslMissing => new ModuleStatus(ModuleState.Error, "This repository is inside WSL, which is not installed or not turned on.", "WSL not found"),
+            GitReadFailure.DistroStopped => new ModuleStatus(ModuleState.Error, "Start it to see its repositories here. Developer Island never starts a distro on its own.", $"{distro} is not running"),
+            GitReadFailure.GitMissingInDistro => new ModuleStatus(ModuleState.Error, $"Install Git inside {distro} (for example: sudo apt install git) to see its repositories here.", $"Git not found in {distro}"),
+            _ => new ModuleStatus(ModuleState.Error, "Git could not read these repositories."),
+        };
+    }
+
+    /// <summary>The note under the panel when stopped distros hide some repositories; null for none.</summary>
+    public static string? StoppedNote(IReadOnlyList<string> distros) => distros.Count switch
+    {
+        0 => null,
+        1 => $"{distros[0]} is not running, so its repositories are not shown.",
+        _ => $"{string.Join(" and ", distros)} are not running, so their repositories are not shown.",
+    };
+
+    /// <summary>
+    /// WSL repositories get no watcher, so while the panel is on screen they are re-read on a timer
+    /// (every 10 s, the same throttle as AI activity). Hidden panel or no WSL repository: no timer.
+    /// </summary>
+    private void UpdateWslPollLocked()
+    {
+        var needed = _enabled && _visible && RootsLocked().Any(WslPath.IsWslPath);
+        if (needed && _wslPoll is null)
+        {
+            _wslPoll = _time.CreateTimer(_ => PollWsl(), null, ActivityThrottle, ActivityThrottle);
+        }
+        else if (!needed && _wslPoll is not null)
+        {
+            _wslPoll.Dispose();
+            _wslPoll = null;
+        }
+    }
+
+    private void PollWsl()
+    {
+        List<string> due;
+        lock (_gate)
+        {
+            if (!_enabled || !_visible)
+            {
+                return;
+            }
+
+            var now = _time.GetUtcNow();
+            due = RootsLocked().Where(WslPath.IsWslPath)
+                .Where(r => !_lastRead.TryGetValue(r, out var last) || now - last >= ActivityThrottle - TimeSpan.FromSeconds(1))
+                .ToList();
+        }
+
+        foreach (var root in due)
+        {
+            _ = ReadAsync(root);
+        }
+    }
+
     private void Watch(string root)
     {
-        if (_watchers.ContainsKey(root))
+        // The WSL share delivers no reliable change notifications; those repositories are polled instead.
+        if (_watchers.ContainsKey(root) || WslPath.IsWslPath(root))
         {
             return;
         }
@@ -380,7 +536,7 @@ public sealed class GitService : IDisposable
         lock (_gate)
         {
             git = _git;
-            if (!_enabled || git is null)
+            if (!_enabled || !CanReadLocked(root))
             {
                 return;
             }
@@ -389,13 +545,13 @@ public sealed class GitService : IDisposable
         await _readLock.WaitAsync();
         try
         {
-            var status = await ReadRepositoryAsync(git, root);
+            var (status, failure) = await ReadRepositoryAsync(git, root);
             lock (_gate)
             {
                 _lastRead[root] = _time.GetUtcNow();
                 if (status is null)
                 {
-                    _errors[root] = "unreadable";
+                    _errors[root] = failure;
                     _status.Remove(root);
                 }
                 else
@@ -417,28 +573,60 @@ public sealed class GitService : IDisposable
         }
     }
 
-    private async Task<GitRepoStatus?> ReadRepositoryAsync(string git, string root)
+    private async Task<(GitRepoStatus? Status, GitReadFailure Failure)> ReadRepositoryAsync(string? git, string root)
     {
+        var distro = WslPath.DistroOf(root);
+        var wsl = _wsl?.Executable;
+        if (distro is not null)
+        {
+            if (wsl is null)
+            {
+                return (null, GitReadFailure.WslMissing);
+            }
+
+            if (!await _wsl!.IsRunningAsync(distro))
+            {
+                return (null, GitReadFailure.DistroStopped);
+            }
+        }
+
         // Repositories come from AI sessions' working folders, so a repository's own config must not
         // start programs here: core.fsmonitor would run its command on every status.
-        var status = await ProcessRunner.RunAsync(git, ["--no-optional-locks", "-c", "core.fsmonitor=false", "-C", root, "status", "--porcelain=v2", "--branch"], timeout: TimeSpan.FromSeconds(10));
-        if (!status.Succeeded)
+        var status = await RunGitAsync(root, GitCommandLine.Status, git, wsl, TimeSpan.FromSeconds(10));
+        if (status is not { Succeeded: true })
         {
-            Log.Debug("git", "git status failed", new { exit = status.ExitCode });
-            return null;
+            Log.Debug("git", "git status failed", new { exit = status?.ExitCode, wsl = distro is not null });
+            return (null, distro is not null && await IsGitMissingInDistroAsync(distro, wsl!) ? GitReadFailure.GitMissingInDistro : GitReadFailure.Unreadable);
         }
 
         var parsed = GitStatusParser.ParseStatus(root, status.Output);
-        var log = await ProcessRunner.RunAsync(git, ["--no-optional-locks", "-C", root, "log", "-1", "--format=%ct%x1f%s"], timeout: TimeSpan.FromSeconds(10));
-        var (at, subject) = log.Succeeded ? GitStatusParser.ParseLastCommit(log.Output) : (null, null);
-        var remote = await ProcessRunner.RunAsync(git, ["-C", root, "config", "--get", "remote.origin.url"], timeout: TimeSpan.FromSeconds(5));
+        var log = await RunGitAsync(root, GitCommandLine.LastCommit, git, wsl, TimeSpan.FromSeconds(10));
+        var (at, subject) = log is { Succeeded: true } ? GitStatusParser.ParseLastCommit(log.Output) : (null, null);
+        var remote = await RunGitAsync(root, GitCommandLine.OriginUrl, git, wsl, TimeSpan.FromSeconds(5));
 
-        return parsed with
+        return (parsed with
         {
             LastCommitAt = at,
             LastCommitSubject = subject,
-            GitHubRepository = remote.Succeeded ? GitStatusParser.ParseGitHubRepository(remote.Output) : null,
+            GitHubRepository = remote is { Succeeded: true } ? GitStatusParser.ParseGitHubRepository(remote.Output) : null,
             UpdatedAt = _time.GetUtcNow(),
-        };
+        }, default);
+    }
+
+    private async Task<ProcessResult?> RunGitAsync(string root, IReadOnlyList<string> arguments, string? git, string? wsl, TimeSpan timeout) =>
+        GitCommandLine.For(root, arguments, git, wsl) is { } command ? await _run(command.FileName, command.Arguments, timeout) : null;
+
+    /// <summary>After a failed read in WSL: does the distro have git at all? (<c>git --version</c> in <c>/</c>.)</summary>
+    private async Task<bool> IsGitMissingInDistroAsync(string distro, string wsl)
+    {
+        try
+        {
+            var probe = await _run(wsl, WslCommand.Exec(distro, "/", "git", GitCommandLine.Version), TimeSpan.FromSeconds(10));
+            return !probe.Succeeded;
+        }
+        catch (Exception ex) when (ex is OperationCanceledException or System.ComponentModel.Win32Exception)
+        {
+            return false;
+        }
     }
 }

@@ -2,6 +2,7 @@ using DeveloperIsland.Core.Diagnostics;
 using DeveloperIsland.Core.Models;
 using DeveloperIsland.Core.Storage;
 using DeveloperIsland.Core.Usage;
+using DeveloperIsland.Core.Wsl;
 
 namespace DeveloperIsland.Core.Providers;
 
@@ -11,6 +12,10 @@ namespace DeveloperIsland.Core.Providers;
 /// <item>An initial scan on a background thread only parses bytes appended since the last run (file cursors).</item>
 /// <item>A <see cref="FileSystemWatcher"/> then drives incremental reads, debounced, with no polling.</item>
 /// <item>One timer fires at local midnight so "today" rolls over, and one clears the active flag after inactivity.</item>
+/// <item>Copies of the tool inside WSL distros (<see cref="SetWslFolders"/>) count into the same totals.
+/// The WSL share delivers no reliable change notifications, so those folders are polled: recently
+/// written files every 5 s, the whole folder every minute. Every event is stored once per key, so a
+/// file reached twice is never counted twice.</item>
 /// </list>
 /// </summary>
 public abstract class LogFileUsageProvider : IAiUsageProvider
@@ -26,6 +31,13 @@ public abstract class LogFileUsageProvider : IAiUsageProvider
 
     private static readonly TimeSpan Debounce = TimeSpan.FromMilliseconds(900);
 
+    private static readonly TimeSpan WslPollInterval = TimeSpan.FromSeconds(5);
+
+    private static readonly TimeSpan WslRescanInterval = TimeSpan.FromMinutes(1);
+
+    /// <summary>Files written this recently are checked on every WSL poll; older ones at the next rescan.</summary>
+    private static readonly TimeSpan HotWindow = TimeSpan.FromMinutes(15);
+
     private readonly object _gate = new();
     private readonly HashSet<string> _pendingFiles = new(StringComparer.OrdinalIgnoreCase);
     private readonly SemaphoreSlim _readLock = new(1, 1);
@@ -33,6 +45,11 @@ public abstract class LogFileUsageProvider : IAiUsageProvider
     private ITimer? _debounceTimer;
     private ITimer? _midnightTimer;
     private ITimer? _activityTimer;
+    private ITimer? _wslTimer;
+    private Func<CancellationToken, Task<IReadOnlyList<string>>>? _wslFolders;
+    private readonly Dictionary<string, PolledFolder> _polled = new(StringComparer.OrdinalIgnoreCase);
+    private int _wslPolling;
+    private bool _started;
     private CancellationTokenSource? _cts;
     private bool _fullRescanRequested;
     private AiUsageSnapshot _snapshot;
@@ -73,12 +90,21 @@ public abstract class LogFileUsageProvider : IAiUsageProvider
 
     protected TimeProvider Time { get; }
 
+    /// <summary>The subfolder of a tool folder whose <c>*.jsonl</c> files are parsed.</summary>
+    protected abstract string LogFolderName { get; }
+
     /// <summary>The folder whose <c>*.jsonl</c> files are parsed.</summary>
-    protected abstract string LogDirectory { get; }
+    protected string LogDirectory => Path.Combine(RootDirectory, LogFolderName);
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        lock (_gate)
+        {
+            _started = true;
+            UpdateWslTimerLocked();
+        }
+
         if (!Directory.Exists(RootDirectory))
         {
             Log.Info("provider", "Tool not detected", new { provider = Kind.ToString() });
@@ -107,8 +133,32 @@ public abstract class LogFileUsageProvider : IAiUsageProvider
         _debounceTimer?.Dispose();
         _midnightTimer?.Dispose();
         _activityTimer?.Dispose();
+        lock (_gate)
+        {
+            _wslTimer?.Dispose();
+            _wslTimer = null;
+        }
+
         OnDisposing();
         GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// The tool's folders inside WSL distros (<c>\\wsl.localhost\&lt;distro&gt;\home\&lt;user&gt;\.claude</c>),
+    /// asked on every poll so started and stopped distros are followed; null stops reading WSL.
+    /// </summary>
+    public void SetWslFolders(Func<CancellationToken, Task<IReadOnlyList<string>>>? folders)
+    {
+        lock (_gate)
+        {
+            _wslFolders = folders;
+            if (folders is null)
+            {
+                _polled.Clear();
+            }
+
+            UpdateWslTimerLocked();
+        }
     }
 
     /// <summary>Parses one file from its cursor, appending events. Returns where to resume next time.</summary>
@@ -218,26 +268,39 @@ public abstract class LogFileUsageProvider : IAiUsageProvider
         }
     }
 
-    private void ScanAll(CancellationToken ct)
+    private void ScanAll(CancellationToken ct) => ScanDirectory(LogDirectory, null, null, ct);
+
+    /// <summary>
+    /// Reads every log in <paramref name="directory"/> that changed since its cursor. With
+    /// <paramref name="hot"/>, also records the recently written files for the next WSL polls.
+    /// </summary>
+    private int ScanDirectory(string directory, Func<string?, string?>? mapPath, Dictionary<string, FileStamp>? hot, CancellationToken ct)
     {
-        if (!Directory.Exists(LogDirectory))
+        if (!Directory.Exists(directory))
         {
-            return;
+            return 0;
         }
 
         var started = Environment.TickCount64;
-        var cursors = Database.GetCursors(LogDirectory);
+        var cursors = Database.GetCursors(directory);
         var cutoff = Time.GetUtcNow().UtcDateTime - BackfillWindow;
+        var hotCutoff = Time.GetUtcNow().UtcDateTime - HotWindow;
         var files = 0;
         var events = 0;
+        hot?.Clear();
 
-        foreach (var path in Directory.EnumerateFiles(LogDirectory, "*.jsonl", SearchOption.AllDirectories))
+        foreach (var path in Directory.EnumerateFiles(directory, "*.jsonl", SearchOption.AllDirectories))
         {
             ct.ThrowIfCancellationRequested();
             var info = new FileInfo(path);
             if (info.LastWriteTimeUtc < cutoff)
             {
                 continue;
+            }
+
+            if (hot is not null && info.LastWriteTimeUtc >= hotCutoff)
+            {
+                hot[path] = new FileStamp(info.Length, info.LastWriteTimeUtc.Ticks);
             }
 
             cursors.TryGetValue(path, out var cursor);
@@ -247,14 +310,20 @@ public abstract class LogFileUsageProvider : IAiUsageProvider
                 continue;
             }
 
-            events += ProcessFile(path, cursor, ct);
+            events += ProcessFile(path, cursor, ct, mapPath);
             files++;
         }
 
-        Log.Info("provider", "Scan finished", new { provider = Kind.ToString(), files, events, ms = Environment.TickCount64 - started });
+        // WSL folders are rescanned every minute; only scans that found something are worth a line.
+        if (hot is null || files > 0)
+        {
+            Log.Info("provider", "Scan finished", new { provider = Kind.ToString(), wsl = hot is not null, files, events, ms = Environment.TickCount64 - started });
+        }
+
+        return events;
     }
 
-    private int ProcessFile(string path, FileCursor? cursor, CancellationToken ct)
+    private int ProcessFile(string path, FileCursor? cursor, CancellationToken ct, Func<string?, string?>? mapPath = null)
     {
         _readLock.Wait(ct);
         try
@@ -276,6 +345,15 @@ public abstract class LogFileUsageProvider : IAiUsageProvider
 
             var events = new List<UsageEvent>();
             var result = ParseFile(path, offset, state, events, ct);
+            if (mapPath is not null)
+            {
+                // Tools inside WSL record Linux working folders; the Git module needs the Windows path.
+                for (var i = 0; i < events.Count; i++)
+                {
+                    events[i] = events[i] with { ProjectPath = mapPath(events[i].ProjectPath) };
+                }
+            }
+
             if (events.Count > 0)
             {
                 // Chunked so one huge backfill does not hold the database lock for long.
@@ -416,6 +494,145 @@ public abstract class LogFileUsageProvider : IAiUsageProvider
             RefreshSnapshot();
             ScheduleMidnight();
         }, null, due, Timeout.InfiniteTimeSpan);
+    }
+
+    private void UpdateWslTimerLocked()
+    {
+        var needed = _started && !_disposed && _wslFolders is not null;
+        if (needed && _wslTimer is null)
+        {
+            _wslTimer = Time.CreateTimer(_ => _ = PollWslAsync(), null, TimeSpan.FromSeconds(1), WslPollInterval);
+        }
+        else if (!needed && _wslTimer is not null)
+        {
+            _wslTimer.Dispose();
+            _wslTimer = null;
+        }
+    }
+
+    /// <summary>
+    /// One WSL poll: asks which folders exist now (running distros only), rescans each folder every
+    /// minute and checks its recently written files in between. Never runs twice at once.
+    /// </summary>
+    internal async Task PollWslAsync()
+    {
+        if (Interlocked.Exchange(ref _wslPolling, 1) == 1)
+        {
+            return;
+        }
+
+        try
+        {
+            Func<CancellationToken, Task<IReadOnlyList<string>>>? source;
+            lock (_gate)
+            {
+                source = _wslFolders;
+            }
+
+            var ct = _cts?.Token ?? CancellationToken.None;
+            if (source is null || ct.IsCancellationRequested)
+            {
+                return;
+            }
+
+            // The Windows folder is read by the watcher; a WSL folder that is the same place (for
+            // example CLAUDE_CONFIG_DIR pointing into WSL) is not read a second time.
+            var own = WslPath.Normalize(RootDirectory.TrimEnd('\\', '/'));
+            var folders = (await source(ct)).Select(f => WslPath.Normalize(f.TrimEnd('\\', '/')))
+                .Where(f => !string.Equals(f, own, StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var now = Time.GetUtcNow();
+            var events = 0;
+            var found = false;
+            foreach (var folder in folders)
+            {
+                ct.ThrowIfCancellationRequested();
+                var directory = Path.Combine(folder, LogFolderName);
+                var distro = WslPath.DistroOf(folder);
+                Func<string?, string?>? map = distro is null ? null : p => WslPath.ToWindows(distro, p);
+                PolledFolder? state;
+                lock (_gate)
+                {
+                    if (!_polled.TryGetValue(folder, out state))
+                    {
+                        state = new PolledFolder();
+                        _polled[folder] = state;
+                    }
+                }
+
+                if (now - state.LastScan >= WslRescanInterval)
+                {
+                    var first = state.LastScan == DateTimeOffset.MinValue;
+                    events += await Task.Run(() => ScanDirectory(directory, map, state.Hot, ct), ct);
+                    state.LastScan = now;
+                    found |= first && Directory.Exists(directory);
+                    continue;
+                }
+
+                foreach (var (path, stamp) in state.Hot.ToList())
+                {
+                    var info = new FileInfo(path);
+                    if (!info.Exists)
+                    {
+                        state.Hot.Remove(path);
+                        continue;
+                    }
+
+                    var current = new FileStamp(info.Length, info.LastWriteTimeUtc.Ticks);
+                    if (current != stamp)
+                    {
+                        events += ProcessFile(path, null, ct, map);
+                        state.Hot[path] = current;
+                    }
+                }
+            }
+
+            lock (_gate)
+            {
+                foreach (var gone in _polled.Keys.Where(k => !folders.Contains(k, StringComparer.OrdinalIgnoreCase)).ToList())
+                {
+                    _polled.Remove(gone);
+                }
+            }
+
+            if (events > 0 || found)
+            {
+                if (_midnightTimer is null)
+                {
+                    // Usage only from WSL: no scan of the Windows folder scheduled the day roll-over.
+                    ScheduleMidnight();
+                }
+
+                RefreshSnapshot();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // A distro stopping mid-read: the next poll asks again which folders exist.
+            Log.Debug("provider", "WSL poll skipped", new { provider = Kind.ToString(), error = ex.GetType().Name });
+        }
+        catch (Exception ex)
+        {
+            Log.Error("provider", "WSL poll failed", ex, new { provider = Kind.ToString() });
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _wslPolling, 0);
+        }
+    }
+
+    private readonly record struct FileStamp(long Length, long LastWriteTicks);
+
+    private sealed class PolledFolder
+    {
+        public DateTimeOffset LastScan { get; set; } = DateTimeOffset.MinValue;
+
+        public Dictionary<string, FileStamp> Hot { get; } = new(StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>Waits (without polling) for the tool's folder to appear, then starts normally.</summary>
