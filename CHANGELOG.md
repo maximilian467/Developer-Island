@@ -19,6 +19,8 @@ All notable changes to Developer Island are documented here. The format follows 
 
 - In Windows light mode, the island no longer sits in a white rectangle: the window background stays transparent whatever the app theme ([#11](https://github.com/maximilian467/Developer-Island/issues/11)).
 
+- **WhisperFlow dictation** (optional, off by default): for the local WhisperFlow speech-to-text tool (not the commercial Wispr Flow). Beside the microphone mark the island shows "WhisperFlow" while it records, a spinner and "Transcribing…" while it transcribes, then "Inserted", "No speech" or "Failed" for three seconds; the notch shows a matching dot. Turn it on in Settings, Modules. Developer Island only reads WhisperFlow's status file (`%LOCALAPPDATA%\WhisperFlow\status.json`: state, time, process ID), never audio or text.
+
 ## [0.3.0] - 2026-10-15
 
 ### Added

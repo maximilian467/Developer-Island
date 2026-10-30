@@ -70,6 +70,8 @@ A larger figure never appears without saying that it includes cache reads. The b
 
 The **estimated API equivalent today** in euros prices every category at public list prices, including cache writes (1.25× or 2× input) and cache reads (0.1× input unless listed). If you use a subscription, it is not what you pay. Models without a known list price are reported as "partly priced" instead of being guessed. Codex also shows its latest primary rate-limit usage (usually a 5-hour window), with a live activity at 50, 75 and 90 %.
 
+**WhisperFlow dictation** (optional, off by default). For the local WhisperFlow speech-to-text tool (a self-hosted tool, not the commercial Wispr Flow). Switch it on in Settings, Modules, "WhisperFlow". The microphone mark then carries a short label: "WhisperFlow" while it records, a small spinner with "Transcribing…" while it transcribes, then "Inserted" (green check), "No speech" or "Failed" (red) for three seconds, so you see whether a dictation worked. In the notch, transcribing and the result are a blue, green, gray or red dot. Like the camera and microphone marks it never opens the island. A WhisperFlow closed mid-recording clears within five seconds.
+
 ### Music
 
 Works with anything that uses Windows media sessions (Spotify, Apple Music, browsers, Media Player and more), with no app-specific APIs and no accounts. It shows the track, artist, artwork and timeline, with Play and Pause, Previous and Next, and seeking when the player supports it. When several players are open, the one that is playing wins. When the player quits, the island clears instead of showing a stale track.
