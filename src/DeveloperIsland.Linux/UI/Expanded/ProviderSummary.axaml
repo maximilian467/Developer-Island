@@ -1,0 +1,92 @@
+<!--
+    Today's usage of one AI tool. No card: grouping comes from spacing.
+    Plan usage first (Claude: reported by Claude Code; Codex: its local limit records), then today's
+    local usage: headline = the chosen token metric; the breakdown names every recorded category.
+-->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DeveloperIsland.ViewModels"
+             xmlns:c="using:DeveloperIsland.UI.Components"
+             x:Class="DeveloperIsland.UI.Expanded.ProviderSummary"
+             x:DataType="vm:AiProviderViewModel">
+    <UserControl.Styles>
+        <Style Selector="TextBlock.breakdownLabel">
+            <Setter Property="Foreground" Value="{StaticResource TextTertiaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.breakdownValue">
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <StackPanel Spacing="2">
+        <!-- Header line: mark, name and live dot. -->
+        <StackPanel Orientation="Horizontal" Spacing="7" Height="32" Margin="0,-8,0,-6">
+            <c:ProviderMark Kind="{Binding ShortName}" Width="13" Height="13" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" />
+            <TextBlock Classes="caption" Text="{Binding DisplayName}" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <Ellipse Width="6" Height="6" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding IsActive}" />
+        </StackPanel>
+
+        <StackPanel IsVisible="{Binding IsReady}" Spacing="2">
+            <!-- Plan usage -->
+            <Grid Margin="0,6,0,0" MinHeight="22">
+                <TextBlock Classes="fine" Text="Plan usage" VerticalAlignment="Center" />
+                <Border HorizontalAlignment="Right" CornerRadius="14" Padding="2" Background="{StaticResource SurfaceRaisedBrush}"
+                        IsVisible="{Binding HasBothPlanWindows}">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Name="CurrentButton" Theme="{StaticResource IslandSegmentButton}" Content="Current" Click="OnShowCurrent" />
+                        <Button Name="WeeklyButton" Theme="{StaticResource IslandSegmentButton}" Content="Weekly" Click="OnShowWeekly" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+            <StackPanel IsVisible="{Binding HasPlan}" Spacing="2">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                    <TextBlock Classes="figure" Text="{Binding PlanPercentText}" />
+                    <TextBlock Classes="body" Text="{Binding PlanWindowName}" VerticalAlignment="Bottom" Margin="0,0,0,5" />
+                </StackPanel>
+                <c:Meter Fraction="{Binding PlanFraction}" Margin="0,2,0,0" />
+                <TextBlock Classes="fine" Text="{Binding PlanResetText}" Margin="0,2,0,0" />
+            </StackPanel>
+            <StackPanel IsVisible="{Binding HasNoPlan}" Spacing="2">
+                <TextBlock Classes="label" Text="Unavailable" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Left" />
+                <TextBlock Classes="fine wrap" Text="{Binding PlanUnavailableReason}" MaxLines="2" MaxWidth="180" HorizontalAlignment="Left" />
+                <Button Theme="{StaticResource IslandPillButton}" MinWidth="0" Padding="14,0" FontSize="12" Margin="0,4,0,0" HorizontalAlignment="Left"
+                        Content="Connect…" Click="OnConnectPlan" IsVisible="{Binding CanConnectPlan}" />
+            </StackPanel>
+
+            <!-- Local usage today -->
+            <TextBlock Classes="fine" Text="Today on this PC" Margin="0,12,0,0" />
+            <StackPanel Orientation="Horizontal" Spacing="5" Background="Transparent" ToolTip.Tip="{Binding DetailSummary}" ToolTip.Placement="Bottom">
+                <TextBlock Classes="figure" Text="{Binding TokensText}" />
+                <TextBlock Classes="body" Text="{Binding TokensUnit}" VerticalAlignment="Bottom" Margin="0,0,0,5" />
+            </StackPanel>
+
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="1" Margin="0,6,0,0"
+                  IsVisible="{Binding HasUsageToday}">
+                <TextBlock Classes="caption breakdownLabel" Text="Input" />
+                <TextBlock Classes="caption breakdownValue" Grid.Column="1" Text="{Binding InputText}" />
+                <TextBlock Classes="caption breakdownLabel" Grid.Row="1" Text="Cache write" />
+                <TextBlock Classes="caption breakdownValue" Grid.Row="1" Grid.Column="1" Text="{Binding CacheWriteText}" />
+                <TextBlock Classes="caption breakdownLabel" Grid.Row="2" Text="Output" />
+                <TextBlock Classes="caption breakdownValue" Grid.Row="2" Grid.Column="1" Text="{Binding OutputText}" />
+                <TextBlock Classes="caption breakdownLabel" Grid.Row="3" Text="Cache read" />
+                <TextBlock Classes="caption breakdownValue" Grid.Row="3" Grid.Column="1" Text="{Binding CacheReadText}" />
+                <TextBlock Classes="caption breakdownLabel" Grid.Row="4" Text="Processed" />
+                <TextBlock Classes="caption breakdownValue" Grid.Row="4" Grid.Column="1" Text="{Binding ProcessedText}" />
+                <TextBlock Classes="caption breakdownLabel" Grid.Row="5" Text="Sessions" />
+                <TextBlock Classes="caption breakdownValue" Grid.Row="5" Grid.Column="1" Text="{Binding SessionsText}" />
+            </Grid>
+
+            <TextBlock Classes="caption wrap" Margin="0,6,0,0" IsVisible="{Binding ShowValue}">
+                <Run Text="{Binding ValueText}" Foreground="{StaticResource TextPrimaryBrush}" /><Run Text=" " /><Run Text="{Binding ValueCaption}" />
+            </TextBlock>
+            <TextBlock Classes="caption" Text="{Binding DetailText}" Margin="0,4,0,0" IsVisible="{Binding HasDetail}" />
+            <TextBlock Classes="fine" Text="{Binding ContextText}" />
+        </StackPanel>
+
+        <StackPanel IsVisible="{Binding IsUnavailable}" Spacing="4" Margin="0,4,0,0">
+            <TextBlock Classes="title" Text="{Binding StatusText}" Foreground="{StaticResource TextSecondaryBrush}" />
+            <TextBlock Classes="caption wrap" Text="{Binding StatusHint}" MaxWidth="170" HorizontalAlignment="Left" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

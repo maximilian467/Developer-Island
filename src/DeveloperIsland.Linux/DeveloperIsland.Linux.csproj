@@ -1,0 +1,76 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Developer Island for Linux (Ubuntu and other freedesktop desktops).
+    The UI is Avalonia (X11 backend, which also runs under XWayland on GNOME Wayland).
+    Logic lives in DeveloperIsland.Core, shared with Windows. View models that have no WinUI
+    dependency are compiled straight from the Windows project (linked below), so both platforms
+    run the same code; only the platform layer and the views are Linux-specific.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>DeveloperIsland</RootNamespace>
+    <AssemblyName>developer-island</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <ApplicationIcon />
+    <!-- Low idle footprint, as on Windows. -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <TieredPGO>false</TieredPGO>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <RuntimeIdentifiers>linux-x64;linux-arm64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.22" />
+    <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.3" />
+    <PackageReference Include="Tmds.DBus.SourceGenerator" Version="0.0.21" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DeveloperIsland.Core\DeveloperIsland.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Shared with the Windows app: compiled unchanged. -->
+  <ItemGroup>
+    <Compile Include="..\DeveloperIsland\ViewModels\AiProviderViewModel.cs" Link="Shared\ViewModels\AiProviderViewModel.cs" />
+    <Compile Include="..\DeveloperIsland\ViewModels\AudioOutputViewModel.cs" Link="Shared\ViewModels\AudioOutputViewModel.cs" />
+    <Compile Include="..\DeveloperIsland\ViewModels\AwakeViewModel.cs" Link="Shared\ViewModels\AwakeViewModel.cs" />
+    <Compile Include="..\DeveloperIsland\ViewModels\CalendarViewModel.cs" Link="Shared\ViewModels\CalendarViewModel.cs" />
+    <Compile Include="..\DeveloperIsland\ViewModels\DropViewModel.cs" Link="Shared\ViewModels\DropViewModel.cs" />
+    <Compile Include="..\DeveloperIsland\ViewModels\FocusViewModel.cs" Link="Shared\ViewModels\FocusViewModel.cs" />
+    <Compile Include="..\DeveloperIsland\ViewModels\GitHubViewModel.cs" Link="Shared\ViewModels\GitHubViewModel.cs" />
+    <Compile Include="..\DeveloperIsland\ViewModels\GitViewModel.cs" Link="Shared\ViewModels\GitViewModel.cs" />
+    <Compile Include="..\DeveloperIsland\ViewModels\IslandViewModel.cs" Link="Shared\ViewModels\IslandViewModel.cs" />
+    <Compile Include="..\DeveloperIsland\ViewModels\ModuleViewModel.cs" Link="Shared\ViewModels\ModuleViewModel.cs" />
+    <Compile Include="..\DeveloperIsland\ViewModels\ObservableObject.cs" Link="Shared\ViewModels\ObservableObject.cs" />
+    <Compile Include="..\DeveloperIsland\ViewModels\PrivacyViewModel.cs" Link="Shared\ViewModels\PrivacyViewModel.cs" />
+    <Compile Include="..\DeveloperIsland\ViewModels\SystemViewModel.cs" Link="Shared\ViewModels\SystemViewModel.cs" />
+    <Compile Include="..\DeveloperIsland\ViewModels\TasksViewModel.cs" Link="Shared\ViewModels\TasksViewModel.cs" />
+    <Compile Include="..\DeveloperIsland\ViewModels\UsageViewModel.cs" Link="Shared\ViewModels\UsageViewModel.cs" />
+    <Compile Include="..\DeveloperIsland\App\StatusLineBridge.cs" Link="Shared\App\StatusLineBridge.cs" />
+    <Compile Include="..\DeveloperIsland\App\SystemReport.cs" Link="Shared\App\SystemReport.cs" />
+    <Compile Include="..\DeveloperIsland\Platform\Media\DemoMediaSource.cs" Link="Shared\Platform\DemoMediaSource.cs" />
+    <Compile Include="..\DeveloperIsland\UI\Components\BrandMarks.cs" Link="Shared\UI\BrandMarks.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="DBusXml/org.freedesktop.DBus.xml" DBusGeneratorMode="Proxy" />
+    <AdditionalFiles Include="DBusXml/org.mpris.MediaPlayer2.xml" DBusGeneratorMode="Proxy" />
+    <AdditionalFiles Include="DBusXml/org.mpris.MediaPlayer2.Player.xml" DBusGeneratorMode="Proxy" />
+    <AdditionalFiles Include="DBusXml/io.github.DeveloperIsland.Shell1.xml" DBusGeneratorMode="Proxy" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**\*" />
+    <Content Include="..\DeveloperIsland\Assets\*.png" Link="Assets\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="gnome-extension\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

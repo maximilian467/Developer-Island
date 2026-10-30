@@ -1,0 +1,17 @@
+<!-- The one non-ready view every module shares: icon, a short title, one sentence, at most one action. -->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DeveloperIsland.ViewModels"
+             xmlns:c="using:DeveloperIsland.UI.Components"
+             x:Class="DeveloperIsland.UI.Expanded.ModuleStateView"
+             x:DataType="vm:ModuleViewModel">
+    <StackPanel Margin="0,2,0,2">
+        <Border Width="36" Height="36" CornerRadius="18" Background="{StaticResource SurfaceRaisedBrush}" HorizontalAlignment="Left">
+            <c:ModuleIcon Name="Icon" Module="{Binding Module}" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <TextBlock Classes="title" Text="{Binding StateTitle}" Margin="0,12,0,0" />
+        <TextBlock Classes="caption wrap" Text="{Binding StateMessage}" Margin="0,4,0,0" MaxLines="3" LineHeight="17" />
+        <Button Theme="{StaticResource IslandPillButton}" Content="{Binding ActionLabel}" Margin="0,14,0,0"
+                IsVisible="{Binding HasAction}" Click="OnAction" HorizontalAlignment="Left" />
+    </StackPanel>
+</UserControl>

@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Name=Developer Island
+GenericName=Developer status bar
+Comment=Claude Code and Codex usage, music, focus, calendar, Git and more in a floating island
+Exec=developer-island
+Icon=developer-island
+Terminal=false
+Categories=Development;Utility;
+Keywords=claude;codex;usage;focus;pomodoro;music;git;github;island;
+StartupWMClass=developer-island
+SingleMainWindow=true
+Actions=Settings;
+
+[Desktop Action Settings]
+Name=Settings
+Exec=developer-island --settings

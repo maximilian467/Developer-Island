@@ -1,0 +1,25 @@
+<!--
+    Home Cloud drop zone: 340 x 64 pill (radius 32). The cloud zone (112 x 48, concentric radius 24)
+    sits on the configured side at an 8 DIP inset; the text takes the rest. While uploading a 3 DIP
+    bar under the text fills with the copied bytes; the zone's glyph turns into a check mark or an
+    error mark when the upload ends.
+-->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:DeveloperIsland.UI.Components"
+             x:Class="DeveloperIsland.UI.Island.DropView">
+    <Border Width="340" Height="64" Padding="8" Background="Transparent">
+        <Grid Name="Root" ColumnDefinitions="Auto,*,Auto">
+            <Border Name="Zone" Grid.Column="2" Width="112" Height="48" CornerRadius="24"
+                    Background="{StaticResource SurfaceRaisedBrush}" BorderBrush="{StaticResource AccentBrush}" BorderThickness="1.5">
+                <c:GlyphIcon Name="ZoneIcon" Glyph="&#xE753;" Size="20" Foreground="{StaticResource AccentBrush}" />
+            </Border>
+
+            <StackPanel Name="Texts" Grid.Column="1" VerticalAlignment="Center" Spacing="1" Margin="12,0,14,0">
+                <TextBlock Name="TitleText" Classes="label" HorizontalAlignment="Left" />
+                <TextBlock Name="DetailText" Classes="caption" />
+                <c:Meter Name="Bar" Margin="0,5,0,0" IsVisible="False" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

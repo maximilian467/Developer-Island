@@ -1,0 +1,446 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:DeveloperIsland.UI.Components"
+        x:Class="DeveloperIsland.UI.Settings.SettingsWindow"
+        Classes="settings"
+        Title="Developer Island Settings"
+        Width="880" Height="620" MinWidth="720" MinHeight="460"
+        WindowStartupLocation="CenterScreen">
+    <Window.Styles>
+        <StyleInclude Source="avares://developer-island/UI/Settings/SettingsTheme.axaml" />
+    </Window.Styles>
+
+    <Grid Name="Root" ColumnDefinitions="232,*">
+        <!-- Sidebar -->
+        <Border Background="{DynamicResource SettingsSidebarBrush}" Padding="12,0,12,16">
+            <Grid RowDefinitions="56,*">
+                <StackPanel Orientation="Horizontal" Spacing="10" Margin="8,0,0,0" VerticalAlignment="Center">
+                    <Image Name="TitleIcon" Width="20" Height="20" />
+                    <TextBlock Text="Developer Island" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource SettingsTextPrimaryBrush}" />
+                </StackPanel>
+                <StackPanel Grid.Row="1" Spacing="2">
+                    <Button Name="NavGeneral" Classes="sNav" Tag="General" Click="OnNav">
+                        <StackPanel Orientation="Horizontal" Spacing="12"><c:GlyphIcon Glyph="&#xE713;" Size="16" /><TextBlock Text="General" /></StackPanel>
+                    </Button>
+                    <Button Name="NavPosition" Classes="sNav" Tag="Position" Click="OnNav">
+                        <StackPanel Orientation="Horizontal" Spacing="12"><c:GlyphIcon Glyph="&#xE7F4;" Size="16" /><TextBlock Text="Position" /></StackPanel>
+                    </Button>
+                    <Button Name="NavModules" Classes="sNav" Tag="Modules" Click="OnNav">
+                        <StackPanel Orientation="Horizontal" Spacing="12"><c:GlyphIcon Glyph="&#xE74C;" Size="16" /><TextBlock Text="Modules" /></StackPanel>
+                    </Button>
+                    <Button Name="NavHomeCloud" Classes="sNav" Tag="HomeCloud" Click="OnNav">
+                        <StackPanel Orientation="Horizontal" Spacing="12"><c:GlyphIcon Glyph="&#xE753;" Size="16" /><TextBlock Text="Home Cloud" /></StackPanel>
+                    </Button>
+                    <Button Name="NavAppearance" Classes="sNav" Tag="Appearance" Click="OnNav">
+                        <StackPanel Orientation="Horizontal" Spacing="12"><c:GlyphIcon Glyph="&#xE790;" Size="16" /><TextBlock Text="Appearance" /></StackPanel>
+                    </Button>
+                    <Button Name="NavAbout" Classes="sNav" Tag="About" Click="OnNav">
+                        <StackPanel Orientation="Horizontal" Spacing="12"><c:GlyphIcon Glyph="&#xE946;" Size="16" /><TextBlock Text="About" /></StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Content -->
+        <ScrollViewer Name="ContentScroll" Grid.Column="1" HorizontalScrollBarVisibility="Disabled">
+            <Panel MaxWidth="620" Margin="32,48,36,32" HorizontalAlignment="Stretch">
+
+                <!-- General -->
+                <StackPanel Name="GeneralSection" Spacing="8">
+                    <TextBlock Classes="sTitle" Text="General" Margin="0,0,0,20" />
+                    <Border Classes="sCard">
+                        <StackPanel>
+                            <Border Classes="sRow">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Classes="sRowTitle" Text="Start at login" />
+                                        <TextBlock Classes="sRowText" Text="Opens Developer Island when you log in." />
+                                    </StackPanel>
+                                    <ToggleSwitch Name="StartWithWindowsToggle" Grid.Column="1" Classes="sToggle" Tag="StartWithWindows" IsCheckedChanged="OnToggle" />
+                                </Grid>
+                            </Border>
+                            <Rectangle Classes="sDivider" />
+                            <Border Classes="sRow">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Classes="sRowTitle" Text="Always on top" />
+                                        <TextBlock Classes="sRowText" Text="Keeps the island above other windows." />
+                                    </StackPanel>
+                                    <ToggleSwitch Name="AlwaysOnTopToggle" Grid.Column="1" Classes="sToggle" Tag="AlwaysOnTop" IsCheckedChanged="OnToggle" />
+                                </Grid>
+                            </Border>
+                            <Rectangle Classes="sDivider" />
+                            <Border Classes="sRow">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Classes="sRowTitle" Text="Launch hidden" />
+                                        <TextBlock Classes="sRowText" Text="When starting at login, wait in the status area until you open it." />
+                                    </StackPanel>
+                                    <ToggleSwitch Name="LaunchHiddenToggle" Grid.Column="1" Classes="sToggle" Tag="LaunchHidden" IsCheckedChanged="OnToggle" />
+                                </Grid>
+                            </Border>
+                            <Rectangle Classes="sDivider" />
+                            <Border Classes="sRow">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <TextBlock Classes="sRowTitle" Text="Keyboard shortcut" />
+                                        <TextBlock Name="ShortcutText" Classes="sRowText" Text="Opens or closes the island from anywhere." />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                                        <ComboBox Name="ShortcutPicker" MinWidth="176" VerticalAlignment="Center" SelectionChanged="OnShortcutChanged" />
+                                        <ToggleSwitch Name="ShortcutToggle" Classes="sToggle" Tag="Shortcut" IsCheckedChanged="OnToggle" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Quit the whole app. Two steps (button, then Quit in the flyout), so it never happens by accident. -->
+                    <Border Classes="sCard" Margin="0,12,0,0">
+                        <Border Classes="sRow">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                    <TextBlock Classes="sRowTitle" Text="Quit Developer Island" />
+                                    <TextBlock Classes="sRowText" Text="Ends the island, its status icon and all background work. Closing this window or hiding the island keeps it running." />
+                                </StackPanel>
+                                <Button Name="QuitButton" Grid.Column="1" Content="Quit…" VerticalAlignment="Center">
+                                    <Button.Flyout>
+                                        <Flyout Placement="BottomEdgeAlignedRight">
+                                            <StackPanel Spacing="12" MaxWidth="280">
+                                                <StackPanel Spacing="4">
+                                                    <TextBlock Classes="sRowTitle" Text="Quit Developer Island?" FontWeight="SemiBold" />
+                                                    <TextBlock Classes="sRowText" Text="The island and its status icon close until you start Developer Island again." />
+                                                </StackPanel>
+                                                <Button Name="ConfirmQuitButton" Content="Quit" HorizontalAlignment="Right" MinWidth="88" Click="OnConfirmQuit"
+                                                        Background="#FFC42B1C" Foreground="White" />
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </Border>
+                </StackPanel>
+
+                <!-- Position -->
+                <StackPanel Name="PositionSection" Spacing="8" IsVisible="False">
+                    <TextBlock Classes="sTitle" Text="Position" Margin="0,0,0,20" />
+                    <Border Classes="sCard">
+                        <StackPanel>
+                            <Border Classes="sRow">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Classes="sRowTitle" Text="Monitor" />
+                                        <TextBlock Classes="sRowText" Text="If this monitor is disconnected, the island moves to the primary monitor." />
+                                    </StackPanel>
+                                    <ComboBox Name="MonitorPicker" Grid.Column="1" MinWidth="220" VerticalAlignment="Center" SelectionChanged="OnMonitorChanged" />
+                                </Grid>
+                            </Border>
+                            <Rectangle Classes="sDivider" />
+                            <Border Classes="sRow" Padding="16">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Classes="sRowTitle" Text="Anchor" />
+                                        <TextBlock Classes="sRowText" Text="The island rests here and grows away from this edge." />
+                                        <TextBlock Name="AnchorName" Classes="sRowText" Foreground="{DynamicResource SettingsTextPrimaryBrush}" Margin="0,8,0,0" />
+                                    </StackPanel>
+                                    <!-- Miniature screen with the six anchors. -->
+                                    <Border Grid.Column="1" Width="184" Height="116" CornerRadius="10" BorderThickness="1"
+                                            Background="{DynamicResource SettingsScreenBrush}" BorderBrush="{DynamicResource SettingsScreenStrokeBrush}">
+                                        <Grid Margin="6" ColumnDefinitions="*,*,*" RowDefinitions="*,*">
+                                            <RadioButton Name="AnchorTopLeft" Classes="anchor" GroupName="Anchor" Tag="TopLeft" HorizontalAlignment="Left" VerticalAlignment="Top" IsCheckedChanged="OnAnchorChecked" ToolTip.Tip="Top Left" />
+                                            <RadioButton Name="AnchorTopCenter" Classes="anchor" Grid.Column="1" GroupName="Anchor" Tag="TopCenter" HorizontalAlignment="Center" VerticalAlignment="Top" IsCheckedChanged="OnAnchorChecked" ToolTip.Tip="Top Center" />
+                                            <RadioButton Name="AnchorTopRight" Classes="anchor" Grid.Column="2" GroupName="Anchor" Tag="TopRight" HorizontalAlignment="Right" VerticalAlignment="Top" IsCheckedChanged="OnAnchorChecked" ToolTip.Tip="Top Right" />
+                                            <RadioButton Name="AnchorBottomLeft" Classes="anchor" Grid.Row="1" GroupName="Anchor" Tag="BottomLeft" HorizontalAlignment="Left" VerticalAlignment="Bottom" IsCheckedChanged="OnAnchorChecked" ToolTip.Tip="Bottom Left" />
+                                            <RadioButton Name="AnchorBottomCenter" Classes="anchor" Grid.Row="1" Grid.Column="1" GroupName="Anchor" Tag="BottomCenter" HorizontalAlignment="Center" VerticalAlignment="Bottom" IsCheckedChanged="OnAnchorChecked" ToolTip.Tip="Bottom Center" />
+                                            <RadioButton Name="AnchorBottomRight" Classes="anchor" Grid.Row="1" Grid.Column="2" GroupName="Anchor" Tag="BottomRight" HorizontalAlignment="Right" VerticalAlignment="Bottom" IsCheckedChanged="OnAnchorChecked" ToolTip.Tip="Bottom Right" />
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                            <Rectangle Classes="sDivider" />
+                            <Border Classes="sRow">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Classes="sRowTitle" Text="Custom position" />
+                                        <TextBlock Name="CustomPositionText" Classes="sRowText" />
+                                    </StackPanel>
+                                    <Button Name="ResetPositionButton" Grid.Column="1" Content="Reset Position" Click="OnResetPosition" VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Classes="sGroup" Text="Auto-hide in apps" />
+                    <Border Classes="sCard">
+                        <StackPanel>
+                            <Border Classes="sRow">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Classes="sRowTitle" Text="Step aside for these apps" />
+                                        <TextBlock Name="SmartHideText" Classes="sRowText" />
+                                    </StackPanel>
+                                    <ToggleSwitch Name="SmartHideToggle" Grid.Column="1" Classes="sToggle" Tag="SmartHide" IsCheckedChanged="OnToggle" />
+                                </Grid>
+                            </Border>
+                            <Rectangle Classes="sDivider" />
+                            <Border Classes="sRow">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Classes="sRowTitle" Text="Behavior" />
+                                        <TextBlock Classes="sRowText" Text="Notch keeps a small tab at the top edge; Hide removes it too. The keyboard shortcut still opens the island." />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" VerticalAlignment="Center" CornerRadius="8" Padding="2" Background="{DynamicResource SettingsSegmentBrush}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <RadioButton Name="SmartHideRetract" Classes="segment" GroupName="SmartHideBehavior" Content="Notch" Tag="Retract" IsCheckedChanged="OnSmartHideBehaviorChecked" />
+                                            <RadioButton Name="SmartHideHide" Classes="segment" GroupName="SmartHideBehavior" Content="Hide" Tag="Hide" IsCheckedChanged="OnSmartHideBehaviorChecked" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                            <Rectangle Classes="sDivider" />
+                            <Border Classes="sRow">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Classes="sRowTitle" Text="Only when maximized" />
+                                        <TextBlock Classes="sRowText" Text="The island steps aside only while the app fills the screen, where it would cover tabs or the title bar." />
+                                    </StackPanel>
+                                    <ToggleSwitch Name="AutoHideMaximizedToggle" Grid.Column="1" Classes="sToggle" Tag="AutoHideMaximized" IsCheckedChanged="OnToggle" />
+                                </Grid>
+                            </Border>
+                            <Rectangle Classes="sDivider" IsVisible="{Binding #ShellHelperRow.IsVisible}" />
+                            <Border Name="ShellHelperRow" Classes="sRow">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Name="ShellHelperTitle" Classes="sRowTitle" Text="GNOME Shell helper" />
+                                        <TextBlock Name="ShellHelperText" Classes="sRowText" />
+                                    </StackPanel>
+                                    <Button Name="ShellHelperButton" Grid.Column="1" Content="Install" Click="OnInstallShellHelper" VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                    <Border Classes="sCard" Margin="0,8,0,0">
+                        <StackPanel>
+                            <StackPanel Name="AutoHideRows" />
+                            <Border Classes="sRow">
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                    <TextBlock Classes="sRowText" Text="Add an app that is running now, or pick its program file." VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <Button Name="AddAppButton" Grid.Column="1" Content="Add application…" Click="OnAddApplication" VerticalAlignment="Center" />
+                                    <Button Grid.Column="2" Content="Browse…" Click="OnBrowseApplication" VerticalAlignment="Center" ToolTip.Tip="Pick a program file" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Home Cloud -->
+                <StackPanel Name="HomeCloudSection" Spacing="8" IsVisible="False">
+                    <TextBlock Classes="sTitle" Text="Home Cloud" Margin="0,0,0,4" />
+                    <TextBlock Classes="sRowText" Text="Drop files or folders onto the island to copy them to your home server." Margin="0,0,0,16" />
+                    <Border Classes="sCard">
+                        <StackPanel>
+                            <Border Classes="sRow">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Classes="sRowTitle" Text="Enable drop zone" />
+                                        <TextBlock Classes="sRowText" Text="Shows a drop zone next to the island while you drag files." />
+                                    </StackPanel>
+                                    <ToggleSwitch Name="HomeCloudToggle" Grid.Column="1" Classes="sToggle" IsCheckedChanged="OnHomeCloudToggled" />
+                                </Grid>
+                            </Border>
+                            <Rectangle Classes="sDivider" />
+                            <Border Classes="sRow">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Classes="sRowTitle" Text="Target folder" />
+                                        <TextBlock Classes="sRowText" Text="A mounted share or local folder." />
+                                    </StackPanel>
+                                    <TextBox Name="HomeCloudPathBox" Grid.Column="1" MinWidth="240" VerticalAlignment="Center" Watermark="/mnt/server/Inbox"
+                                             LostFocus="OnHomeCloudPathLostFocus" KeyDown="OnHomeCloudPathKeyDown" />
+                                </Grid>
+                            </Border>
+                            <Rectangle Classes="sDivider" />
+                            <Border Classes="sRow">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Classes="sRowTitle" Text="Drop zone side" />
+                                        <TextBlock Classes="sRowText" Text="Which side of the island the drop zone appears on." />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" VerticalAlignment="Center" CornerRadius="8" Padding="2" Background="{DynamicResource SettingsSegmentBrush}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <RadioButton Name="HomeCloudSideLeft" Classes="segment" GroupName="HomeCloudSide" Content="Left" Tag="Left" IsCheckedChanged="OnHomeCloudSideChecked" />
+                                            <RadioButton Name="HomeCloudSideRight" Classes="segment" GroupName="HomeCloudSide" Content="Right" Tag="Right" IsCheckedChanged="OnHomeCloudSideChecked" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                            <Rectangle Classes="sDivider" />
+                            <Border Classes="sRow">
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                    <TextBlock Name="HomeCloudStatus" Classes="sRowText" Text="Check that the target folder can be reached." VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <Button Name="HomeCloudTestButton" Grid.Column="1" Content="Test connection" Click="OnHomeCloudTest" VerticalAlignment="Center" />
+                                    <Button Name="HomeCloudOpenButton" Grid.Column="2" Content="Open folder" Click="OnHomeCloudOpen" VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Modules -->
+                <StackPanel Name="ModulesSection" Spacing="8" IsVisible="False">
+                    <TextBlock Classes="sTitle" Text="Modules" Margin="0,0,0,4" />
+                    <TextBlock Classes="sRowText" Text="Turn modules on or off and set their order in the island." Margin="0,0,0,16" />
+                    <Border Classes="sCard">
+                        <StackPanel Name="ModuleRows" />
+                    </Border>
+
+                    <TextBlock Classes="sGroup" Text="Claude Code and Codex" />
+                    <Border Classes="sCard">
+                        <Border Classes="sRow">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                    <TextBlock Classes="sRowTitle" Text="Token metric" />
+                                    <TextBlock Classes="sRowText" Text="Fresh counts input, cache writes and output. All processed adds cache reads, the context re-read on every turn, which is usually most of the total. Applies to the capsule, peek, tooltips and usage graph; the breakdown always lists every category." />
+                                </StackPanel>
+                                <Border Grid.Column="1" VerticalAlignment="Center" CornerRadius="8" Padding="2" Background="{DynamicResource SettingsSegmentBrush}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <RadioButton Name="TokenMetricFresh" Classes="segment" GroupName="TokenMetric" Content="Fresh" Tag="Fresh" IsCheckedChanged="OnTokenMetricChecked" />
+                                        <RadioButton Name="TokenMetricAll" Classes="segment" GroupName="TokenMetric" Content="All processed" Tag="AllProcessed" IsCheckedChanged="OnTokenMetricChecked" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </Border>
+
+                    <TextBlock Classes="sGroup" Text="Claude plan usage" />
+                    <Border Classes="sCard">
+                        <Border Classes="sRow">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Name="PlanStatusTitle" Classes="sRowTitle" Text="Not connected" />
+                                    <TextBlock Name="PlanStatusText" Classes="sRowText" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <Button Name="PlanConnectButton" Content="Connect" Click="OnConnectPlan" />
+                                    <Button Name="PlanDisconnectButton" Content="Disconnect" Click="OnDisconnectPlan" IsVisible="False" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Border>
+
+                    <TextBlock Classes="sGroup" Text="Awake" />
+                    <Border Classes="sCard">
+                        <Border Classes="sRow">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                    <TextBlock Classes="sRowTitle" Text="End on low battery" />
+                                    <TextBlock Classes="sRowText" Text="On battery, an awake session ends below this level, and closing the lid suspends the PC again. During a session, Developer Island holds systemd-logind inhibitor locks for suspend and the lid switch; nothing is changed permanently and the locks end with the session or the app. Use a well-ventilated surface, not a bag." />
+                                </StackPanel>
+                                <ComboBox Name="AwakeBatteryPicker" Grid.Column="1" MinWidth="120" VerticalAlignment="Center" SelectionChanged="OnAwakeBatteryChanged" />
+                            </Grid>
+                        </Border>
+                    </Border>
+
+                    <TextBlock Classes="sGroup" Text="Git repositories" />
+                    <Border Classes="sCard">
+                        <StackPanel>
+                            <StackPanel Name="RepoRows" />
+                            <Border Classes="sRow">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <TextBlock Classes="sRowText" VerticalAlignment="Center" Margin="0,0,16,0"
+                                               Text="The Git module follows the folder of your latest Claude Code or Codex session. Add other repositories to keep them in the list." />
+                                    <Button Grid.Column="1" Content="Add repository…" Click="OnAddRepository" VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Classes="sGroup" Text="Calendars" />
+                    <Border Classes="sCard">
+                        <StackPanel>
+                            <StackPanel Name="CalendarRows" />
+                            <Border Classes="sRow">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                    <TextBox Name="CalendarLinkBox" Watermark="Paste a calendar link in iCal format (https:// or webcal://)"
+                                             KeyDown="OnCalendarLinkKeyDown" TextChanged="OnCalendarLinkChanged" />
+                                    <Button Name="AddCalendarButton" Grid.Column="1" Content="Add" Click="OnAddCalendarLink" IsEnabled="False" />
+                                </Grid>
+                            </Border>
+                            <Border Classes="sRow" Padding="16,0,12,12">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <TextBlock Classes="sRowText" VerticalAlignment="Center" Margin="0,0,16,0"
+                                               Text="Google, Outlook and iCloud offer a private iCal address in their sharing settings. The link stays on this PC, in your keyring, and is only used to read events." />
+                                    <Button Grid.Column="1" Content="Add .ics file…" Click="OnAddCalendarFile" VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Appearance -->
+                <StackPanel Name="AppearanceSection" Spacing="8" IsVisible="False">
+                    <TextBlock Classes="sTitle" Text="Appearance" Margin="0,0,0,20" />
+                    <Border Classes="sCard">
+                        <Border Classes="sRow">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Classes="sRowTitle" Text="Theme" />
+                                    <TextBlock Classes="sRowText" Text="Applies to this window. The island itself is always dark." />
+                                </StackPanel>
+                                <Border Grid.Column="1" VerticalAlignment="Center" CornerRadius="8" Padding="2" Background="{DynamicResource SettingsSegmentBrush}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <RadioButton Name="ThemeSystem" Classes="segment" GroupName="Theme" Content="System" Tag="System" IsCheckedChanged="OnThemeChecked" />
+                                        <RadioButton Name="ThemeDark" Classes="segment" GroupName="Theme" Content="Dark" Tag="Dark" IsCheckedChanged="OnThemeChecked" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </Border>
+                </StackPanel>
+
+                <!-- About -->
+                <StackPanel Name="AboutSection" Spacing="8" IsVisible="False">
+                    <TextBlock Classes="sTitle" Text="About" Margin="0,0,0,20" />
+                    <Border Classes="sCard">
+                        <StackPanel>
+                            <Border Classes="sRow">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+                                    <Image Name="AboutIcon" Width="44" Height="44" VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Classes="sRowTitle" Text="Developer Island" FontWeight="SemiBold" />
+                                        <TextBlock Name="VersionText" Classes="sRowText" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                            <Rectangle Classes="sDivider" />
+                            <Border Classes="sRow">
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Classes="sRowTitle" Text="Local-first" />
+                                    <TextBlock Classes="sRowText" Text="Your prompts never leave your device. Developer Island reads only usage metadata (tokens, model, time) from local logs and stores daily totals on this PC. Its only network use is what you turn on: calendar links you add, the GitHub CLI, and album art from the player's own artwork address." />
+                                </StackPanel>
+                            </Border>
+                            <Rectangle Classes="sDivider" />
+                            <Border Classes="sRow">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Classes="sRowTitle" Text="Data and logs" />
+                                        <SelectableTextBlock Name="DataPathText" FontSize="12" Foreground="{DynamicResource SettingsTextSecondaryBrush}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Content="Open Folder" Click="OnOpenDataFolder" VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+                            <Rectangle Classes="sDivider" />
+                            <Border Classes="sRow">
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Classes="sRowTitle" Text="API equivalent" />
+                                    <TextBlock Classes="sRowText" Text="Estimated from public API list prices, converted to euros. Subscriptions are billed differently, so this is not what you pay. Adjust prices or the exchange rate in pricing.json." />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Panel>
+        </ScrollViewer>
+    </Grid>
+</Window>
