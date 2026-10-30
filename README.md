@@ -25,6 +25,7 @@ AI coding tools spend tokens and plan limits where you can't see them, and the r
 ### AI usage
 
 - **Claude Code and Codex** usage from their local logs: today's fresh and processed tokens with a full breakdown (input, cache write, output, cache read), sessions and model.
+- **WSL too:** turn on Include WSL and usage from Claude Code and Codex inside your running WSL distros counts into the same totals, and the Git module follows their repositories with the distro's own git. Stopped distros are never started.
 - A **token metric** of your choice in Settings: **fresh** tokens (input, cache writes and output, the default) or **all processed** tokens including cache reads, for the capsule, peek, tooltips and graph. Every figure says which one it is.
 - **Plan usage** where the tool reports it: Claude's 5-hour and weekly windows with reset times, and Codex's windows from its own logs. Never computed from token counts.
 - A **26-week usage graph** with a tooltip per day, and an **estimated API equivalent** at public list prices (in the expanded view only).
@@ -82,7 +83,7 @@ All details per module: [docs/MODULES.md](docs/MODULES.md).
 
 Developer Island is **local-first**. It has no account, no telemetry and no cloud sync, and it does not upload your prompts or code. The one request it makes on its own is the optional update check: off until you agree, it asks GitHub anonymously once a day whether a newer release exists, and installs one only when you click Install.
 
-- **Read locally:** Claude Code transcripts (`~/.claude/projects`) and Codex rollout files (`~/.codex/sessions`). Only usage metadata is extracted (token counts, model, timestamps, session IDs, working directory); prompt, message and code content is never stored, displayed or logged.
+- **Read locally:** Claude Code transcripts (`~/.claude/projects`) and Codex rollout files (`~/.codex/sessions`), with Include WSL also those inside running WSL distros (read through `\\wsl.localhost`; `wsl.exe` lists running distros and runs git there). Only usage metadata is extracted (token counts, model, timestamps, session IDs, working directory); prompt, message and code content is never stored, displayed or logged.
 - **Stored locally** in `%LOCALAPPDATA%\DeveloperIsland`: a SQLite database with token counts and daily totals, settings, tasks, focus history, the last Claude plan percentages, the last Claude Code alert (its kind, project folder name and time) and, during an Awake session, the lid setting to put back. Logs contain events and error types, never content, and are kept for 7 days.
 - **Credentials:** private calendar links are kept in Windows Credential Manager. GitHub access goes through the GitHub CLI's own sign-in; Developer Island never sees a token.
 - **Network:** only the calendar links you add, the GitHub CLI's read-only requests while the GitHub module is on, if you drop files onto the island, the copy to the folder you configured under Home Cloud (your own server), and, if you turn it on, a daily update check against the project's GitHub releases.
@@ -122,7 +123,7 @@ Everything is set in the Settings window and applies immediately:
 |---|---|
 | General | Start with Windows, always on top, launch hidden, keyboard shortcut |
 | Position | Monitor, anchor, custom position; auto-hide in apps (notch or hide, only when maximized, app list) |
-| Modules | Each module on or off and its order; Claude plan usage; Claude Code alerts; Git repositories; calendars |
+| Modules | Each module on or off and its order; Claude plan usage; Claude Code alerts; Git repositories; Include WSL; calendars |
 | Appearance | System or Dark for Settings (the island itself is always dark) |
 
 API prices and the exchange rate for the API equivalent can be adjusted in `%LOCALAPPDATA%\DeveloperIsland\pricing.json` ([example](docs/PRIVACY.md)).

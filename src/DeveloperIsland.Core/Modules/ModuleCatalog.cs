@@ -41,7 +41,8 @@ public enum ModuleState
 }
 
 /// <summary>A module's state plus a short, user-facing explanation for the non-ready states.</summary>
-public sealed record ModuleStatus(ModuleState State, string? Message = null)
+/// <param name="Title">Replaces the state's usual title when the reason is more specific ("Ubuntu is not running").</param>
+public sealed record ModuleStatus(ModuleState State, string? Message = null, string? Title = null)
 {
     public static readonly ModuleStatus Disabled = new(ModuleState.Disabled);
     public static readonly ModuleStatus Loading = new(ModuleState.Loading);

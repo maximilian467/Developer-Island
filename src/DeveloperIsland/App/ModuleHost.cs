@@ -8,6 +8,7 @@ using DeveloperIsland.Core.Modules;
 using DeveloperIsland.Core.Settings;
 using DeveloperIsland.Core.SystemInfo;
 using DeveloperIsland.Core.Tasks;
+using DeveloperIsland.Core.Wsl;
 using DeveloperIsland.Platform.SystemInfo;
 using DeveloperIsland.ViewModels;
 using Microsoft.UI.Dispatching;
@@ -29,7 +30,7 @@ internal sealed class ModuleHost : IDisposable
     private readonly SettingsStore _settings;
     private readonly bool _demo;
     private readonly HttpClient _http;
-    private readonly GitService _git = new();
+    private readonly GitService _git;
     private readonly GitHubService _github = new();
     private readonly CalendarService _calendar;
     private readonly SystemMonitor _system;
@@ -45,8 +46,9 @@ internal sealed class ModuleHost : IDisposable
 
     private readonly ISecretStore _secrets;
 
-    public ModuleHost(DispatcherQueue dispatcher, ModuleViewModels vms, IslandViewModel island, SettingsStore settings, bool demo, ISecretStore secrets)
+    public ModuleHost(DispatcherQueue dispatcher, ModuleViewModels vms, IslandViewModel island, SettingsStore settings, bool demo, ISecretStore secrets, IWslRuntime wsl)
     {
+        _git = new GitService(wsl: wsl);
         _secrets = secrets;
         _dispatcher = dispatcher;
         _vms = vms;
@@ -192,7 +194,7 @@ internal sealed class ModuleHost : IDisposable
     private void UpdateGit()
     {
         var repositories = _git.Repositories;
-        _vms.Git.Update(_git.Status, repositories, DateTimeOffset.UtcNow);
+        _vms.Git.Update(_git.Status, repositories, DateTimeOffset.UtcNow, _git.Note);
         var active = repositories.FirstOrDefault();
         _github.SetRepository(active?.GitHubRepository, active?.Branch);
         _island.EnsureValidTab();

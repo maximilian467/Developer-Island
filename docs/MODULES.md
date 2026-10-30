@@ -33,7 +33,7 @@ Every module has the same four honest states: working; **empty** (nothing to sho
 
 ### Claude Code and Codex
 
-Developer Island reads usage metadata from Claude Code's local transcripts (`~/.claude/projects`, or `CLAUDE_CONFIG_DIR`) and Codex rollout files (`~/.codex/sessions`, or `CODEX_HOME`).
+Developer Island reads usage metadata from Claude Code's local transcripts (`~/.claude/projects`, or `CLAUDE_CONFIG_DIR`) and Codex rollout files (`~/.codex/sessions`, or `CODEX_HOME`). With **Include WSL** on, it also reads them inside your WSL distros (see [WSL](#wsl)).
 
 Tokens are counted the way the providers bill them:
 
@@ -85,6 +85,19 @@ The panel also lists active Windows playback devices and can make the selected d
 </p>
 
 The repository of your latest Claude Code or Codex session, plus any you add in Settings: branch, uncommitted changes (staged, modified, new), commits to push or pull, and the last commit. Up to three other recent repositories are one click away. Developer Island never searches your disk: it only walks up from a session's folder to find its repository. Git runs only when you open the panel or when you commit, check out or fetch.
+
+Repositories inside WSL (`\\wsl.localhost\<distro>\...` or `\\wsl$\<distro>\...`) are read by the distro's own git, see [WSL](#wsl).
+
+### WSL
+
+Many developers run Claude Code, Codex and git inside WSL. Settings, Modules, **Include WSL** (off by default) reads them there too. It lists the installed distros from the registry (`HKCU\Software\Microsoft\Windows\CurrentVersion\Lxss`), which starts nothing; Docker Desktop's and Rancher Desktop's own distros are left out. Each distro can be switched off on its own.
+
+- **Only running distros.** Opening `\\wsl.localhost\<distro>` would boot a stopped distro, so Developer Island first asks `wsl.exe --list --running` (at most every 15 seconds) and reads nothing in a distro that is not running. When you start it, its usage and repositories appear.
+- **Usage.** For each running distro, the homes in its `/etc/passwd` (the distro's default user first, then other login users, then root) are checked for `.claude` and `.codex`; their logs count into the same totals as on Windows. The WSL share sends no reliable change notifications, so these folders are polled: files written in the last 15 minutes every 5 seconds, the whole folder every minute. Every response is stored once by its id, so a file reached twice (through `\\wsl$` and `\\wsl.localhost`, or a `CLAUDE_CONFIG_DIR` pointing into WSL) is never counted twice. `CLAUDE_CONFIG_DIR` and `CODEX_HOME` set inside the distro are not known to Windows; the default folders are read.
+- **Project folders.** Tools inside WSL record Linux paths. `/home/you/proj` becomes `\\wsl.localhost\<distro>\home\you\proj` for the Git module, and a Windows drive mounted by WSL (`/mnt/c/Users/you/proj`) becomes `C:\Users\you\proj` again.
+- **Git.** For a repository inside WSL, Developer Island runs `wsl.exe --distribution <distro> --cd <linux path> --exec git ...` with the same read-only status, log and remote arguments as on Windows (no shell, no profile scripts). Windows git on the share would be slow and refuse the files as "dubious ownership". The share sends no change notifications, so these repositories are re-read every 10 seconds while the Git panel is on screen, and not at all while it is hidden (after the first read). Repositories you add in Settings may be WSL paths, also without Include WSL; they are read only while their distro runs.
+- **States.** The Git panel says when a distro is not running, when git is missing inside it, and when WSL is not installed. With other repositories on screen, a line under them names the stopped distro.
+- Requires `\\wsl.localhost` (Windows 11, or Windows 10 with WSL from the Microsoft Store).
 
 ### GitHub
 
@@ -159,7 +172,7 @@ Not a tab, but a drop zone of the island: drop files or folders onto it and they
 |---|---|
 | General | Start with Windows, always on top, launch hidden, keyboard shortcut; Check for updates, the last check and Check now; Quit Developer Island (ends the app, its tray icon and all background work) |
 | Position | Monitor, anchor, custom position; Auto-hide in apps (on or off, notch or hide, only when maximized, an app list with icons and Add application or Browse) |
-| Modules | Every module on or off and in which order; token metric for Claude Code and Codex (`TokenMetric`: `Fresh`, the default, or `AllProcessed`); Claude plan usage (connect or disconnect); Git repositories; calendars |
+| Modules | Every module on or off and in which order; token metric for Claude Code and Codex (`TokenMetric`: `Fresh`, the default, or `AllProcessed`); Claude plan usage (connect or disconnect); Git repositories; Include WSL and its distros (`WslEnabled`, off by default; `WslExcludedDistros`); calendars |
 | Home Cloud | Home Cloud on or off (`HomeCloudEnabled`, default off), target folder (`HomeCloudTargetPath`, default empty; the zone works only once it is set), side of the drop zone (`HomeCloudDropSide`, Left or Right, default Right) |
 | Appearance | System or Dark (the island itself is always dark) |
 

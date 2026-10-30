@@ -506,10 +506,30 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="The Git module follows the folder of your latest Claude Code or Codex session. Add other repositories to keep them in the list."
+                                    <TextBlock Text="The Git module follows the folder of your latest Claude Code or Codex session. Add other repositories to keep them in the list; folders inside WSL work too."
                                                Style="{StaticResource SettingsRowDescriptionStyle}" VerticalAlignment="Center" Margin="0,0,16,0" />
                                     <Button Grid.Column="1" Content="Add repository…" Click="OnAddRepository" VerticalAlignment="Center" />
                                 </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock x:Name="WslGroupLabel" Text="WSL" Style="{StaticResource SettingsGroupLabelStyle}" Margin="4,20,0,4" />
+                        <Border Style="{StaticResource SettingsCardStyle}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingsRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <TextBlock Text="Include WSL" Style="{StaticResource SettingsRowTitleStyle}" />
+                                        <TextBlock Text="Also reads Claude Code and Codex usage and the Git repositories inside your WSL distros. Only running distros are read: Developer Island never starts one."
+                                                   Style="{StaticResource SettingsRowDescriptionStyle}" />
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="WslToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
+                                                  AutomationProperties.Name="Include WSL" Toggled="OnToggle" Tag="Wsl" />
+                                </Grid>
+                                <StackPanel x:Name="WslRows" AutomationProperties.Name="WSL distros" />
                             </StackPanel>
                         </Border>
 

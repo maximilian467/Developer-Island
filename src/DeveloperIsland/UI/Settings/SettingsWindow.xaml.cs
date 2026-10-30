@@ -27,11 +27,14 @@ public sealed partial class SettingsWindow : Window
     private bool _loading;
     private readonly Func<bool> _isShortcutInUse;
     private readonly Core.Calendar.ISecretStore _secrets;
+    private readonly Core.Wsl.WslService _wsl;
+    private bool _wslDiscovered;
     private string _selected = "General";
 
-    internal SettingsWindow(SettingsStore store, bool isDemo, Func<bool> isShortcutInUse, Core.Calendar.ISecretStore secrets)
+    internal SettingsWindow(SettingsStore store, bool isDemo, Func<bool> isShortcutInUse, Core.Calendar.ISecretStore secrets, Core.Wsl.WslService wsl)
     {
         _secrets = secrets;
+        _wsl = wsl;
         _store = store;
         _isDemo = isDemo;
         _isShortcutInUse = isShortcutInUse;
@@ -69,7 +72,12 @@ public sealed partial class SettingsWindow : Window
         DataPathText.Text = AppPaths.Root;
 
         _store.Changed += OnStoreChanged;
-        Closed += (_, _) => _store.Changed -= OnStoreChanged;
+        _wsl.Changed += OnWslChanged;
+        Closed += (_, _) =>
+        {
+            _store.Changed -= OnStoreChanged;
+            _wsl.Changed -= OnWslChanged;
+        };
         Root.ActualThemeChanged += (_, _) =>
         {
             ApplyCaptionColors();
@@ -81,6 +89,7 @@ public sealed partial class SettingsWindow : Window
         ApplyTheme(_store.Current.Theme);
         Select("General");
         SizeAndCenter();
+        _ = DiscoverWslAsync();
     }
 
     /// <summary>The user confirmed Quit Developer Island: the host ends the whole app.</summary>
@@ -121,6 +130,15 @@ public sealed partial class SettingsWindow : Window
             ContentScroll.ChangeView(null, 0, null, disableAnimation: true);
             await Task.Delay(150);
             await UI.Components.SnapshotWriter.SaveAsync(Root, Path.Combine(directory, "30-settings-" + name.ToLowerInvariant() + ".png"));
+            if (name == "Modules")
+            {
+                // The WSL card sits mid-section, in neither the top nor the end shot.
+                var top = WslGroupLabel.TransformToVisual((UIElement)ContentScroll.Content).TransformPoint(new Windows.Foundation.Point(0, 0)).Y;
+                ContentScroll.ChangeView(null, Math.Max(0, top - 24), null, disableAnimation: true);
+                await Task.Delay(300);
+                await UI.Components.SnapshotWriter.SaveAsync(Root, Path.Combine(directory, "30-settings-modules-wsl.png"));
+            }
+
             if (ContentScroll.ScrollableHeight > 1)
             {
                 ContentScroll.ChangeView(null, ContentScroll.ScrollableHeight, null, disableAnimation: true);
@@ -173,6 +191,19 @@ public sealed partial class SettingsWindow : Window
 
     private void OnStoreChanged(AppSettings settings) => DispatcherQueue.TryEnqueue(() => LoadFromSettings(settings));
 
+    private void OnWslChanged() => DispatcherQueue.TryEnqueue(() =>
+    {
+        _loading = true;
+        try
+        {
+            BuildWslRows(_store.Current);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    });
+
     private void LoadFromSettings(AppSettings s)
     {
         _loading = true;
@@ -186,6 +217,8 @@ public sealed partial class SettingsWindow : Window
             UpdatePlanConnection();
             LoadWhisperFlow(s);
             BuildRepositoryRows(s);
+            WslToggle.IsOn = s.WslEnabled;
+            BuildWslRows(s);
             BuildCalendarRows(s);
             ShortcutToggle.IsOn = s.GlobalShortcutEnabled;
             ShortcutPicker.SelectedItem = ShortcutGesture.FromText(s.GlobalShortcut).Text;
@@ -318,6 +351,16 @@ public sealed partial class SettingsWindow : Window
                 case "Shortcut": s.GlobalShortcutEnabled = on; break;
                 case "SmartHide": s.SmartHideEnabled = on; break;
                 case "AutoHideMaximized": s.AutoHideOnlyMaximized = on; break;
+                case "Wsl": s.WslEnabled = on; break;
+                case var distro when distro.StartsWith("Distro:", StringComparison.Ordinal):
+                    var name = distro["Distro:".Length..];
+                    s.WslExcludedDistros.RemoveAll(d => string.Equals(d, name, StringComparison.OrdinalIgnoreCase));
+                    if (!on)
+                    {
+                        s.WslExcludedDistros.Add(name);
+                    }
+
+                    break;
                 case var app when app.StartsWith("App:", StringComparison.Ordinal):
                     SetAppEnabled(s, app["App:".Length..], on);
                     break;

@@ -20,6 +20,11 @@ All notable changes to Developer Island are documented here. The format follows 
 
 - **Token metric** in Settings, Modules: show **fresh** tokens (input, cache writes and output; the default, as before) or **all processed** tokens including cache reads in the capsule, peek, tooltips, usage graph and day inspector, for Claude Code and Codex alike. Every figure is labelled ("fresh tokens", "tokens incl. cache reads"); the breakdown still lists every category, and each API response still counts once.
 - Choose the active Windows playback output from the Music panel.
+- **WSL support** ([#9](https://github.com/maximilian467/Developer-Island/issues/9)). Settings, Modules, **Include WSL** (off by default) lists the installed distros (read from the registry, so nothing starts) and adds, for each one left on:
+  - Claude Code and Codex usage from `~/.claude` and `~/.codex` inside the distro, counted into the same totals. The WSL share sends no reliable change notifications, so these folders are polled (recent files every 5 s, the whole folder every minute); every response is still counted once.
+  - Their project folders: Linux paths (`/home/you/proj`) become `\\wsl.localhost\<distro>\home\you\proj` for the Git module; `/mnt/c/...` becomes `C:\...` again.
+  - Git for repositories inside WSL runs the distro's own git through `wsl.exe` (no "dubious ownership", no slow share), re-read every 10 s while the Git panel is open. `\\wsl$\...` and `\\wsl.localhost\...` repositories can also be added in Settings, Git repositories.
+  - Only running distros are read: Developer Island never starts one. A stopped distro, a distro without git and a PC without WSL each get their own message in the Git panel.
 - **Update check with one-click install.** Settings, General, "Check for updates" asks GitHub at most once a day whether a newer release exists (off until you agree; the island asks once after updating). A newer version appears as a live activity ("Developer Island 0.x.y is available") and in the tray menu; clicking opens a small dialog with Install now, Release notes, Later and Skip this version. Install now downloads the setup, verifies the signed checksums (ECDSA P-256, the public key is built into the app) and the setup's SHA-256, runs it silently and starts the new version again, keeping your autostart choice. "Check now" and the time of the last check are in Settings. Drafts and prereleases are never offered; offline checks stay silent. Portable copies point to the release page instead.
 - Releases carry `SHA256SUMS-<version>.txt.sig`: `tools/build-release.ps1` signs the checksums with the key in `DI_RELEASE_SIGNING_KEY` (`tools/release-signing.cs`, see docs/RELEASING.md).
 - **WhisperFlow dictation** (optional, off by default): for the local WhisperFlow speech-to-text tool (not the commercial Wispr Flow). Beside the microphone mark the island shows "WhisperFlow" while it records, a spinner and "Transcribing…" while it transcribes, then "Inserted", "No speech" or "Failed" for three seconds; the notch shows a matching dot. Turn it on in Settings, Modules. Developer Island only reads WhisperFlow's status file (`%LOCALAPPDATA%\WhisperFlow\status.json`: state, time, process ID), never audio or text.
@@ -30,6 +35,7 @@ All notable changes to Developer Island are documented here. The format follows 
 
 ### Fixed
 
+- The first usage of a day kept no working folder until the next reply, so the Git module could miss the session's repository.
 - In Windows light mode, the island no longer sits in a white rectangle: the window background stays transparent whatever the app theme ([#11](https://github.com/maximilian467/Developer-Island/issues/11)).
 
 ## [0.3.0] - 2026-10-15

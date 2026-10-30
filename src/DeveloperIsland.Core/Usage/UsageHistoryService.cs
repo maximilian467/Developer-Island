@@ -74,13 +74,17 @@ public sealed class UsageHistoryService
                         accumulator = LoadAccumulator(day, e.Provider);
                         batch[key] = accumulator;
                         loadedFromDb.Add(key);
-                        continue;
                     }
                 }
 
                 if (!loadedFromDb.Contains(key))
                 {
                     accumulator.Add(e);
+                }
+                else
+                {
+                    // The database does not keep working folders; the event in hand does (Git follows it).
+                    accumulator.NoteLatest(e);
                 }
             }
 
@@ -188,6 +192,15 @@ internal sealed class UsageAccumulator
             _sessions.Add(e.SessionId);
         }
 
+        if (_latest is null || e.Timestamp >= _latest.Timestamp)
+        {
+            _latest = e;
+        }
+    }
+
+    /// <summary>An event already counted (loaded from the database), seen again with its working folder.</summary>
+    public void NoteLatest(UsageEvent e)
+    {
         if (_latest is null || e.Timestamp >= _latest.Timestamp)
         {
             _latest = e;

@@ -1,6 +1,7 @@
 using DeveloperIsland.Core.Formatting;
 using DeveloperIsland.Core.Git;
 using DeveloperIsland.Core.Modules;
+using DeveloperIsland.Core.Wsl;
 
 namespace DeveloperIsland.ViewModels;
 
@@ -15,6 +16,7 @@ public sealed class GitViewModel : ModuleViewModel
     private GitRepoStatus? _active;
     private IReadOnlyList<GitRepoRow> _others = [];
     private DateTimeOffset _now = DateTimeOffset.UtcNow;
+    private string? _note;
 
     public GitViewModel()
         : base(ModuleId.Git)
@@ -27,6 +29,16 @@ public sealed class GitViewModel : ModuleViewModel
     public GitRepoStatus? Active => _active;
 
     public string RepoName => _active?.Name ?? string.Empty;
+
+    /// <summary>"Ubuntu (WSL)" for a repository inside a WSL distro; empty otherwise.</summary>
+    public string RepoLocation => WslPath.DistroOf(_active?.Root) is { } distro ? $"{distro} (WSL)" : string.Empty;
+
+    public bool HasRepoLocation => RepoLocation.Length > 0;
+
+    /// <summary>Why some repositories are missing (a stopped distro); empty otherwise.</summary>
+    public string Note => _note ?? string.Empty;
+
+    public bool HasNote => !string.IsNullOrEmpty(_note);
 
     public string BranchText => _active is null ? string.Empty
         : _active.Branch ?? (_active.DetachedAt is { } at ? $"detached at {at}" : "detached");
@@ -89,9 +101,10 @@ public sealed class GitViewModel : ModuleViewModel
     public string AccessibleSummary => _active is null ? "No repository"
         : $"{RepoName}, branch {BranchText}, {(_active.IsClean ? "clean" : $"{_active.Changed} {ChangesCaption}")}, {SyncText}";
 
-    public void Update(ModuleStatus status, IReadOnlyList<GitRepoStatus> repositories, DateTimeOffset now)
+    public void Update(ModuleStatus status, IReadOnlyList<GitRepoStatus> repositories, DateTimeOffset now, string? note = null)
     {
         _now = now;
+        _note = note;
         _active = repositories.FirstOrDefault();
         _others = repositories.Skip(1).Take(MaxOtherRepositories)
             .Select(r => new GitRepoRow(r.Root, r.Name, r.Branch ?? "detached", r.IsClean ? "clean" : DisplayFormat.Count(r.Changed, "change", "changes")))

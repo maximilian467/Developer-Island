@@ -14,7 +14,8 @@ public sealed record ProcessResult(int ExitCode, string Output, string Error)
 /// </summary>
 public static class ProcessRunner
 {
-    public static async Task<ProcessResult> RunAsync(string fileName, IEnumerable<string> arguments, string? workingDirectory = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+    /// <param name="outputEncoding">UTF-8 unless given; <c>wsl.exe</c> writes its own messages in UTF-16.</param>
+    public static async Task<ProcessResult> RunAsync(string fileName, IEnumerable<string> arguments, string? workingDirectory = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default, Encoding? outputEncoding = null)
     {
         var info = new ProcessStartInfo(fileName)
         {
@@ -22,8 +23,8 @@ public static class ProcessRunner
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8,
+            StandardOutputEncoding = outputEncoding ?? Encoding.UTF8,
+            StandardErrorEncoding = outputEncoding ?? Encoding.UTF8,
         };
         foreach (var argument in arguments)
         {
@@ -40,6 +41,8 @@ public static class ProcessRunner
         info.Environment["GH_PROMPT_DISABLED"] = "1";
         info.Environment["GH_NO_UPDATE_NOTIFIER"] = "1";
         info.Environment["NO_COLOR"] = "1";
+        // wsl.exe switches its own output to UTF-8 when this is set; callers rely on its documented UTF-16.
+        info.Environment.Remove("WSL_UTF8");
 
         using var process = new Process { StartInfo = info };
         process.Start();

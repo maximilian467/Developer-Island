@@ -32,7 +32,7 @@ public abstract class ModuleViewModel : ObservableObject
 
     public bool IsLoading => _status.State == ModuleState.Loading;
 
-    public string StateTitle => _status.State switch
+    public string StateTitle => _status.Title ?? _status.State switch
     {
         ModuleState.Loading => "Loading…",
         ModuleState.Empty => EmptyTitle,
