@@ -197,6 +197,7 @@ public sealed partial class SettingsWindow : Window
             LoadHomeCloud(s);
             LoadAwake(s);
             LoadTokenMetric(s);
+            LoadUpdates(s);
             foreach (var dependent in new Control[] { SmartHideRetract, SmartHideHide, AutoHideMaximizedToggle })
             {
                 dependent.IsEnabled = s.SmartHideEnabled;
@@ -304,6 +305,10 @@ public sealed partial class SettingsWindow : Window
                 case "StartWithWindows": s.StartWithWindows = on; break;
                 case "AlwaysOnTop": s.AlwaysOnTop = on; break;
                 case "LaunchHidden": s.LaunchHidden = on; break;
+                case "CheckForUpdates":
+                    s.CheckForUpdates = on;
+                    s.UpdateCheckAsked = true;
+                    break;
                 case var module when module.StartsWith("Module:", StringComparison.Ordinal)
                     && Enum.TryParse<ModuleId>(module["Module:".Length..], out var id):
                     s.SetEnabled(id, on);

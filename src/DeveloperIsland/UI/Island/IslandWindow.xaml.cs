@@ -151,6 +151,9 @@ public sealed partial class IslandWindow : Window
 
     public event Action? SettingsRequested;
 
+    /// <summary>A notice activity (an available update, the update question) was clicked.</summary>
+    public event Action<ActivityKind>? NoticeClicked;
+
     /// <summary>The module panel on screen changed; null when the island is not expanded.</summary>
     public event Action<ViewModels.IslandTab?>? VisiblePanelChanged;
 
@@ -828,7 +831,14 @@ public sealed partial class IslandWindow : Window
         var wasDragging = _dragging;
         EndDrag(commit: wasDragging);
         Root.ReleasePointerCapture(e.Pointer);
-        if (!wasDragging)
+        if (!wasDragging && _state.Mode == IslandMode.Activity && _viewModel.Activity.IsNotice)
+        {
+            // An update notice opens its own small dialog; the island goes back to rest.
+            var kind = _viewModel.Activity.Kind;
+            _state.Dismiss();
+            NoticeClicked?.Invoke(kind);
+        }
+        else if (!wasDragging)
         {
             _keyboardInitiated = false;
             _state.Activate();

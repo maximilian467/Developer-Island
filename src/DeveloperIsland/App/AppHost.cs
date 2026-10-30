@@ -16,6 +16,7 @@ using DeveloperIsland.Core.Providers.Claude;
 using DeveloperIsland.Core.Providers.Codex;
 using DeveloperIsland.Core.Settings;
 using DeveloperIsland.Core.Storage;
+using DeveloperIsland.Core.Updates;
 using DeveloperIsland.Core.Usage;
 using DeveloperIsland.Platform.Media;
 using DeveloperIsland.Platform.Audio;
@@ -23,9 +24,11 @@ using DeveloperIsland.Platform.Monitors;
 using DeveloperIsland.Platform.Power;
 using DeveloperIsland.Platform.Startup;
 using DeveloperIsland.Platform.Tray;
+using DeveloperIsland.Platform.Updates;
 using DeveloperIsland.Platform.Windowing;
 using DeveloperIsland.UI.Island;
 using DeveloperIsland.UI.Settings;
+using DeveloperIsland.UI.Update;
 using DeveloperIsland.ViewModels;
 using Microsoft.UI.Dispatching;
 
@@ -80,6 +83,15 @@ internal sealed class AppHost : IDisposable
     private bool _mediaPrimed;
     private bool _hiddenByUser;
     private bool _hiddenForFullscreen;
+    private UpdateService? _updates;
+    private HttpClient? _updateHttp;
+    private UpdateWindow? _updateWindow;
+    private string? _announcedUpdate;
+
+    private static readonly ReleaseVersion CurrentVersion = ReleaseVersion.FromAssembly(typeof(AppHost).Assembly.GetName().Version);
+
+    /// <summary>Notices (the update question, an available update) wait until startup has settled.</summary>
+    private static readonly TimeSpan NoticeDelay = TimeSpan.FromSeconds(6);
 
     public AppHost(DispatcherQueue dispatcher, AppOptions options)
     {
@@ -160,6 +172,17 @@ internal sealed class AppHost : IDisposable
         _window.SettingsRequested += OpenSettings;
         _window.VisiblePanelChanged += tab => _modules.OnPanelVisible(tab);
         _window.DragCompleted += OnDragCompleted;
+        _window.NoticeClicked += kind =>
+        {
+            if (kind == ActivityKind.UpdateQuestion)
+            {
+                OpenUpdateQuestion();
+            }
+            else
+            {
+                OpenUpdateDialog();
+            }
+        };
         _window.PlacementInvalidated += () => _dispatcher.TryEnqueue(PlaceIsland);
         _window.ConfigureHomeCloud(settings.HomeCloudActive, settings.HomeCloudTargetPath, settings.HomeCloudDropSide);
         PlaceIsland();
@@ -172,6 +195,7 @@ internal sealed class AppHost : IDisposable
             IsFocusAvailable = () => _settings.Current.FocusEnabled && !_focusTimer.Snapshot.IsActive,
             IsTasksAvailable = () => _settings.Current.TasksEnabled,
             AwakeState = () => (_settings.Current.AwakeEnabled, _awake?.Snapshot.IsActive ?? false),
+            AvailableUpdate = () => AnnounceableUpdate()?.Version.ToString(),
         };
         _tray.Activated += () => ShowIsland(expand: true);
         _tray.CommandInvoked += OnTrayCommand;
@@ -199,6 +223,7 @@ internal sealed class AppHost : IDisposable
         }
 
         SyncAutostart(settings);
+        StartUpdates(settings);
 
         var startHidden = _options.IsAutostart && settings.LaunchHidden;
         if (startHidden)
@@ -352,6 +377,7 @@ internal sealed class AppHost : IDisposable
         await AwakeSnapshotsAsync(shot);
         await TokenMetricSnapshotsAsync(shot);
         await DropSnapshotsAsync(shot);
+        await UpdateSnapshotsAsync(shot);
 
         await new SettingsWindow(_settings, _options.IsDemo, () => false, _secrets).SaveSnapshotsAsync(_options.SnapshotDirectory!);
     }
@@ -410,6 +436,50 @@ internal sealed class AppHost : IDisposable
         await shot("74-awake-idle");
         _state.Dismiss();
         await Task.Delay(600);
+    }
+
+    /// <summary>
+    /// The update notices on the island and the update dialog in each of its states, for a pretend
+    /// release 0.5.0. Nothing is checked, downloaded or installed.
+    /// </summary>
+    private async Task UpdateSnapshotsAsync(Func<string, Task> shot)
+    {
+        _viewModel.OnUpdateQuestion();
+        await shot("90-update-question");
+        _state.Dismiss();
+        await Task.Delay(600);
+        _viewModel.OnUpdateAvailable("0.5.0");
+        await shot("91-update-available");
+        _state.Dismiss();
+        await Task.Delay(600);
+
+        var downloads = new Uri(ReleaseJson.ReleasesPrefix + "download/v0.5.0/");
+        var setup = ReleaseInfo.SetupName("0.5.0");
+        var release = new ReleaseInfo(new ReleaseVersion(0, 5, 0), new Uri(ReleaseJson.ReleasesPrefix + "tag/v0.5.0"),
+            new ReleaseAsset(setup, new Uri(downloads, setup), 0), null, null);
+        var dialogs = new (string Name, Action<UpdateWindow> Show)[]
+        {
+            ("92-update-dialog-question", w => w.ShowQuestion()),
+            ("93-update-dialog-available", w => w.ShowRelease(release, CurrentVersion, canInstall: true)),
+            ("94-update-dialog-downloading", w =>
+            {
+                w.ShowRelease(release, CurrentVersion, canInstall: true);
+                w.ShowDownloadingForSnapshot(0.42);
+            }),
+            ("95-update-dialog-portable", w => w.ShowRelease(release, CurrentVersion, canInstall: false)),
+            ("96-update-dialog-bad-signature", w =>
+            {
+                w.ShowRelease(release, CurrentVersion, canInstall: true);
+                w.ShowFailureForSnapshot(UpdateDownloadStatus.BadSignature);
+            }),
+        };
+        foreach (var (name, show) in dialogs)
+        {
+            var window = new UpdateWindow(CreateUpdateActions(), _settings.Current.Theme);
+            show(window);
+            await window.SaveSnapshotAsync(Path.Combine(_options.SnapshotDirectory!, name + ".png"));
+            window.Close();
+        }
     }
 
     /// <summary>
@@ -557,6 +627,8 @@ internal sealed class AppHost : IDisposable
         _providers.Dispose();
         _focusTimer?.Dispose();
         _modules?.Dispose();
+        _updates?.Dispose();
+        _updateHttp?.Dispose();
         _plan?.Dispose();
         _media?.Dispose();
         _state?.Dispose();
@@ -837,6 +909,7 @@ internal sealed class AppHost : IDisposable
         _modules.Apply(settings);
         ApplyFavorites(settings);
         _plan?.Configure(settings.ClaudeEnabled);
+        _updates?.Configure(settings.CheckForUpdates);
         _viewModel.EnsureValidTab();
         _window.SetAlwaysOnTop(settings.AlwaysOnTop);
         _window.ConfigureHomeCloud(settings.HomeCloudActive, settings.HomeCloudTargetPath, settings.HomeCloudDropSide);
@@ -1001,6 +1074,161 @@ internal sealed class AppHost : IDisposable
         if (AutostartService.IsEnabled() != settings.StartWithWindows)
         {
             AutostartService.SetEnabled(settings.StartWithWindows);
+        }
+    }
+
+    // Updates ----------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// The optional update check (never in demo mode: no network there), and the one-time question
+    /// whether to turn it on, asked through the island a few seconds after the start.
+    /// </summary>
+    private void StartUpdates(AppSettings settings)
+    {
+        if (_options.IsDemo)
+        {
+            return;
+        }
+
+        _updateHttp = UpdateService.CreateHttpClient(CurrentVersion);
+        _updates = new UpdateService(_updateHttp, CurrentVersion, new UpdateStateStore(AppPaths.UpdateState));
+        _updates.Changed += () => _dispatcher.TryEnqueue(OnUpdateStatus);
+        _updates.Configure(settings.CheckForUpdates);
+        if (!settings.UpdateCheckAsked)
+        {
+            AfterNoticeDelay(AskAboutUpdates);
+        }
+    }
+
+    private void AfterNoticeDelay(Action action)
+    {
+        var timer = _dispatcher.CreateTimer();
+        timer.IsRepeating = false;
+        timer.Interval = NoticeDelay;
+        timer.Tick += (_, _) => action();
+        timer.Start();
+    }
+
+    /// <summary>The available release, unless the user skipped that version.</summary>
+    private ReleaseInfo? AnnounceableUpdate() =>
+        _updates?.Status.Available is { } release && release.Version.ToString() != _settings.Current.SkippedUpdateVersion ? release : null;
+
+    /// <summary>A check started or finished: Settings follows; a newly found release is announced once per run.</summary>
+    private void OnUpdateStatus()
+    {
+        _settingsWindow?.RefreshUpdates();
+        if (AnnounceableUpdate() is { } release && _announcedUpdate != release.Version.ToString())
+        {
+            _announcedUpdate = release.Version.ToString();
+            AfterNoticeDelay(() =>
+            {
+                if (AnnounceableUpdate() is { } still)
+                {
+                    _viewModel.OnUpdateAvailable(still.Version.ToString());
+                }
+            });
+        }
+    }
+
+    /// <summary>
+    /// Asked once: the island shows "Check for updates?" as a live activity. It counts as asked only
+    /// when it was really on screen (not while hidden, retracted or open); otherwise at the next start.
+    /// </summary>
+    private void AskAboutUpdates()
+    {
+        if (_settings.Current.UpdateCheckAsked)
+        {
+            return;
+        }
+
+        _viewModel.OnUpdateQuestion();
+        if (_state.Mode == Core.Island.IslandMode.Activity && _viewModel.Activity.Kind == ActivityKind.UpdateQuestion)
+        {
+            _settings.Update(s => s.UpdateCheckAsked = true);
+        }
+    }
+
+    private void OpenUpdateQuestion()
+    {
+        var window = EnsureUpdateWindow();
+        if (!window.IsBusy)
+        {
+            window.ShowQuestion();
+        }
+
+        window.ShowAndFocus();
+    }
+
+    /// <summary>The update dialog for the available release (island notice, tray, Settings).</summary>
+    private void OpenUpdateDialog()
+    {
+        if (_updates?.Status.Available is not { } release)
+        {
+            return;
+        }
+
+        var window = EnsureUpdateWindow();
+        if (!window.IsBusy)
+        {
+            window.ShowRelease(release, CurrentVersion, SetupLauncher.IsInstalledCopy());
+        }
+
+        window.ShowAndFocus();
+    }
+
+    private UpdateWindow EnsureUpdateWindow()
+    {
+        if (_updateWindow is null)
+        {
+            _updateWindow = new UpdateWindow(CreateUpdateActions(), _settings.Current.Theme);
+            _updateWindow.Closed += (_, _) => _updateWindow = null;
+        }
+
+        return _updateWindow;
+    }
+
+    private UpdateDialogActions CreateUpdateActions() => new(
+        AnswerQuestion: enable =>
+        {
+            Log.Info("update", "Update question answered", new { enable });
+            _settings.Update(s =>
+            {
+                s.CheckForUpdates = enable;
+                s.UpdateCheckAsked = true;
+            });
+        },
+        Download: (release, progress, cancel) =>
+        {
+            var downloader = new UpdateDownloader(_updateHttp!, AppPaths.Updates, UpdateSignature.EmbeddedPublicKey);
+            return Task.Run(() => downloader.DownloadAsync(release, progress, cancel));
+        },
+        RunSetup: path =>
+        {
+            if (!SetupLauncher.Start(path))
+            {
+                return false;
+            }
+
+            // The setup waits for this process to end (it closes the app otherwise), then starts the new version.
+            _dispatcher.TryEnqueue(() => QuitRequested?.Invoke());
+            return true;
+        },
+        Skip: release =>
+        {
+            Log.Info("update", "Update version skipped");
+            _settings.Update(s => s.SkippedUpdateVersion = release.Version.ToString());
+        },
+        OpenNotes: url => OpenLink(url.AbsoluteUri));
+
+    private static void OpenLink(string url)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("update", "Link could not be opened", new { error = ex.GetType().Name });
         }
     }
 
@@ -1227,6 +1455,9 @@ internal sealed class AppHost : IDisposable
             case TrayCommand.Settings:
                 OpenSettings();
                 break;
+            case TrayCommand.Update:
+                OpenUpdateDialog();
+                break;
             case TrayCommand.Quit:
                 QuitRequested?.Invoke();
                 break;
@@ -1242,6 +1473,7 @@ internal sealed class AppHost : IDisposable
             _settingsWindow = new SettingsWindow(_settings, _options.IsDemo, () => _hotkey?.IsInUse ?? false, _secrets);
             _settingsWindow.Closed += (_, _) => _settingsWindow = null;
             _settingsWindow.QuitRequested += OnQuitFromSettings;
+            _settingsWindow.AttachUpdates(_updates, OpenUpdateDialog);
         }
 
         if (section is not null)
