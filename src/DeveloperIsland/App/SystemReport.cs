@@ -74,8 +74,16 @@ internal static class SystemReport
 
         // Camera and microphone, as the privacy marks read them (no app names are printed).
         var privacy = Platform.Privacy.PrivacyWatcher.ReadNow();
-        Console.WriteLine($"Microphone in use: {(privacy.Microphone ? "yes" : "no")}");
+        var capturing = Platform.Privacy.PrivacyWatcher.CapturingNow();
+        Console.WriteLine($"Microphone in use: {(privacy.Microphone ? "yes" : "no")} (recording sessions: {(capturing ? "active" : "none")})");
         Console.WriteLine($"Camera in use:     {(privacy.Camera ? "yes" : "no")}");
+
+        // WhisperFlow, as the dictation label reads it: its state and whether its process runs.
+        var statusPath = Core.Dictation.WhisperFlowStatusFile.DefaultPath();
+        var status = File.Exists(statusPath) ? Core.Dictation.WhisperFlowStatusFile.Parse(File.ReadAllText(statusPath)) : null;
+        Console.WriteLine(status is null
+            ? $"WhisperFlow:       {(File.Exists(statusPath) ? "status file unreadable" : "no status file (WhisperFlow has not run with status output yet)")}"
+            : $"WhisperFlow:       {status.Phase} at {status.At.ToLocalTime().ToString("HH:mm:ss", c)}, process {(Core.Dictation.WhisperFlowStatusFile.IsRunning(status.ProcessId) ? "running" : "gone")}, island shows: {Core.Dictation.WhisperFlowStatusFile.Effective(status, DateTimeOffset.UtcNow, Core.Dictation.WhisperFlowStatusFile.IsRunning)}");
 
         var duration = args.Select(a => a.StartsWith("--seconds=", StringComparison.Ordinal) && int.TryParse(a["--seconds=".Length..], out var n) ? n : 0).Max();
         if (duration > 0)

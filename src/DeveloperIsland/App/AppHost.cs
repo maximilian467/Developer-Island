@@ -1421,6 +1421,7 @@ internal sealed class AppHost : IDisposable
     /// <summary>WhisperFlow records, transcribes or reports its result: shown with the microphone mark, like device use.</summary>
     private void OnDictationChanged(Core.Dictation.DictationPhase phase)
     {
+        Log.Info("whisperflow", "Dictation phase", new { phase = phase.ToString() });
         _viewModel.Privacy.Dictation = phase;
         ApplySmartHide();
     }
