@@ -121,6 +121,9 @@ public sealed class AppSettings
 
     public bool AwakeEnabled { get; set; } = true;
 
+    /// <summary>Show the local WhisperFlow dictation (recording, transcribing, result) next to the microphone mark.</summary>
+    public bool WhisperFlowEnabled { get; set; }
+
     /// <summary>The token figure the island shows for Claude Code and Codex (see <see cref="Models.TokenMetric"/>).</summary>
     [JsonConverter(typeof(JsonStringEnumConverter<TokenMetric>))]
     public TokenMetric TokenMetric { get; set; } = TokenMetric.Fresh;
