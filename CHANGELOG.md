@@ -4,6 +4,18 @@ All notable changes to Developer Island are documented here. The format follows 
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-30
+
+### Fixed
+
+- **Microphone mark** works again on current Windows 11. Since the Windows updates of October 2026, Windows no longer records microphone use where the island read it on some systems, so the mark (and with it the WhisperFlow label's microphone) stayed off. The island now also reads the recording devices' audio sessions, once a second, process IDs and states only. The camera mark still relies on Windows' record.
+
+### Changed
+
+- `--system-report` shows whether a recording session is active and the WhisperFlow link (its state, whether its process runs, what the island shows); the log records WhisperFlow phase changes and microphone changes.
+
+## [0.4.0] - 2026-10-30
+
 ### Added
 
 - **Token metric** in Settings, Modules: show **fresh** tokens (input, cache writes and output; the default, as before) or **all processed** tokens including cache reads in the capsule, peek, tooltips, usage graph and day inspector, for Claude Code and Codex alike. Every figure is labelled ("fresh tokens", "tokens incl. cache reads"); the breakdown still lists every category, and each API response still counts once.
@@ -15,6 +27,7 @@ All notable changes to Developer Island are documented here. The format follows 
   - Only running distros are read: Developer Island never starts one. A stopped distro, a distro without git and a PC without WSL each get their own message in the Git panel.
 - **Update check with one-click install.** Settings, General, "Check for updates" asks GitHub at most once a day whether a newer release exists (off until you agree; the island asks once after updating). A newer version appears as a live activity ("Developer Island 0.x.y is available") and in the tray menu; clicking opens a small dialog with Install now, Release notes, Later and Skip this version. Install now downloads the setup, verifies the signed checksums (ECDSA P-256, the public key is built into the app) and the setup's SHA-256, runs it silently and starts the new version again, keeping your autostart choice. "Check now" and the time of the last check are in Settings. Drafts and prereleases are never offered; offline checks stay silent. Portable copies point to the release page instead.
 - Releases carry `SHA256SUMS-<version>.txt.sig`: `tools/build-release.ps1` signs the checksums with the key in `DI_RELEASE_SIGNING_KEY` (`tools/release-signing.cs`, see docs/RELEASING.md).
+- **WhisperFlow dictation** (optional, off by default): for the local WhisperFlow speech-to-text tool (not the commercial Wispr Flow). Beside the microphone mark the island shows "WhisperFlow" while it records, a spinner and "Transcribing…" while it transcribes, then "Inserted", "No speech" or "Failed" for three seconds; the notch shows a matching dot. Turn it on in Settings, Modules. Developer Island only reads WhisperFlow's status file (`%LOCALAPPDATA%\WhisperFlow\status.json`: state, time, process ID), never audio or text.
 
 ### Changed
 

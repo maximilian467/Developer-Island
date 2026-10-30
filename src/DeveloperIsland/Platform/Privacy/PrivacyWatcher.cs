@@ -2,15 +2,22 @@ using System.Runtime.InteropServices;
 using DeveloperIsland.Core.Diagnostics;
 using DeveloperIsland.Core.Privacy;
 using Microsoft.Win32;
+using NAudio.CoreAudioApi;
 using Microsoft.Win32.SafeHandles;
 
 namespace DeveloperIsland.Platform.Privacy;
 
 /// <summary>
-/// Watches whether the microphone or the camera is in use, event-driven: Windows signals a change
-/// of the consent store (<see cref="ConsentStore"/>) through <c>RegNotifyChangeKeyValue</c>, and only
-/// then are the few entries read again. No polling; one waiting thread. App names are never logged
-/// or kept. Changes are reported on that thread.
+/// Watches whether the microphone or the camera is in use, from two sources:
+/// <list type="bullet">
+/// <item>The consent store (<see cref="ConsentStore"/>), event-driven: Windows signals a change through
+/// <c>RegNotifyChangeKeyValue</c>, and only then are the few entries read again. The only source for the camera.</item>
+/// <item>The audio sessions of the recording devices (<see cref="MicrophoneSessions"/>), read once a second
+/// on their own thread. Since the Windows 11 updates of October 2026 the consent store is no longer
+/// written on some systems, so this is what keeps the microphone mark working.</item>
+/// </list>
+/// The microphone is in use when either source says so. App names are never logged or kept. Changes
+/// are reported on the watching threads.
 /// </summary>
 internal sealed partial class PrivacyWatcher : IDisposable
 {
@@ -22,9 +29,16 @@ internal sealed partial class PrivacyWatcher : IDisposable
     /// <summary>An app opening a device writes several values in a row; read once they settle.</summary>
     private static readonly TimeSpan Settle = TimeSpan.FromMilliseconds(120);
 
+    /// <summary>How often the recording devices' sessions are read (a few COM calls, well under a millisecond).</summary>
+    private static readonly TimeSpan SessionInterval = TimeSpan.FromSeconds(1);
+
     private readonly Action<PrivacyState> _changed;
     private readonly ManualResetEvent _stop = new(false);
     private readonly Thread? _thread;
+    private readonly Thread? _sessionThread;
+    private readonly Lock _gate = new();
+    private PrivacyState _consent;
+    private bool _capturing;
     private PrivacyState _state;
 
     public PrivacyWatcher(Action<PrivacyState> changed)
@@ -32,6 +46,9 @@ internal sealed partial class PrivacyWatcher : IDisposable
         _changed = changed;
         _thread = new Thread(Run) { IsBackground = true, Name = "Privacy indicators", Priority = ThreadPriority.BelowNormal };
         _thread.Start();
+        _sessionThread = new Thread(RunSessions) { IsBackground = true, Name = "Microphone sessions", Priority = ThreadPriority.BelowNormal };
+        _sessionThread.SetApartmentState(ApartmentState.MTA);
+        _sessionThread.Start();
     }
 
     public PrivacyState Current => _state;
@@ -40,6 +57,7 @@ internal sealed partial class PrivacyWatcher : IDisposable
     {
         _stop.Set();
         _thread?.Join(TimeSpan.FromSeconds(1));
+        _sessionThread?.Join(TimeSpan.FromSeconds(2));
         _stop.Dispose();
     }
 
@@ -48,7 +66,53 @@ internal sealed partial class PrivacyWatcher : IDisposable
     {
         using var microphone = Registry.CurrentUser.OpenSubKey(StorePath + "microphone");
         using var webcam = Registry.CurrentUser.OpenSubKey(StorePath + "webcam");
-        return new PrivacyState(InUse(microphone), InUse(webcam));
+        var consent = new PrivacyState(InUse(microphone), InUse(webcam));
+        return consent with { Microphone = consent.Microphone || CapturingNow() };
+    }
+
+    /// <summary>The recording devices' sessions, read on the thread pool (an MTA thread, as Core Audio wants).</summary>
+    public static bool CapturingNow()
+    {
+        try
+        {
+            return Task.Run(() =>
+            {
+                using var enumerator = new MMDeviceEnumerator();
+                return MicrophoneSessions.InUse(enumerator);
+            }).GetAwaiter().GetResult();
+        }
+        catch (COMException)
+        {
+            return false;
+        }
+    }
+
+    private void RunSessions()
+    {
+        try
+        {
+            using var enumerator = new MMDeviceEnumerator();
+            Log.Info("privacy", "Watching microphone sessions");
+            var failures = 0;
+            do
+            {
+                try
+                {
+                    Update(capturing: MicrophoneSessions.InUse(enumerator));
+                    failures = 0;
+                }
+                catch (COMException ex) when (++failures < 10)
+                {
+                    // The audio service restarting, a device change mid-read: try again next round.
+                    Log.Debug("privacy", "Microphone sessions unreadable", new { error = ex.HResult });
+                }
+            }
+            while (!_stop.WaitOne(SessionInterval));
+        }
+        catch (Exception ex)
+        {
+            Log.Error("privacy", "Microphone session watch failed", ex);
+        }
     }
 
     private void Run()
@@ -77,7 +141,7 @@ internal sealed partial class PrivacyWatcher : IDisposable
                     return;
                 }
 
-                Publish(new PrivacyState(InUse(microphone), InUse(webcam)));
+                Update(consent: new PrivacyState(InUse(microphone), InUse(webcam)));
                 if (WaitHandle.WaitAny(waits) == 0 || _stop.WaitOne(Settle))
                 {
                     return;
@@ -90,16 +154,26 @@ internal sealed partial class PrivacyWatcher : IDisposable
         }
     }
 
-    private void Publish(PrivacyState state)
+    /// <summary>
+    /// Combines the two sources and reports a change. Reported under the lock, so two threads can never
+    /// deliver their states in the wrong order (the callback only queues work on the UI thread).
+    /// </summary>
+    private void Update(PrivacyState? consent = null, bool? capturing = null)
     {
-        if (state == _state)
+        lock (_gate)
         {
-            return;
-        }
+            _consent = consent ?? _consent;
+            _capturing = capturing ?? _capturing;
+            var state = new PrivacyState(_consent.Microphone || _capturing, _consent.Camera);
+            if (state == _state)
+            {
+                return;
+            }
 
-        _state = state;
-        Log.Debug("privacy", "Device use changed", new { microphone = state.Microphone, camera = state.Camera });
-        _changed(state);
+            _state = state;
+            Log.Info("privacy", "Device use changed", new { microphone = state.Microphone, camera = state.Camera });
+            _changed(state);
+        }
     }
 
     private static bool Arm(RegistryKey? key, AutoResetEvent signal) =>

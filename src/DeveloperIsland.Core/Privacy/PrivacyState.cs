@@ -38,6 +38,21 @@ public static class ConsentStore
     public static bool AnyInUse(IEnumerable<ConsentUsage> usages) => usages.Any(InUse);
 }
 
+/// <summary>One audio session on a recording device: the process it belongs to and whether it captures now.</summary>
+public readonly record struct CaptureSession(int ProcessId, bool Active);
+
+/// <summary>
+/// The microphone as the audio stack sees it: an active session on any recording device means an app
+/// is capturing now. Since the Windows 11 updates of October 2026 the consent store is no longer
+/// written on some systems, so this is the primary signal for the microphone; the consent store stays
+/// a second source (and the only one for the camera).
+/// </summary>
+public static class CaptureSessions
+{
+    public static bool AnyActive(IEnumerable<CaptureSession> sessions, int ownProcessId) =>
+        sessions.Any(s => s.Active && s.ProcessId != ownProcessId);
+}
+
 public static class PrivacyIndicator
 {
     /// <summary>

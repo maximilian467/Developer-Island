@@ -464,6 +464,22 @@
                             </Grid>
                         </Border>
 
+                        <TextBlock Text="WhisperFlow" Style="{StaticResource SettingsGroupLabelStyle}" Margin="4,20,0,4" />
+                        <Border Style="{StaticResource SettingsCardStyle}">
+                            <Grid Style="{StaticResource SettingsRowStyle}" ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Show dictation" Style="{StaticResource SettingsRowTitleStyle}" />
+                                    <TextBlock x:Name="WhisperFlowStatusText" Style="{StaticResource SettingsRowDescriptionStyle}" Text="" />
+                                </StackPanel>
+                                <ToggleSwitch x:Name="WhisperFlowToggle" Grid.Column="1" Style="{StaticResource SettingsToggleStyle}"
+                                              AutomationProperties.Name="Show WhisperFlow dictation" Toggled="OnToggle" Tag="WhisperFlow" />
+                            </Grid>
+                        </Border>
+
                         <TextBlock Text="Awake" Style="{StaticResource SettingsGroupLabelStyle}" Margin="4,20,0,4" />
                         <Border Style="{StaticResource SettingsCardStyle}">
                             <Grid Style="{StaticResource SettingsRowStyle}" ColumnSpacing="12">

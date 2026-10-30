@@ -31,6 +31,21 @@ public class PrivacyIndicatorTests
     }
 
     [Fact]
+    public void An_active_session_on_a_recording_device_means_the_microphone_is_in_use()
+    {
+        Assert.True(CaptureSessions.AnyActive([new(4242, Active: true)], ownProcessId: 1));
+        Assert.True(CaptureSessions.AnyActive([new(7, Active: false), new(4242, Active: true)], ownProcessId: 1));
+        Assert.False(CaptureSessions.AnyActive([new(4242, Active: false)], ownProcessId: 1));
+        Assert.False(CaptureSessions.AnyActive([], ownProcessId: 1));
+    }
+
+    [Fact]
+    public void The_islands_own_recording_session_never_counts()
+    {
+        Assert.False(CaptureSessions.AnyActive([new(1, Active: true)], ownProcessId: 1));
+    }
+
+    [Fact]
     public void Microphone_on_while_auto_hidden_keeps_the_notch_with_its_mark_and_does_not_open()
     {
         var island = new IslandStateMachine(new FakeTimeProvider());

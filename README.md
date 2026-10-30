@@ -81,7 +81,7 @@ All details per module: [docs/MODULES.md](docs/MODULES.md).
 
 ## Privacy
 
-Developer Island is **local-first**. It has no account, no telemetry and no cloud sync, and it does not upload your prompts or code.
+Developer Island is **local-first**. It has no account, no telemetry and no cloud sync, and it does not upload your prompts or code. The one request it makes on its own is the optional update check: off until you agree, it asks GitHub anonymously once a day whether a newer release exists, and installs one only when you click Install.
 
 - **Read locally:** Claude Code transcripts (`~/.claude/projects`) and Codex rollout files (`~/.codex/sessions`), with Include WSL also those inside running WSL distros (read through `\\wsl.localhost`; `wsl.exe` lists running distros and runs git there). Only usage metadata is extracted (token counts, model, timestamps, session IDs, working directory); prompt, message and code content is never stored, displayed or logged.
 - **Stored locally** in `%LOCALAPPDATA%\DeveloperIsland`: a SQLite database with token counts and daily totals, settings, tasks, focus history, the last Claude plan percentages, the last Claude Code alert (its kind, project folder name and time) and, during an Awake session, the lid setting to put back. Logs contain events and error types, never content, and are kept for 7 days.

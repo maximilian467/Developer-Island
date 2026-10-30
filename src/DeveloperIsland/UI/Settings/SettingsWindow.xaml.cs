@@ -215,6 +215,7 @@ public sealed partial class SettingsWindow : Window
             LaunchHiddenToggle.IsOn = s.LaunchHidden;
             BuildModuleRows(s);
             UpdatePlanConnection();
+            LoadWhisperFlow(s);
             BuildRepositoryRows(s);
             WslToggle.IsOn = s.WslEnabled;
             BuildWslRows(s);
@@ -342,6 +343,7 @@ public sealed partial class SettingsWindow : Window
                     s.CheckForUpdates = on;
                     s.UpdateCheckAsked = true;
                     break;
+                case "WhisperFlow": s.WhisperFlowEnabled = on; break;
                 case var module when module.StartsWith("Module:", StringComparison.Ordinal)
                     && Enum.TryParse<ModuleId>(module["Module:".Length..], out var id):
                     s.SetEnabled(id, on);
