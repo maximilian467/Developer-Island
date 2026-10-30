@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using DeveloperIsland.Core.Dictation;
 using DeveloperIsland.UI.Animations;
 using DeveloperIsland.ViewModels;
 using Microsoft.UI.Xaml;
@@ -11,7 +12,8 @@ namespace DeveloperIsland.UI.Components;
 
 /// <summary>
 /// The notch's quiet form of the privacy marks: a 4 DIP orange dot for the microphone and a green
-/// one for the camera, side by side. No icons, no text, and the notch keeps its size.
+/// one for the camera, side by side. No icons, no text, and the notch keeps its size. WhisperFlow's
+/// transcription and result add a third dot: blue while it works, then green, gray or red.
 /// </summary>
 public sealed class PrivacyDots : UserControl
 {
@@ -22,6 +24,7 @@ public sealed class PrivacyDots : UserControl
 
     private readonly Ellipse _microphone = Dot("StatusWarningColor");
     private readonly Ellipse _camera = Dot("StatusGoodColor");
+    private readonly Ellipse _dictation = Dot("AccentColor");
     private bool _shown;
 
     public PrivacyDots()
@@ -29,7 +32,7 @@ public sealed class PrivacyDots : UserControl
         IsTabStop = false;
         IsHitTestVisible = false;
         Visibility = Visibility.Collapsed;
-        Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = DotSize, Children = { _microphone, _camera } };
+        Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = DotSize, Children = { _microphone, _dictation, _camera } };
     }
 
     public PrivacyViewModel? Source
@@ -64,17 +67,33 @@ public sealed class PrivacyDots : UserControl
 
     private void Update()
     {
-        var state = Source?.State ?? default;
-        _microphone.Visibility = state.Microphone ? Visibility.Visible : Visibility.Collapsed;
-        _camera.Visibility = state.Camera ? Visibility.Visible : Visibility.Collapsed;
-        Visibility = state.IsActive ? Visibility.Visible : Visibility.Collapsed;
-        AutomationProperties.SetName(this, state.Description);
+        var source = Source;
+        var active = source?.IsActive ?? false;
+        var dictation = source?.Dictation ?? DictationPhase.Idle;
+        _microphone.Visibility = source?.Microphone == true ? Visibility.Visible : Visibility.Collapsed;
+        _camera.Visibility = source?.Camera == true ? Visibility.Visible : Visibility.Collapsed;
+        var dictationColor = dictation switch
+        {
+            DictationPhase.Transcribing => "AccentColor",
+            DictationPhase.Done => "StatusGoodColor",
+            DictationPhase.NoSpeech => "TextSecondaryColor",
+            DictationPhase.Failed => "StatusCriticalColor",
+            _ => null,
+        };
+        if (dictationColor is not null)
+        {
+            _dictation.Fill = new SolidColorBrush((Windows.UI.Color)Application.Current.Resources[dictationColor]);
+        }
 
-        if (state.IsActive && !_shown)
+        _dictation.Visibility = dictationColor is null ? Visibility.Collapsed : Visibility.Visible;
+        Visibility = active ? Visibility.Visible : Visibility.Collapsed;
+        AutomationProperties.SetName(this, source?.Description ?? string.Empty);
+
+        if (active && !_shown)
         {
             Motion.FadeIn(this, delay: TimeSpan.Zero);
         }
 
-        _shown = state.IsActive;
+        _shown = active;
     }
 }

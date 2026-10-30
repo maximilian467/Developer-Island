@@ -66,6 +66,7 @@ internal sealed class AppHost : IDisposable
     private UiStateStore _uiState = null!;
     private DispatcherQueueTimer? _rotation;
     private PlanUsageService? _plan;
+    private Core.Dictation.WhisperFlowService? _whisperFlow;
     private DispatcherQueueTimer? _planReset;
     private DispatcherQueueTimer? _historyDebounce;
     private DispatcherQueueTimer? _displaySettle;
@@ -157,6 +158,9 @@ internal sealed class AppHost : IDisposable
             _plan = new PlanUsageService(new PlanUsageStore(AppPaths.ClaudePlan));
             _plan.Changed += usage => _dispatcher.TryEnqueue(() => OnPlanUsage(usage));
             _plan.Configure(settings.ClaudeEnabled);
+            _whisperFlow = new Core.Dictation.WhisperFlowService(Core.Dictation.WhisperFlowStatusFile.DefaultPath());
+            _whisperFlow.Changed += phase => _dispatcher.TryEnqueue(() => OnDictationChanged(phase));
+            _whisperFlow.Configure(settings.WhisperFlowEnabled);
         }
         _viewModel.SetLastActive(_uiState.LastActiveModule);
         ApplyFavorites(settings);
@@ -340,6 +344,33 @@ internal sealed class AppHost : IDisposable
         await shot("64-privacy-expanded");
         _state.Dismiss();
         _viewModel.Privacy.State = Core.Privacy.PrivacyState.None;
+        await Task.Delay(600);
+
+        // WhisperFlow dictation beside the microphone mark (Settings, Modules).
+        foreach (var (phase, name) in new[]
+        {
+            (Core.Dictation.DictationPhase.Recording, "recording"),
+            (Core.Dictation.DictationPhase.Transcribing, "transcribing"),
+            (Core.Dictation.DictationPhase.Done, "done"),
+            (Core.Dictation.DictationPhase.Failed, "failed"),
+        })
+        {
+            _viewModel.Privacy.Dictation = phase;
+            await Task.Delay(700); // the capsule's width morph settles first
+            await shot("65-whisperflow-" + name);
+        }
+
+        _state.SetRest(Core.Island.RestMode.Retracted);
+        _viewModel.Privacy.Dictation = Core.Dictation.DictationPhase.Transcribing;
+        await Task.Delay(600);
+        await shot("66-whisperflow-notch");
+        _state.SetRest(Core.Island.RestMode.Compact);
+        _viewModel.Privacy.Dictation = Core.Dictation.DictationPhase.Recording;
+        _state.Activate();
+        await Task.Delay(600);
+        await shot("67-whisperflow-expanded");
+        _state.Dismiss();
+        _viewModel.Privacy.Dictation = Core.Dictation.DictationPhase.Idle;
         await Task.Delay(600);
 
         // Non-ready module states, as a user without gh, calendars or a readable repository sees them.
@@ -630,6 +661,7 @@ internal sealed class AppHost : IDisposable
         _updates?.Dispose();
         _updateHttp?.Dispose();
         _plan?.Dispose();
+        _whisperFlow?.Dispose();
         _media?.Dispose();
         _state?.Dispose();
         _fullscreen?.Dispose();
@@ -910,6 +942,7 @@ internal sealed class AppHost : IDisposable
         ApplyFavorites(settings);
         _plan?.Configure(settings.ClaudeEnabled);
         _updates?.Configure(settings.CheckForUpdates);
+        _whisperFlow?.Configure(settings.WhisperFlowEnabled);
         _viewModel.EnsureValidTab();
         _window.SetAlwaysOnTop(settings.AlwaysOnTop);
         _window.ConfigureHomeCloud(settings.HomeCloudActive, settings.HomeCloudTargetPath, settings.HomeCloudDropSide);
@@ -1382,6 +1415,13 @@ internal sealed class AppHost : IDisposable
     private void OnPrivacyChanged(Core.Privacy.PrivacyState state)
     {
         _viewModel.Privacy.State = state;
+        ApplySmartHide();
+    }
+
+    /// <summary>WhisperFlow records, transcribes or reports its result: shown with the microphone mark, like device use.</summary>
+    private void OnDictationChanged(Core.Dictation.DictationPhase phase)
+    {
+        _viewModel.Privacy.Dictation = phase;
         ApplySmartHide();
     }
 
