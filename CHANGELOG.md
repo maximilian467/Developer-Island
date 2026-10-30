@@ -4,6 +4,16 @@ All notable changes to Developer Island are documented here. The format follows 
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-30
+
+### Fixed
+
+- **Microphone mark** works again on current Windows 11. Since the Windows updates of October 2026, Windows no longer records microphone use where the island read it on some systems, so the mark (and with it the WhisperFlow label's microphone) stayed off. The island now also reads the recording devices' audio sessions, once a second, process IDs and states only. The camera mark still relies on Windows' record.
+
+### Changed
+
+- `--system-report` shows whether a recording session is active and the WhisperFlow link (its state, whether its process runs, what the island shows); the log records WhisperFlow phase changes and microphone changes.
+
 ## [0.4.0] - 2026-10-30
 
 ### Added
