@@ -23,6 +23,12 @@ internal static class AppPaths
     /// <summary>Plan usage handed over by Claude Code's status line (numbers only).</summary>
     public static string ClaudePlan => Path.Combine(Root, "claude-plan.json");
 
+    /// <summary>When the update check last ran and what it found.</summary>
+    public static string UpdateState => Path.Combine(Root, "update-state.json");
+
+    /// <summary>A downloaded update (setup, checksums, signature) until the next one replaces it.</summary>
+    public static string Updates => Path.Combine(Root, "updates");
+
     public static string Settings(bool demo) => Path.Combine(Root, demo ? "settings.demo.json" : "settings.json");
 
     public static string Assets => Path.Combine(AppContext.BaseDirectory, "Assets");

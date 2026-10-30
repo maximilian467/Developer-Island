@@ -671,6 +671,22 @@ public sealed class IslandViewModel : ObservableObject
         ActivityRequested?.Invoke(TimeSpan.FromSeconds(reason == Core.Awake.AwakeEndReason.Stopped ? 3 : 6));
     }
 
+    /// <summary>A newer release was found: "Developer Island 0.5.0 is available". A click opens the update dialog.</summary>
+    public void OnUpdateAvailable(string version)
+    {
+        Activity.Set(ActivityKind.UpdateAvailable, $"Developer Island {version} is available", "Click to install or read what is new", glyph: "");
+        _lastEventKind = null;
+        ActivityRequested?.Invoke(TimeSpan.FromSeconds(8));
+    }
+
+    /// <summary>Asked once: whether the island may check for updates. A click opens the question.</summary>
+    public void OnUpdateQuestion()
+    {
+        Activity.Set(ActivityKind.UpdateQuestion, "Check for updates?", "Click to choose. You can change it in Settings.", glyph: "");
+        _lastEventKind = null;
+        ActivityRequested?.Invoke(TimeSpan.FromSeconds(10));
+    }
+
     /// <summary>Keeps a visible focus or awake activity's countdown current.</summary>
     public void RefreshActivityTrailing()
     {

@@ -51,6 +51,7 @@ public sealed partial class IslandWindow : Window
     private IslandAnchor _anchor = IslandAnchor.TopCenter;
     private (MonitorInfo Monitor, double OffsetX, double OffsetY)? _placement;
     private readonly DpiChangeHook _dpiHook;
+    private readonly ClearBackgroundHook _backgroundHook;
     private FrameworkElement? _current;
     private Rect _regionRect;
     private (int L, int T, int R, int B) _appliedRegion;
@@ -84,6 +85,7 @@ public sealed partial class IslandWindow : Window
         _hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         IslandWindowChrome.Apply(_hwnd, AppWindow, alwaysOnTop);
         _dpiHook = new DpiChangeHook(_hwnd, RectForScale);
+        _backgroundHook = new ClearBackgroundHook(_hwnd);
 
         // Nothing is visible until the first layout sets the real region; this avoids a black
         // frame on the first composition pass.
@@ -148,6 +150,9 @@ public sealed partial class IslandWindow : Window
     }
 
     public event Action? SettingsRequested;
+
+    /// <summary>A notice activity (an available update, the update question) was clicked.</summary>
+    public event Action<ActivityKind>? NoticeClicked;
 
     /// <summary>The module panel on screen changed; null when the island is not expanded.</summary>
     public event Action<ViewModels.IslandTab?>? VisiblePanelChanged;
@@ -266,6 +271,7 @@ public sealed partial class IslandWindow : Window
     {
         _exiting = true;
         _dpiHook.Dispose();
+        _backgroundHook.Dispose();
         _outsideClicks.Stop();
         _mediaTicker.Stop();
         StopDropTarget();
@@ -825,7 +831,14 @@ public sealed partial class IslandWindow : Window
         var wasDragging = _dragging;
         EndDrag(commit: wasDragging);
         Root.ReleasePointerCapture(e.Pointer);
-        if (!wasDragging)
+        if (!wasDragging && _state.Mode == IslandMode.Activity && _viewModel.Activity.IsNotice)
+        {
+            // An update notice opens its own small dialog; the island goes back to rest.
+            var kind = _viewModel.Activity.Kind;
+            _state.Dismiss();
+            NoticeClicked?.Invoke(kind);
+        }
+        else if (!wasDragging)
         {
             _keyboardInitiated = false;
             _state.Activate();

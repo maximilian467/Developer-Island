@@ -13,4 +13,9 @@
     <InternalsVisibleTo Include="DeveloperIsland.Tests" />
   </ItemGroup>
 
+  <!-- The release signing public key (docs/RELEASING.md). Without it the app refuses every update install. -->
+  <ItemGroup Condition="Exists('Updates\release-signing-public-key.pem')">
+    <EmbeddedResource Include="Updates\release-signing-public-key.pem" LogicalName="release-signing-public-key.pem" />
+  </ItemGroup>
+
 </Project>

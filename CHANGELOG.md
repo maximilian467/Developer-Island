@@ -13,10 +13,17 @@ All notable changes to Developer Island are documented here. The format follows 
   - Their project folders: Linux paths (`/home/you/proj`) become `\\wsl.localhost\<distro>\home\you\proj` for the Git module; `/mnt/c/...` becomes `C:\...` again.
   - Git for repositories inside WSL runs the distro's own git through `wsl.exe` (no "dubious ownership", no slow share), re-read every 10 s while the Git panel is open. `\\wsl$\...` and `\\wsl.localhost\...` repositories can also be added in Settings, Git repositories.
   - Only running distros are read: Developer Island never starts one. A stopped distro, a distro without git and a PC without WSL each get their own message in the Git panel.
+- **Update check with one-click install.** Settings, General, "Check for updates" asks GitHub at most once a day whether a newer release exists (off until you agree; the island asks once after updating). A newer version appears as a live activity ("Developer Island 0.x.y is available") and in the tray menu; clicking opens a small dialog with Install now, Release notes, Later and Skip this version. Install now downloads the setup, verifies the signed checksums (ECDSA P-256, the public key is built into the app) and the setup's SHA-256, runs it silently and starts the new version again, keeping your autostart choice. "Check now" and the time of the last check are in Settings. Drafts and prereleases are never offered; offline checks stay silent. Portable copies point to the release page instead.
+- Releases carry `SHA256SUMS-<version>.txt.sig`: `tools/build-release.ps1` signs the checksums with the key in `DI_RELEASE_SIGNING_KEY` (`tools/release-signing.cs`, see docs/RELEASING.md).
+
+### Changed
+
+- The installer starts the app again after a silent update run with `/RESTARTAPP`; interactive installs are unchanged.
 
 ### Fixed
 
 - The first usage of a day kept no working folder until the next reply, so the Git module could miss the session's repository.
+- In Windows light mode, the island no longer sits in a white rectangle: the window background stays transparent whatever the app theme ([#11](https://github.com/maximilian467/Developer-Island/issues/11)).
 
 ## [0.3.0] - 2026-10-15
 

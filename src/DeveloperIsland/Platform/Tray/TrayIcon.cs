@@ -13,6 +13,9 @@ public enum TrayCommand
     Quit = 5,
     NewTask = 6,
     Awake = 7,
+
+    /// <summary>A newer release is available: opens the update dialog.</summary>
+    Update = 8,
 }
 
 /// <summary>
@@ -55,6 +58,9 @@ internal sealed class TrayIcon : IDisposable
 
     /// <summary>Whether the Awake module is on, and whether a session runs (the item then ends it).</summary>
     public Func<(bool Enabled, bool Active)> AwakeState { get; set; } = () => (false, false);
+
+    /// <summary>The version of an available update ("0.5.0"), or null: the menu then has no update item.</summary>
+    public Func<string?> AvailableUpdate { get; set; } = () => null;
 
     public void Add()
     {
@@ -143,6 +149,12 @@ internal sealed class TrayIcon : IDisposable
         {
             var visible = IsIslandVisible?.Invoke() ?? true;
             var focus = IsFocusAvailable?.Invoke() ?? true;
+            if (AvailableUpdate() is { } version)
+            {
+                AppendMenu(menu, MF_STRING, (UIntPtr)(uint)TrayCommand.Update, $"Update to Developer Island {version}…");
+                AppendMenu(menu, MF_SEPARATOR, UIntPtr.Zero, null);
+            }
+
             AppendMenu(menu, MF_STRING | (visible ? MF_GRAYED : 0), (UIntPtr)(uint)TrayCommand.Show, "Show Developer Island");
             AppendMenu(menu, MF_STRING | (visible ? 0 : MF_GRAYED), (UIntPtr)(uint)TrayCommand.Hide, "Hide Developer Island");
             AppendMenu(menu, MF_SEPARATOR, UIntPtr.Zero, null);

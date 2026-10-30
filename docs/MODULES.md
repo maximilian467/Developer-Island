@@ -16,7 +16,8 @@ What each module shows, where its data comes from and how it behaves. The [READM
 - **Anywhere you want it.** It sits at Top Center by default. There are five more anchors, or you can drag it anywhere; near an anchor it snaps into place. Drag it onto another monitor, also one with a different scale; the point you hold stays under the cursor. The monitor, anchor and offset are saved. The monitor is recognized by its hardware id, so the island returns to the right display after docking or reconnecting, and it falls back to the primary monitor while that display is disconnected.
 - **Out of the way.** The window region follows the capsule, leaving the rest of the desktop clickable. Hovering or dragging does not activate the island. It steps aside while a fullscreen app is on its own monitor; one on another monitor does not move it.
 - **Keyboard.** **Ctrl + Alt + Space** opens or closes the island from anywhere; three other combinations are available if another app already uses it. Esc closes the island, and focus returns to where you were. Tab and the arrow keys move through the expanded view.
-- **Tray and autostart.** The notification-area menu offers Show, Hide, Start Focus, New Task, Stay Awake, Settings and Quit. Start with Windows is a native per-user setting, with no scripts.
+- **Tray and autostart.** The notification-area menu offers Show, Hide, Start Focus, New Task, Stay Awake, Settings and Quit, and "Update to Developer Island 0.x.y…" while an update is available. Start with Windows is a native per-user setting, with no scripts.
+- **Updates.** With "Check for updates" on (Settings, General; the island asks once), Developer Island asks GitHub at most once a day whether a newer release exists. A new version shows once as a live activity, "Developer Island 0.x.y is available", and stays in the tray menu. Clicking either opens a small dialog: **Install now** downloads the setup, checks its signature and checksum, closes the island and starts the new version (your autostart choice stays); **Release notes** opens the release page; **Later** closes; **Skip this version** stops the notices for that version. Offline, nothing is shown. A portable copy is pointed to the release page instead.
 
 <p align="center">
   <img src="assets/compact-featured-claude.png" alt="Compact island featuring Claude: today's fresh tokens and plan usage" width="440">
@@ -167,7 +168,7 @@ Not a tab, but a drop zone of the island: drop files or folders onto it and they
 
 | Section | Settings |
 |---|---|
-| General | Start with Windows, always on top, launch hidden, keyboard shortcut; Quit Developer Island (ends the app, its tray icon and all background work) |
+| General | Start with Windows, always on top, launch hidden, keyboard shortcut; Check for updates, the last check and Check now; Quit Developer Island (ends the app, its tray icon and all background work) |
 | Position | Monitor, anchor, custom position; Auto-hide in apps (on or off, notch or hide, only when maximized, an app list with icons and Add application or Browse) |
 | Modules | Every module on or off and in which order; token metric for Claude Code and Codex (`TokenMetric`: `Fresh`, the default, or `AllProcessed`); Claude plan usage (connect or disconnect); Git repositories; Include WSL and its distros (`WslEnabled`, off by default; `WslExcludedDistros`); calendars |
 | Home Cloud | Home Cloud on or off (`HomeCloudEnabled`, default off), target folder (`HomeCloudTargetPath`, default empty; the zone works only once it is set), side of the drop zone (`HomeCloudDropSide`, Left or Right, default Right) |

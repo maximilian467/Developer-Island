@@ -40,6 +40,9 @@ ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.19041
 CloseApplications=force
 RestartApplications=no
+; The app's one-click update runs this setup silently; it keeps the tasks chosen at the last
+; install, the autostart choice included (Inno Setup's default, spelled out).
+UsePreviousTasks=yes
 
 [Tasks]
 Name: "autostart"; Description: "Start Developer Island when I sign in"
@@ -58,6 +61,9 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 
 [Run]
 Filename: "{app}\DeveloperIsland.exe"; Description: "Open Developer Island"; Flags: nowait postinstall skipifsilent
+; One-click update: the app starts this setup with /VERYSILENT ... /RESTARTAPP and quits, so the
+; new version is started again afterwards. Interactive installs never run this entry.
+Filename: "{app}\DeveloperIsland.exe"; Flags: nowait skipifnotsilent; Check: RestartAppRequested
 
 [UninstallRun]
 Filename: "{sys}\taskkill.exe"; Parameters: "/IM DeveloperIsland.exe /F"; Flags: runhidden; RunOnceId: "StopDeveloperIsland"
@@ -65,3 +71,15 @@ Filename: "{sys}\reg.exe"; Parameters: "delete HKCU\Software\Microsoft\Windows\C
 
 ; Usage history and settings in %LOCALAPPDATA%\DeveloperIsland are kept on uninstall,
 ; so a reinstall continues where it left off. Delete that folder to remove them.
+
+[Code]
+// True when the setup was started with /RESTARTAPP (the app's one-click update).
+function RestartAppRequested: Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 1 to ParamCount do
+    if CompareText(ParamStr(I), '/RESTARTAPP') = 0 then
+      Result := True;
+end;

@@ -86,7 +86,7 @@ Developer Island is **local-first**. It has no account, no telemetry and no clou
 - **Read locally:** Claude Code transcripts (`~/.claude/projects`) and Codex rollout files (`~/.codex/sessions`), with Include WSL also those inside running WSL distros (read through `\\wsl.localhost`; `wsl.exe` lists running distros and runs git there). Only usage metadata is extracted (token counts, model, timestamps, session IDs, working directory); prompt, message and code content is never stored, displayed or logged.
 - **Stored locally** in `%LOCALAPPDATA%\DeveloperIsland`: a SQLite database with token counts and daily totals, settings, tasks, focus history, the last Claude plan percentages, the last Claude Code alert (its kind, project folder name and time) and, during an Awake session, the lid setting to put back. Logs contain events and error types, never content, and are kept for 7 days.
 - **Credentials:** private calendar links are kept in Windows Credential Manager. GitHub access goes through the GitHub CLI's own sign-in; Developer Island never sees a token.
-- **Network:** only the calendar links you add, the GitHub CLI's read-only requests while the GitHub module is on, and, if you drop files onto the island, the copy to the folder you configured under Home Cloud (your own server).
+- **Network:** only the calendar links you add, the GitHub CLI's read-only requests while the GitHub module is on, if you drop files onto the island, the copy to the folder you configured under Home Cloud (your own server), and, if you turn it on, a daily update check against the project's GitHub releases.
 - **Camera and microphone:** only "in use or not" is read from Windows' own consent store; app names are never stored or shown.
 
 Full details: [docs/PRIVACY.md](docs/PRIVACY.md) and [SECURITY.md](SECURITY.md).
@@ -187,7 +187,7 @@ More, including offscreen snapshots and the hardware report: [docs/DEVELOPMENT.m
 
 ## Roadmap
 
-- Code signing, a winget package and update notifications
+- Code signing and a winget package
 - Account-based calendars (Outlook, Google) through the calendar provider interface
 - More AI tools through the provider interface
 - A layout per display, and ARM64 builds
